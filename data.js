@@ -1,7 +1,7 @@
 // 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.
-// 마지막 갱신: 2026-05-14 14:59:09
+// 마지막 갱신: 2026-05-14 15:04:22
 window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 14:58:02",
+  "updated": "2026-05-14 15:03:02",
   "regions": [
     {
       "name": "의정부",
@@ -3956,9 +3956,9 @@ window.DASHBOARD_DATA = {
       "has_cctv": false,
       "api": "dam",
       "dam_info": {
-        "storage_rate": 69.887,
-        "inflow": 7.9,
-        "outflow": 1.409,
+        "storage_rate": 69.894,
+        "inflow": 5.956,
+        "outflow": 1.402,
         "total_outflow": 7.9
       }
     },
@@ -4516,12 +4516,6 @@ window.DASHBOARD_DATA = {
   "messages": [],
   "forecast": [
     {
-      "time": "15시",
-      "icon": "☀",
-      "temp": 30,
-      "rain": 0
-    },
-    {
       "time": "16시",
       "icon": "🌥",
       "temp": 30,
@@ -4583,6 +4577,12 @@ window.DASHBOARD_DATA = {
     },
     {
       "time": "02시",
+      "icon": "🌙",
+      "temp": 18,
+      "rain": 0
+    },
+    {
+      "time": "03시",
       "icon": "🌙",
       "temp": 18,
       "rain": 0
