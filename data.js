@@ -1,7 +1,7 @@
 // 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.
-// 마지막 갱신: 2026-05-14 17:59:00
+// 마지막 갱신: 2026-05-14 18:04:06
 window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 17:58:01",
+  "updated": "2026-05-14 18:03:01",
   "regions": [
     {
       "name": "의정부",
@@ -3956,10 +3956,10 @@ window.DASHBOARD_DATA = {
       "has_cctv": false,
       "api": "dam",
       "dam_info": {
-        "storage_rate": 69.908,
-        "inflow": 5.756,
-        "outflow": 1.388,
-        "total_outflow": 7.7
+        "storage_rate": 69.916,
+        "inflow": 5.349,
+        "outflow": 1.379,
+        "total_outflow": 7.682
       }
     },
     {
@@ -4513,33 +4513,8 @@ window.DASHBOARD_DATA = {
       "api": "waterlevel"
     }
   ],
-  "messages": [
-    {
-      "sender": "파주시",
-      "time": "16:03",
-      "text": "금일 15:20경 조리읍 오산리 28-1 인근 차량화재 발생. 도로 양방향 통제중으로(약2~3시간)해당 구간 이용 차량은 인근도로로 우회하시기 바랍니다.[파주시]",
-      "region": "파주"
-    },
-    {
-      "sender": "광주시",
-      "time": "10:15",
-      "text": "금일 야외활동인구 증가 예상으로 산불위험 높음. ▲광주시 전지역 입산 금지 ▲산림 내 불법 야영·취사 금지. 현재 단속 중. 적발 시 과태료 부과.[광주시]",
-      "region": "광주"
-    },
-    {
-      "sender": "김포시",
-      "time": "08:20",
-      "text": "현재 고촌읍 향산리 1-44 한강시네폴리스 서울에서 김포방향 1차로 차량 연쇄 추돌사고로 정체 발생 중. 교통정보 확인 바랍니다. [김포시]",
-      "region": "김포"
-    }
-  ],
+  "messages": [],
   "forecast": [
-    {
-      "time": "18시",
-      "icon": "☀",
-      "temp": 28,
-      "rain": 0
-    },
     {
       "time": "19시",
       "icon": "🌙",
@@ -4604,6 +4579,12 @@ window.DASHBOARD_DATA = {
       "time": "05시",
       "icon": "🌙",
       "temp": 17,
+      "rain": 0
+    },
+    {
+      "time": "06시",
+      "icon": "☀",
+      "temp": 16,
       "rain": 0
     }
   ],
