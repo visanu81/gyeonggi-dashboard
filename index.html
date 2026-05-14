@@ -543,61 +543,73 @@
   .panel-body { scrollbar-width: none; -ms-overflow-style: none; }
   .panel-body::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
-  /* 시군 그리드 */
+  /* 시군 그리드 — 통일된 디자인 */
   .region-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    gap: 10px;
   }
   .region-card {
-    background: var(--bg-card-2);
+    background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px;
+    border-left: 4px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
     position: relative;
-    transition: all 0.2s;
+    transition: border-color 0.15s, transform 0.15s;
+    display: flex; flex-direction: column;
+    gap: 8px;
   }
-  .region-card.warning { border-color: var(--warning); background: var(--warning-bg); }
-  .region-card.danger { border-color: var(--danger); background: var(--danger-bg); }
-  .region-card.dongducheon {
+  .region-card:hover {
     border-color: var(--accent);
-    background: var(--highlight-bg);
-    box-shadow: 0 0 0 2px var(--accent-glow);
+    transform: translateY(-1px);
   }
+  .region-card.warning { border-left-color: var(--warning); background: var(--warning-bg); }
+  .region-card.danger  { border-left-color: var(--danger);  background: var(--danger-bg); }
+  .region-card.dongducheon { border-left-color: var(--accent); border-left-width: 4px; }
 
   .region-name {
-    font-size: 12px; font-weight: 700;
-    margin-bottom: 5px;
+    font-size: 13px; font-weight: 700;
     display: flex; justify-content: space-between; align-items: center;
+    color: var(--text);
+    letter-spacing: -0.2px;
   }
   .region-tag {
-    font-size: 9px; padding: 1px 5px; border-radius: 4px;
-    background: var(--warning); color: #000;
-    font-weight: 700;
+    font-size: 10px; padding: 2px 7px; border-radius: 3px;
+    background: var(--warning); color: #fff;
+    font-weight: 800; letter-spacing: 0.3px;
   }
   .region-tag.danger { background: var(--danger); color: #fff; }
 
   .region-main {
-    display: flex; align-items: baseline; gap: 6px;
-    margin-bottom: 6px;
+    display: flex; align-items: baseline; gap: 8px;
   }
   .region-temp {
-    font-size: 22px; font-weight: 800;
+    font-size: 28px; font-weight: 800;
     font-variant-numeric: tabular-nums;
     color: var(--text);
     line-height: 1;
+    letter-spacing: -0.8px;
   }
-  .region-weather { font-size: 11px; color: var(--text-dim); }
+  .region-weather {
+    font-size: 12px; color: var(--text-dim);
+    font-weight: 600;
+  }
 
   .region-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 4px;
-    font-size: 10px;
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
     color: var(--text-dim);
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
   }
-  .region-stats div { display: flex; flex-direction: column; gap: 1px; }
-  .region-stats .v { color: var(--text); font-weight: 600; font-size: 11px; }
+  .region-stats > div {
+    display: flex; align-items: baseline; gap: 4px;
+  }
+  .region-stats span:first-child { color: var(--text-sub); font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
+  .region-stats .v { color: var(--text); font-weight: 700; font-size: 11px; }
 
   /* 특보 */
   .warning-item {
@@ -1323,8 +1335,9 @@
   .river-stat-card .val.down { color: var(--safe); }
   .river-stat-card .val.flat { color: var(--text-dim); }
 
-  .river-item { cursor: pointer; transition: all 0.15s; padding: 8px 4px; border-radius: 5px; }
+  .river-item { cursor: pointer; transition: all 0.15s; padding: 10px 6px; border-radius: 5px; display:flex; flex-direction:column; gap:4px; }
   .river-item:hover { background: var(--bg-card-2); }
+  .river-spark { margin: 2px 0; opacity: 0.85; }
 
   /* === 시군 상세 모달 === */
   .modal-overlay {
@@ -2462,6 +2475,29 @@ function renderWarnings(data, targetId, badgeId) {
   if (badgeId) document.getElementById(badgeId).textContent = `${data.length}건`;
 }
 
+// 24시간 미니 라인 그래프 SVG 생성
+function buildMiniSparkline(history, level) {
+  if (!history || history.length < 2) return '';
+  const values = history.map(h => h.value).filter(v => v != null);
+  if (values.length < 2) return '';
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = Math.max(max - min, 0.1);
+  const W = 200, H = 28, pad = 2;
+  const pts = history.map((h, i) => {
+    const x = pad + (i / (history.length - 1)) * (W - pad * 2);
+    const y = pad + (1 - (h.value - min) / range) * (H - pad * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const areaPath = `M${pad},${H} L` + pts.split(' ').join(' L') + ` L${W - pad},${H} Z`;
+  const colorMap = {safe: 'var(--safe)', warning: 'var(--warning)', danger: 'var(--danger)'};
+  const color = colorMap[level] || 'var(--text-dim)';
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:28px;display:block;">
+    <path d="${areaPath}" fill="${color}" fill-opacity="0.15"/>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5"/>
+  </svg>`;
+}
+
 function renderRivers(data) {
   if (!data || data.length === 0) {
     document.getElementById('riverList').innerHTML =
@@ -2470,12 +2506,14 @@ function renderRivers(data) {
   }
   const html = data.map((r, i) => {
     const pct = Math.min(100, (r.value / r.danger) * 100);
+    const spark = buildMiniSparkline(r.history, r.level);
     return `
       <div class="river-item" data-river-index="${i}" title="${r.name} 상세보기">
         <div class="river-top">
           <span class="river-name">${r.name}</span>
           <span class="river-value ${r.level}">${r.value.toFixed(2)}m</span>
         </div>
+        ${spark ? `<div class="river-spark">${spark}</div>` : ''}
         <div class="river-bar-bg"><div class="river-bar-fill ${r.level}" style="width:${pct}%"></div></div>
         <div class="river-stats"><span>주의 ${r.warning}m</span><span>위험 ${r.danger}m</span></div>
       </div>`;
@@ -3085,14 +3123,70 @@ function renderMessages(data, targetId, badgeId) {
 }
 
 function renderForecast(data, targetId) {
-  const html = data.map(f => `
-    <div class="forecast-col">
-      <div class="forecast-time">${f.time}</div>
-      <div class="forecast-icon">${f.icon}</div>
-      <div class="forecast-temp">${f.temp}°</div>
-      <div class="forecast-rain">${f.rain}%</div>
-    </div>`).join('');
-  document.getElementById(targetId).innerHTML = html;
+  if (!data || !data.length) {
+    document.getElementById(targetId).innerHTML = '';
+    return;
+  }
+  // Bloomberg 스타일 라인 차트 (SVG)
+  const items = data.slice(0, 12);
+  const W = 800, H = 130, padTop = 26, padBottom = 38, padX = 24;
+  const innerW = W - padX * 2;
+  const innerH = H - padTop - padBottom;
+
+  const temps = items.map(f => Number(f.temp) || 0);
+  const minT = Math.min(...temps);
+  const maxT = Math.max(...temps);
+  const range = Math.max(maxT - minT, 4);
+  const yMin = minT - range * 0.2;
+  const yMax = maxT + range * 0.3;
+
+  const xAt = i => padX + (i / (items.length - 1 || 1)) * innerW;
+  const yAt = t => padTop + (1 - (t - yMin) / (yMax - yMin)) * innerH;
+
+  // 기온 라인 + 영역
+  const linePts = items.map((f, i) => `${xAt(i).toFixed(1)},${yAt(f.temp).toFixed(1)}`).join(' ');
+  const areaPath = `M${xAt(0)},${padTop + innerH} ` +
+                   items.map((f, i) => `L${xAt(i).toFixed(1)},${yAt(f.temp).toFixed(1)}`).join(' ') +
+                   ` L${xAt(items.length - 1)},${padTop + innerH} Z`;
+
+  // 강수확률 막대 (하단)
+  const rainBars = items.map((f, i) => {
+    const pop = Number(f.rain ?? f.rain_pop ?? 0);
+    if (pop <= 0) return '';
+    const barH = (pop / 100) * (innerH * 0.4);
+    const x = xAt(i) - 10;
+    return `<rect x="${x.toFixed(1)}" y="${(padTop + innerH - barH).toFixed(1)}" width="20" height="${barH.toFixed(1)}" fill="var(--accent)" fill-opacity="0.15" rx="2"/>`;
+  }).join('');
+
+  // 각 시각의 점·기온·강수확률·아이콘
+  const markers = items.map((f, i) => {
+    const x = xAt(i);
+    const y = yAt(f.temp);
+    const pop = Number(f.rain ?? f.rain_pop ?? 0);
+    const popLabel = pop > 0 ? `<text x="${x.toFixed(1)}" y="${(padTop + innerH + 5).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--accent)" font-weight="700">${pop}%</text>` : '';
+    return `
+      <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="2"/>
+      <text x="${x.toFixed(1)}" y="${(y - 10).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="800" fill="var(--text)">${f.temp}°</text>
+      <text x="${x.toFixed(1)}" y="${(H - 22).toFixed(1)}" text-anchor="middle" font-size="14">${f.icon}</text>
+      <text x="${x.toFixed(1)}" y="${(H - 5).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--text-dim)" font-weight="600">${f.hour || f.time}</text>
+      ${popLabel}
+    `;
+  }).join('');
+
+  // 가로 그리드 라인 (기온 기준선)
+  const midY = yAt((minT + maxT) / 2);
+  const grid = `<line x1="${padX}" y1="${midY.toFixed(1)}" x2="${(W - padX).toFixed(1)}" y2="${midY.toFixed(1)}" stroke="var(--border)" stroke-dasharray="3,3" stroke-width="1"/>`;
+
+  const svg = `
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:130px;display:block;">
+      ${grid}
+      ${rainBars}
+      <path d="${areaPath}" fill="var(--accent)" fill-opacity="0.08"/>
+      <polyline points="${linePts}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+      ${markers}
+    </svg>
+  `;
+  document.getElementById(targetId).innerHTML = svg;
 }
 
 function renderPm(data) {
@@ -3243,19 +3337,20 @@ function renderFocusMode(data) {
   if (selRiversArr.length > 0) {
     riverBody.innerHTML = selRiversArr.map(r => {
       const pct = Math.min(100, (r.value / r.danger) * 100);
-      // 댐과 하천 명칭 압축 (예: "신천 (동두천 송천교)" → "신천 (동두천)")
       const shortName = r.name.replace(/\s*\(([가-힣]+)\s*[가-힣]+(?:교|댐|대교|보|리|동)\)/, ' ($1)');
       const isDam = r.api === 'dam';
       const damExtra = isDam && r.dam_info ?
         `<span class="river-mini-extra">방류 ${(r.dam_info.outflow || 0).toFixed(1)} m³/s · 저수율 ${(r.dam_info.storage_rate || 0).toFixed(0)}%</span>` :
         '';
+      const spark = buildMiniSparkline(r.history, r.level);
       return `
         <div class="river-mini-item" data-river-name="${r.name}" title="${r.name} 상세">
           <div class="river-mini-top">
             <span class="river-mini-name">${isDam ? '🌊 ' : ''}${shortName}</span>
             <span class="river-mini-value ${r.level}">${r.value.toFixed(2)}m</span>
           </div>
-          <div class="river-bar-bg" style="height:5px;">
+          ${spark}
+          <div class="river-bar-bg" style="height:4px;">
             <div class="river-bar-fill ${r.level}" style="width:${pct}%"></div>
           </div>
           <div class="river-mini-bottom">
