@@ -1936,9 +1936,9 @@
 </div>
 
 <!-- 실데이터 (tools/update_data.py 가 자동 생성). 없으면 아래 SAMPLE_DATA 사용. -->
-<!-- 2026-05-14 19:21:17 스냅샷. 이 파일 하나로 작동. -->
+<!-- 2026-05-14 19:23:40 스냅샷. 이 파일 하나로 작동. -->
 <script>window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 19:19:57",
+  "updated": "2026-05-14 19:22:16",
   "regions": [
     {
       "name": "의정부",
@@ -6450,26 +6450,7 @@
       "api": "waterlevel"
     }
   ],
-  "messages": [
-    {
-      "sender": "파주시",
-      "time": "16:03",
-      "text": "금일 15:20경 조리읍 오산리 28-1 인근 차량화재 발생. 도로 양방향 통제중으로(약2~3시간)해당 구간 이용 차량은 인근도로로 우회하시기 바랍니다.[파주시]",
-      "region": "파주"
-    },
-    {
-      "sender": "광주시",
-      "time": "10:15",
-      "text": "금일 야외활동인구 증가 예상으로 산불위험 높음. ▲광주시 전지역 입산 금지 ▲산림 내 불법 야영·취사 금지. 현재 단속 중. 적발 시 과태료 부과.[광주시]",
-      "region": "광주"
-    },
-    {
-      "sender": "김포시",
-      "time": "08:20",
-      "text": "현재 고촌읍 향산리 1-44 한강시네폴리스 서울에서 김포방향 1차로 차량 연쇄 추돌사고로 정체 발생 중. 교통정보 확인 바랍니다. [김포시]",
-      "region": "김포"
-    }
-  ],
+  "messages": [],
   "forecast": [
     {
       "time": "20시",
@@ -7710,21 +7691,63 @@ function buildPmModalBody(data) {
 // ----- 산불 위험도 상세 -----
 function buildFireModalBody(data) {
   const fireList = data.fire || [];
-  if (fireList.length === 0) {
-    return '<div style="text-align:center;color:var(--text-sub);padding:40px;">산불 데이터 없음</div>';
-  }
-  const regions = fireList.map(f => `
+  const stats = (data.fire_stats || {}).summary || {};
+
+  // 1. 권역별 위험도
+  const regions = fireList.length > 0 ? fireList.map(f => `
     <div class="fire-grade-card lv${f.level}">
       <div class="grade-name">
         <span>${f.region}</span>
         <span>${f.levelText} (${f.level}단계)</span>
       </div>
-    </div>`).join('');
+    </div>`).join('') : '<div style="color:var(--text-sub);text-align:center;padding:14px;">데이터 없음</div>';
+
+  // 2. 발생 통계 카드
+  const statsBlock = stats.total > 0 ? `
+    <div class="modal-section" style="margin-bottom:14px;">
+      <div class="modal-section-title">산불 발생 통계 (최근 1년)</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;">
+        <div class="river-stat-card" style="flex-direction:column;align-items:flex-start;">
+          <span class="label">전국 발생</span>
+          <span class="val" style="font-size:22px;">${stats.total}<span style="font-size:11px;color:var(--text-dim);">건</span></span>
+        </div>
+        <div class="river-stat-card" style="flex-direction:column;align-items:flex-start;">
+          <span class="label">경기도</span>
+          <span class="val" style="font-size:22px;color:var(--warning);">${stats.gyeonggi}<span style="font-size:11px;color:var(--text-dim);">건</span></span>
+        </div>
+        <div class="river-stat-card" style="flex-direction:column;align-items:flex-start;">
+          <span class="label">경기북부 (관할)</span>
+          <span class="val" style="font-size:22px;color:var(--danger);">${stats.north}<span style="font-size:11px;color:var(--text-dim);">건</span></span>
+        </div>
+      </div>
+    </div>` : '';
+
+  // 3. 경기북부 최근 산불 발생 내역
+  const recentList = (stats.latest_north || []).slice(0, 8);
+  const recentBlock = recentList.length > 0 ? `
+    <div class="modal-section" style="margin-bottom:14px;">
+      <div class="modal-section-title">경기북부 최근 산불 발생 내역</div>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+        ${recentList.map(it => `
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--danger);border-radius:6px;padding:8px 12px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;">
+              <span style="font-weight:700;font-size:13px;">${it.sigungu} <span style="color:var(--text-dim);font-weight:400;">(${it.cause})</span></span>
+              <span style="font-size:11px;color:var(--text-sub);">${it.occur_time}</span>
+            </div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:3px;">
+              📍 ${it.address} · 피해 면적 <strong style="color:var(--warning);">${it.damage_area} ha</strong>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>` : '';
+
   return `
+    ${statsBlock}
     <div class="modal-section" style="margin-bottom:14px;">
       <div class="modal-section-title">권역별 현재 위험도</div>
       <div style="margin-top:8px;">${regions}</div>
     </div>
+    ${recentBlock}
     <div class="modal-section">
       <div class="modal-section-title">위험 단계 기준</div>
       <div style="margin-top:8px;">
@@ -7746,7 +7769,7 @@ function buildFireModalBody(data) {
         </div>
       </div>
     </div>
-    <div style="margin-top:14px;font-size:11px;color:var(--text-sub);">📡 산림청 국립산림과학원 · 산불위험예보 V2</div>`;
+    <div style="margin-top:14px;font-size:11px;color:var(--text-sub);">📡 산림청 국립산림과학원 (위험도) · 산림청 산불통계 서비스 (발생 내역)</div>`;
 }
 
 // ----- 재난문자 전문 -----
@@ -8395,7 +8418,7 @@ updateClock();
 setInterval(updateClock, 1000);
 
 // 페이지를 5분마다 새로고침해서 최신 data.js를 다시 읽음
-// 단일 HTML 스냅샷 — 자동 새로고침 비활성 (생성 시각: 2026-05-14 19:21:17)
+// 단일 HTML 스냅샷 — 자동 새로고침 비활성 (생성 시각: 2026-05-14 19:23:40)
 </script>
 </body>
 </html>

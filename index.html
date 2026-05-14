@@ -2605,21 +2605,63 @@ function buildPmModalBody(data) {
 // ----- 산불 위험도 상세 -----
 function buildFireModalBody(data) {
   const fireList = data.fire || [];
-  if (fireList.length === 0) {
-    return '<div style="text-align:center;color:var(--text-sub);padding:40px;">산불 데이터 없음</div>';
-  }
-  const regions = fireList.map(f => `
+  const stats = (data.fire_stats || {}).summary || {};
+
+  // 1. 권역별 위험도
+  const regions = fireList.length > 0 ? fireList.map(f => `
     <div class="fire-grade-card lv${f.level}">
       <div class="grade-name">
         <span>${f.region}</span>
         <span>${f.levelText} (${f.level}단계)</span>
       </div>
-    </div>`).join('');
+    </div>`).join('') : '<div style="color:var(--text-sub);text-align:center;padding:14px;">데이터 없음</div>';
+
+  // 2. 발생 통계 카드
+  const statsBlock = stats.total > 0 ? `
+    <div class="modal-section" style="margin-bottom:14px;">
+      <div class="modal-section-title">산불 발생 통계 (최근 1년)</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;">
+        <div class="river-stat-card" style="flex-direction:column;align-items:flex-start;">
+          <span class="label">전국 발생</span>
+          <span class="val" style="font-size:22px;">${stats.total}<span style="font-size:11px;color:var(--text-dim);">건</span></span>
+        </div>
+        <div class="river-stat-card" style="flex-direction:column;align-items:flex-start;">
+          <span class="label">경기도</span>
+          <span class="val" style="font-size:22px;color:var(--warning);">${stats.gyeonggi}<span style="font-size:11px;color:var(--text-dim);">건</span></span>
+        </div>
+        <div class="river-stat-card" style="flex-direction:column;align-items:flex-start;">
+          <span class="label">경기북부 (관할)</span>
+          <span class="val" style="font-size:22px;color:var(--danger);">${stats.north}<span style="font-size:11px;color:var(--text-dim);">건</span></span>
+        </div>
+      </div>
+    </div>` : '';
+
+  // 3. 경기북부 최근 산불 발생 내역
+  const recentList = (stats.latest_north || []).slice(0, 8);
+  const recentBlock = recentList.length > 0 ? `
+    <div class="modal-section" style="margin-bottom:14px;">
+      <div class="modal-section-title">경기북부 최근 산불 발생 내역</div>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+        ${recentList.map(it => `
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--danger);border-radius:6px;padding:8px 12px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;">
+              <span style="font-weight:700;font-size:13px;">${it.sigungu} <span style="color:var(--text-dim);font-weight:400;">(${it.cause})</span></span>
+              <span style="font-size:11px;color:var(--text-sub);">${it.occur_time}</span>
+            </div>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:3px;">
+              📍 ${it.address} · 피해 면적 <strong style="color:var(--warning);">${it.damage_area} ha</strong>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>` : '';
+
   return `
+    ${statsBlock}
     <div class="modal-section" style="margin-bottom:14px;">
       <div class="modal-section-title">권역별 현재 위험도</div>
       <div style="margin-top:8px;">${regions}</div>
     </div>
+    ${recentBlock}
     <div class="modal-section">
       <div class="modal-section-title">위험 단계 기준</div>
       <div style="margin-top:8px;">
@@ -2641,7 +2683,7 @@ function buildFireModalBody(data) {
         </div>
       </div>
     </div>
-    <div style="margin-top:14px;font-size:11px;color:var(--text-sub);">📡 산림청 국립산림과학원 · 산불위험예보 V2</div>`;
+    <div style="margin-top:14px;font-size:11px;color:var(--text-sub);">📡 산림청 국립산림과학원 (위험도) · 산림청 산불통계 서비스 (발생 내역)</div>`;
 }
 
 // ----- 재난문자 전문 -----
