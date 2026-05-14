@@ -276,13 +276,12 @@
     min-height: 0;
   }
 
-  .panel-region    { grid-column: 1; grid-row: 1 / span 3; }
+  .panel-region    { grid-column: 1; grid-row: 1 / span 2; }
   .panel-warning   { grid-column: 2; grid-row: 1; }
-  .panel-pm        { grid-column: 2; grid-row: 2; }
-  .panel-fire      { grid-column: 2; grid-row: 3; }
+  .panel-fire      { grid-column: 2; grid-row: 2; }
   .panel-msg       { grid-column: 3; grid-row: 1; }
   .panel-river     { grid-column: 3; grid-row: 2; }
-  .panel-forecast  { grid-column: 3; grid-row: 3; }
+  .panel-forecast  { grid-column: 1 / -1; grid-row: 3; }
 
   .panel-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -548,9 +547,8 @@
   }
 
   /* 동두천 패널 위치 (3x3 + 가로 전체 한 줄) */
-  body[data-view="focus"] .focus-panel-weather  { grid-column: 1; grid-row: 1; }
-  body[data-view="focus"] .focus-panel-river    { grid-column: 2; grid-row: 1; }
-  body[data-view="focus"] .focus-panel-pm       { grid-column: 3; grid-row: 1; }
+  body[data-view="focus"] .focus-panel-weather  { grid-column: 1 / span 2; grid-row: 1; }
+  body[data-view="focus"] .focus-panel-river    { grid-column: 3; grid-row: 1; }
   body[data-view="focus"] .focus-panel-forecast { grid-column: 1; grid-row: 2; }
   body[data-view="focus"] .focus-panel-fire     { grid-column: 2; grid-row: 2; }
   body[data-view="focus"] .focus-panel-warning  { grid-column: 3; grid-row: 2; }
@@ -987,21 +985,16 @@
     font-weight: 700;
   }
 
-  /* 미세먼지·산불 패널 클릭 가능 — hover 시 테두리 강조 */
-  .panel-pm, .panel-fire,
-  .focus-panel-pm, .focus-panel-fire {
+  /* 산불 패널 클릭 가능 — hover 시 테두리 강조 */
+  .panel-fire, .focus-panel-fire {
     cursor: pointer;
     transition: border-color 0.15s, box-shadow 0.15s;
   }
-  .panel-pm:hover, .panel-fire:hover,
-  .focus-panel-pm:hover, .focus-panel-fire:hover {
+  .panel-fire:hover, .focus-panel-fire:hover {
     border-color: var(--accent);
     box-shadow: 0 0 12px var(--accent-glow);
   }
-  /* hover 시 panel-header에 작은 안내 표시 */
-  .panel-pm:hover .panel-header::after,
   .panel-fire:hover .panel-header::after,
-  .focus-panel-pm:hover .panel-header::after,
   .focus-panel-fire:hover .panel-header::after {
     content: '클릭 ↗';
     margin-left: 6px;
@@ -1290,7 +1283,6 @@
   /* === 광역/동두천 모드 토글 시 보이고 숨김 === */
   body[data-view="wide"] .focus-panel-weather,
   body[data-view="wide"] .focus-panel-river,
-  body[data-view="wide"] .focus-panel-pm,
   body[data-view="wide"] .focus-panel-forecast,
   body[data-view="wide"] .focus-panel-fire,
   body[data-view="wide"] .focus-panel-warning,
@@ -1381,7 +1373,6 @@
   /* 광역 모드일 때 focus 패널 숨김, 그 반대도 */
   body[data-view="focus"] .panel-region,
   body[data-view="focus"] .panel-warning,
-  body[data-view="focus"] .panel-pm,
   body[data-view="focus"] .panel-fire,
   body[data-view="focus"] .panel-msg,
   body[data-view="focus"] .panel-river,
@@ -1437,17 +1428,15 @@
     body[data-view="wide"] .panel-region    { grid-column: 1 / -1; grid-row: auto; min-height: 360px; }
     body[data-view="wide"] .panel-warning   { grid-column: 1; grid-row: auto; min-height: 200px; }
     body[data-view="wide"] .panel-msg       { grid-column: 2; grid-row: auto; min-height: 200px; }
-    body[data-view="wide"] .panel-pm        { grid-column: 1; grid-row: auto; min-height: 200px; }
     body[data-view="wide"] .panel-river     { grid-column: 2; grid-row: auto; min-height: 200px; }
     body[data-view="wide"] .panel-fire      { grid-column: 1; grid-row: auto; min-height: 180px; }
-    body[data-view="wide"] .panel-forecast  { grid-column: 2; grid-row: auto; min-height: 180px; }
+    body[data-view="wide"] .panel-forecast  { grid-column: 1 / -1; grid-row: auto; min-height: 180px; }
 
     body[data-view="focus"] .main-grid {
       grid-template-columns: 1fr 1fr;
     }
     body[data-view="focus"] .focus-panel-weather  { grid-column: 1 / -1; grid-row: 1; }
-    body[data-view="focus"] .focus-panel-river    { grid-column: 1; grid-row: 2; }
-    body[data-view="focus"] .focus-panel-pm       { grid-column: 2; grid-row: 2; }
+    body[data-view="focus"] .focus-panel-river    { grid-column: 1 / -1; grid-row: 2; }
     body[data-view="focus"] .focus-panel-forecast { grid-column: 1 / -1; grid-row: 3; }
     body[data-view="focus"] .focus-panel-fire     { grid-column: 1; grid-row: 4; }
     body[data-view="focus"] .focus-panel-warning  { grid-column: 2; grid-row: 4; }
@@ -1525,14 +1514,12 @@
     .panel,
     body[data-view="wide"] .panel-region,
     body[data-view="wide"] .panel-warning,
-    body[data-view="wide"] .panel-pm,
     body[data-view="wide"] .panel-fire,
     body[data-view="wide"] .panel-msg,
     body[data-view="wide"] .panel-river,
     body[data-view="wide"] .panel-forecast,
     body[data-view="focus"] .focus-panel-weather,
     body[data-view="focus"] .focus-panel-river,
-    body[data-view="focus"] .focus-panel-pm,
     body[data-view="focus"] .focus-panel-forecast,
     body[data-view="focus"] .focus-panel-fire,
     body[data-view="focus"] .focus-panel-warning,
@@ -1919,9 +1906,9 @@
 </div>
 
 <!-- 실데이터 (tools/update_data.py 가 자동 생성). 없으면 아래 SAMPLE_DATA 사용. -->
-<!-- 2026-05-14 18:53:59 스냅샷. 이 파일 하나로 작동. -->
+<!-- 2026-05-14 18:57:22 스냅샷. 이 파일 하나로 작동. -->
 <script>window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 18:53:02",
+  "updated": "2026-05-14 18:56:36",
   "regions": [
     {
       "name": "의정부",
@@ -1938,11 +1925,11 @@
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 38,
+          "reh": 36,
           "rn1": 0.0,
-          "t1h": 27.1,
-          "vec": 180.0,
-          "wsd": 0.5,
+          "t1h": 27.0,
+          "vec": 210.0,
+          "wsd": 0.8,
           "base_time": "18:00"
         },
         "rain_cumul": {
@@ -1951,8 +1938,8 @@
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "남",
-        "feels_like": 27.1,
+        "wind_dir_name": "남남서",
+        "feels_like": 27.0,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -2311,11 +2298,11 @@
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 38,
+          "reh": 36,
           "rn1": 0.0,
-          "t1h": 27.1,
-          "vec": 180.0,
-          "wsd": 0.5,
+          "t1h": 27.0,
+          "vec": 210.0,
+          "wsd": 0.8,
           "base_time": "18:00"
         },
         "rain_cumul": {
@@ -2324,8 +2311,8 @@
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "남",
-        "feels_like": 27.1,
+        "wind_dir_name": "남남서",
+        "feels_like": 27.0,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -2684,11 +2671,11 @@
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 35,
+          "reh": 36,
           "rn1": 0.0,
-          "t1h": 28.0,
-          "vec": 319.0,
-          "wsd": 1.0,
+          "t1h": 27.6,
+          "vec": 334.0,
+          "wsd": 0.7,
           "base_time": "18:00"
         },
         "rain_cumul": {
@@ -2697,8 +2684,8 @@
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "북서",
-        "feels_like": 28.0,
+        "wind_dir_name": "북북서",
+        "feels_like": 27.6,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -3057,11 +3044,11 @@
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 37,
+          "reh": 40,
           "rn1": 0.0,
-          "t1h": 26.9,
-          "vec": 275.0,
-          "wsd": 1.1,
+          "t1h": 26.0,
+          "vec": 287.0,
+          "wsd": 1.0,
           "base_time": "18:00"
         },
         "rain_cumul": {
@@ -3070,8 +3057,8 @@
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "서",
-        "feels_like": 26.9,
+        "wind_dir_name": "서북서",
+        "feels_like": 26.0,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -3430,11 +3417,11 @@
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 43,
+          "reh": 44,
           "rn1": 0.0,
-          "t1h": 28.0,
-          "vec": 31.0,
-          "wsd": 0.5,
+          "t1h": 27.5,
+          "vec": 29.0,
+          "wsd": 0.7,
           "base_time": "18:00"
         },
         "rain_cumul": {
@@ -3444,7 +3431,7 @@
           "12h": 0.0
         },
         "wind_dir_name": "북북동",
-        "feels_like": 29.0,
+        "feels_like": 28.4,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -3805,9 +3792,9 @@
           "pty": "0",
           "reh": 37,
           "rn1": 0.0,
-          "t1h": 27.0,
-          "vec": 53.0,
-          "wsd": 3.0,
+          "t1h": 26.7,
+          "vec": 59.0,
+          "wsd": 2.3,
           "base_time": "18:00"
         },
         "rain_cumul": {
@@ -3816,8 +3803,8 @@
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "북동",
-        "feels_like": 26.7,
+        "wind_dir_name": "동북동",
+        "feels_like": 26.6,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -4176,11 +4163,11 @@
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 37,
+          "reh": 39,
           "rn1": 0.0,
-          "t1h": 28.7,
-          "vec": 288.0,
-          "wsd": 0.3,
+          "t1h": 28.1,
+          "vec": 298.0,
+          "wsd": 0.2,
           "base_time": "18:00"
         },
         "rain_cumul": {
@@ -4190,7 +4177,7 @@
           "12h": 0.0
         },
         "wind_dir_name": "서북서",
-        "feels_like": 28.7,
+        "feels_like": 28.1,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -4549,11 +4536,11 @@
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 28,
+          "reh": 37,
           "rn1": 0.0,
-          "t1h": 29.9,
-          "vec": 162.0,
-          "wsd": 1.2,
+          "t1h": 28.5,
+          "vec": 251.0,
+          "wsd": 2.5,
           "base_time": "18:00"
         },
         "rain_cumul": {
@@ -4562,8 +4549,8 @@
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "남남동",
-        "feels_like": 29.9,
+        "wind_dir_name": "서남서",
+        "feels_like": 28.4,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -4922,11 +4909,11 @@
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 52,
+          "reh": 54,
           "rn1": 0.0,
-          "t1h": 26.3,
-          "vec": 272.0,
-          "wsd": 3.2,
+          "t1h": 25.8,
+          "vec": 250.0,
+          "wsd": 3.6,
           "base_time": "18:00"
         },
         "rain_cumul": {
@@ -4935,8 +4922,8 @@
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "서",
-        "feels_like": 25.9,
+        "wind_dir_name": "서남서",
+        "feels_like": 25.3,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -5298,7 +5285,7 @@
           "reh": 47,
           "rn1": 0.0,
           "t1h": 26.6,
-          "vec": 254.0,
+          "vec": 263.0,
           "wsd": 1.7,
           "base_time": "18:00"
         },
@@ -5308,7 +5295,7 @@
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "서남서",
+        "wind_dir_name": "서",
         "feels_like": 26.6,
         "tmax": null,
         "tmin": null,
@@ -6433,26 +6420,7 @@
       "api": "waterlevel"
     }
   ],
-  "messages": [
-    {
-      "sender": "파주시",
-      "time": "16:03",
-      "text": "금일 15:20경 조리읍 오산리 28-1 인근 차량화재 발생. 도로 양방향 통제중으로(약2~3시간)해당 구간 이용 차량은 인근도로로 우회하시기 바랍니다.[파주시]",
-      "region": "파주"
-    },
-    {
-      "sender": "광주시",
-      "time": "10:15",
-      "text": "금일 야외활동인구 증가 예상으로 산불위험 높음. ▲광주시 전지역 입산 금지 ▲산림 내 불법 야영·취사 금지. 현재 단속 중. 적발 시 과태료 부과.[광주시]",
-      "region": "광주"
-    },
-    {
-      "sender": "김포시",
-      "time": "08:20",
-      "text": "현재 고촌읍 향산리 1-44 한강시네폴리스 서울에서 김포방향 1차로 차량 연쇄 추돌사고로 정체 발생 중. 교통정보 확인 바랍니다. [김포시]",
-      "region": "김포"
-    }
-  ],
+  "messages": [],
   "forecast": [
     {
       "time": "19시",
@@ -7495,12 +7463,6 @@ document.addEventListener('click', (e) => {
     openGenericModal('기상청 발표문', '특보 통보문 · 기상정보 (최근 3일)', buildBulletinsModalBody(DATA), 760);
     return;
   }
-  // 미세먼지 패널 — 단, 시군 카드(region-card)나 자식 패널 안의 카드가 아닐 때만
-  const pmPanel = e.target.closest('.panel-pm, .focus-panel-pm');
-  if (pmPanel && !e.target.closest('.region-card, button')) {
-    openGenericModal('미세먼지 현황', '경기북부 10개 시군 실시간 측정', buildPmModalBody(DATA), 760);
-    return;
-  }
   // 산불 패널
   const firePanel = e.target.closest('.panel-fire, .focus-panel-fire');
   if (firePanel && !e.target.closest('.region-card, button')) {
@@ -7699,8 +7661,7 @@ function renderFocusMode(data) {
   // 패널 헤더 텍스트
   const panelTitleMap = {
     'panel-weather': region + ' 현재 기상',
-    'panel-river':   selRiver ? selRiver.name.split(' (')[0] + ' 수위' : '인근 하천 수위',
-    'panel-pm':      region + ' 미세먼지',
+    'panel-river':   '인근 하천 수위',
     'panel-fire':    '산불 위험도',
     'panel-warning': region + ' 발효 특보',
     'panel-msg':     '재난문자',
@@ -7788,27 +7749,7 @@ function renderFocusMode(data) {
     riverPanel.removeAttribute('title');
   }
 
-  // ===== 3. 미세먼지 카드 =====
-  const pmBody = document.getElementById('focusPmBody');
-  const pmGrade = document.getElementById('focusPmGrade');
-  if (ddcPm) {
-    pmGrade.textContent = ddcPm.gradeText;
-    const pmColors = {good: 'var(--pm-good)', normal: 'var(--pm-normal)', bad: 'var(--pm-bad)', vbad: 'var(--pm-vbad)'};
-    pmGrade.style.color = pmColors[ddcPm.grade] || 'var(--text-dim)';
-    pmGrade.style.fontWeight = '700';
-    pmBody.innerHTML = `
-      <div class="pm-big-item">
-        <span class="pm-big-label">PM10 (미세먼지)</span>
-        <span class="pm-big-value">${ddcPm.pm10}<span class="unit">μg/m³</span></span>
-      </div>
-      <div class="pm-big-item">
-        <span class="pm-big-label">PM2.5 (초미세)</span>
-        <span class="pm-big-value">${ddcPm.pm25}<span class="unit">μg/m³</span></span>
-      </div>`;
-  } else {
-    pmBody.innerHTML = '<div class="focus-empty">미세먼지 데이터 없음</div>';
-    pmGrade.textContent = '-';
-  }
+  // 미세먼지 패널 제거됨
 
   // ===== 4. 12시간 예보 카드 =====
   renderForecast(data.forecast.slice(0, 12), 'focusForecastRow');
@@ -7975,7 +7916,6 @@ function renderAll(data) {
   renderRivers(data.rivers);
   renderMessages(data.messages, 'msgList', 'msgBadge');
   renderForecast(data.forecast, 'forecastRow');
-  renderPm(data.pm);
   renderFire(data.fire);
   renderFocusMode(data);
   updateOverallStatus(data.warnings);
@@ -8071,7 +8011,7 @@ updateClock();
 setInterval(updateClock, 1000);
 
 // 페이지를 5분마다 새로고침해서 최신 data.js를 다시 읽음
-// 단일 HTML 스냅샷 — 자동 새로고침 비활성 (생성 시각: 2026-05-14 18:53:59)
+// 단일 HTML 스냅샷 — 자동 새로고침 비활성 (생성 시각: 2026-05-14 18:57:22)
 </script>
 </body>
 </html>
