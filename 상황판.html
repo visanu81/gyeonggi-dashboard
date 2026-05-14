@@ -1373,6 +1373,20 @@
     box-shadow: 0 0 6px var(--accent);
     animation: blink-soft 1.5s infinite;
   }
+  .footer-credit {
+    color: var(--text-dim);
+    padding: 3px 12px;
+    background: var(--highlight-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    font-size: 11px;
+    letter-spacing: 0.2px;
+  }
+  .footer-credit strong {
+    color: var(--accent);
+    font-weight: 700;
+    margin: 0 2px;
+  }
 
   /* ========================================================== */
   /* === 반응형: 태블릿 (1200px 이하) — 2열 그리드 === */
@@ -1783,6 +1797,9 @@
     </span>
     <span>데이터: 기상청 · 행정안전부 · 한강홍수통제소 · 에어코리아 · 국립산림과학원</span>
   </div>
+  <div class="footer-credit">
+    제작 <strong>소방위 한경승</strong> · 동두천소방서
+  </div>
   <div>
     <span>마지막 업데이트: <span id="lastUpdate">--:--</span></span>
   </div>
@@ -1884,9 +1901,9 @@
 </div>
 
 <!-- 실데이터 (tools/update_data.py 가 자동 생성). 없으면 아래 SAMPLE_DATA 사용. -->
-<!-- 2026-05-14 10:19:07 스냅샷. 이 파일 하나로 작동. -->
+<!-- 2026-05-14 10:24:07 스냅샷. 이 파일 하나로 작동. -->
 <script>window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 10:18:02",
+  "updated": "2026-05-14 10:23:02",
   "regions": [
     {
       "name": "의정부",
@@ -7995,7 +8012,7 @@ updateClock();
 setInterval(updateClock, 1000);
 
 // 페이지를 5분마다 새로고침해서 최신 data.js를 다시 읽음
-// 단일 HTML 스냅샷 — 자동 새로고침 비활성 (생성 시각: 2026-05-14 10:19:07)
+// 단일 HTML 스냅샷 — 자동 새로고침 비활성 (생성 시각: 2026-05-14 10:24:07)
 </script>
 </body>
 </html>
