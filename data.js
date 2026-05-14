@@ -1,7 +1,7 @@
 // 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.
-// 마지막 갱신: 2026-05-14 18:04:06
+// 마지막 갱신: 2026-05-14 18:08:53
 window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 18:03:01",
+  "updated": "2026-05-14 18:08:01",
   "regions": [
     {
       "name": "의정부",
@@ -3745,10 +3745,6 @@ window.DASHBOARD_DATA = {
       "level": "safe",
       "history": [
         {
-          "time": "2026051318",
-          "value": 1.27
-        },
-        {
           "time": "2026051319",
           "value": 1.27
         },
@@ -3838,6 +3834,10 @@ window.DASHBOARD_DATA = {
         },
         {
           "time": "2026051417",
+          "value": 1.27
+        },
+        {
+          "time": "2026051418",
           "value": 1.27
         }
       ],
@@ -3971,10 +3971,6 @@ window.DASHBOARD_DATA = {
       "level": "safe",
       "history": [
         {
-          "time": "2026051318",
-          "value": 0.88
-        },
-        {
           "time": "2026051319",
           "value": 0.88
         },
@@ -4065,25 +4061,25 @@ window.DASHBOARD_DATA = {
         {
           "time": "2026051417",
           "value": 0.86
+        },
+        {
+          "time": "2026051418",
+          "value": 0.86
         }
       ],
       "delta_1h": 0.0,
-      "delta_3h": -0.01,
+      "delta_3h": 0.0,
       "has_cctv": true,
       "api": "waterlevel"
     },
     {
       "name": "임진강 (연천 임진교)",
       "code": "1021680",
-      "value": 0.57,
+      "value": 0.58,
       "warning": 5.9,
       "danger": 10.8,
       "level": "safe",
       "history": [
-        {
-          "time": "2026051318",
-          "value": 0.65
-        },
         {
           "time": "2026051319",
           "value": 0.64
@@ -4175,9 +4171,13 @@ window.DASHBOARD_DATA = {
         {
           "time": "2026051417",
           "value": 0.57
+        },
+        {
+          "time": "2026051418",
+          "value": 0.58
         }
       ],
-      "delta_1h": -0.02,
+      "delta_1h": 0.01,
       "delta_3h": -0.01,
       "has_cctv": true,
       "api": "waterlevel"
@@ -4185,15 +4185,11 @@ window.DASHBOARD_DATA = {
     {
       "name": "한탄강 (포천 용담교)",
       "code": "1022640",
-      "value": 0.92,
+      "value": 0.91,
       "warning": 9.5,
       "danger": 18.0,
       "level": "safe",
       "history": [
-        {
-          "time": "2026051318",
-          "value": 0.99
-        },
         {
           "time": "2026051319",
           "value": 0.99
@@ -4285,10 +4281,14 @@ window.DASHBOARD_DATA = {
         {
           "time": "2026051417",
           "value": 0.92
+        },
+        {
+          "time": "2026051418",
+          "value": 0.91
         }
       ],
-      "delta_1h": -0.02,
-      "delta_3h": -0.03,
+      "delta_1h": -0.01,
+      "delta_3h": -0.05,
       "has_cctv": true,
       "api": "waterlevel"
     },
@@ -4300,10 +4300,6 @@ window.DASHBOARD_DATA = {
       "danger": 8.0,
       "level": "safe",
       "history": [
-        {
-          "time": "2026051318",
-          "value": 0.99
-        },
         {
           "time": "2026051319",
           "value": 0.99
@@ -4394,6 +4390,10 @@ window.DASHBOARD_DATA = {
         },
         {
           "time": "2026051417",
+          "value": 0.99
+        },
+        {
+          "time": "2026051418",
           "value": 0.99
         }
       ],
@@ -4411,10 +4411,6 @@ window.DASHBOARD_DATA = {
       "level": "safe",
       "history": [
         {
-          "time": "2026051318",
-          "value": 0.4
-        },
-        {
           "time": "2026051319",
           "value": 0.4
         },
@@ -4504,6 +4500,10 @@ window.DASHBOARD_DATA = {
         },
         {
           "time": "2026051417",
+          "value": 0.39
+        },
+        {
+          "time": "2026051418",
           "value": 0.39
         }
       ],
