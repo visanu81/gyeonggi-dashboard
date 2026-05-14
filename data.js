@@ -1,7 +1,7 @@
 // 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.
-// 마지막 갱신: 2026-05-14 13:14:01
+// 마지막 갱신: 2026-05-14 13:19:04
 window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 13:13:02",
+  "updated": "2026-05-14 13:18:02",
   "regions": [
     {
       "name": "의정부",
@@ -3849,15 +3849,11 @@ window.DASHBOARD_DATA = {
     {
       "name": "임진강 (군남댐)",
       "code": "1021701",
-      "value": 24.38,
+      "value": 24.39,
       "warning": 31.5,
       "danger": 35.0,
       "level": "safe",
       "history": [
-        {
-          "time": "2026051313",
-          "value": 24.31
-        },
         {
           "time": "2026051314",
           "value": 24.31
@@ -3949,10 +3945,14 @@ window.DASHBOARD_DATA = {
         {
           "time": "2026051412",
           "value": 24.38
+        },
+        {
+          "time": "2026051413",
+          "value": 24.39
         }
       ],
       "delta_1h": 0.01,
-      "delta_3h": 0.05,
+      "delta_3h": 0.04,
       "has_cctv": false,
       "api": "dam",
       "dam_info": {
@@ -4513,20 +4513,7 @@ window.DASHBOARD_DATA = {
       "api": "waterlevel"
     }
   ],
-  "messages": [
-    {
-      "sender": "광주시",
-      "time": "10:15",
-      "text": "금일 야외활동인구 증가 예상으로 산불위험 높음. ▲광주시 전지역 입산 금지 ▲산림 내 불법 야영·취사 금지. 현재 단속 중. 적발 시 과태료 부과.[광주시]",
-      "region": "광주"
-    },
-    {
-      "sender": "김포시",
-      "time": "08:20",
-      "text": "현재 고촌읍 향산리 1-44 한강시네폴리스 서울에서 김포방향 1차로 차량 연쇄 추돌사고로 정체 발생 중. 교통정보 확인 바랍니다. [김포시]",
-      "region": "김포"
-    }
-  ],
+  "messages": [],
   "forecast": [
     {
       "time": "14시",
@@ -4604,66 +4591,66 @@ window.DASHBOARD_DATA = {
   "pm": [
     {
       "region": "의정부",
-      "pm10": 21,
+      "pm10": 27,
+      "pm25": 17,
+      "grade": "normal",
+      "gradeText": "보통"
+    },
+    {
+      "region": "양주",
+      "pm10": 20,
       "pm25": 10,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
-      "region": "양주",
-      "pm10": 33,
-      "pm25": 11,
-      "grade": "normal",
-      "gradeText": "보통"
-    },
-    {
       "region": "동두천",
-      "pm10": 19,
-      "pm25": 0,
+      "pm10": 18,
+      "pm25": 7,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "포천",
       "pm10": 30,
-      "pm25": 11,
+      "pm25": 12,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "가평",
-      "pm10": 20,
-      "pm25": 11,
+      "pm10": 19,
+      "pm25": 8,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "남양주",
       "pm10": 17,
-      "pm25": 13,
+      "pm25": 12,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "구리",
-      "pm10": 26,
-      "pm25": 7,
-      "grade": "good",
-      "gradeText": "좋음"
+      "pm10": 32,
+      "pm25": 6,
+      "grade": "normal",
+      "gradeText": "보통"
     },
     {
       "region": "파주",
-      "pm10": 20,
+      "pm10": 21,
       "pm25": 13,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "고양",
-      "pm10": 36,
-      "pm25": 7,
-      "grade": "normal",
-      "gradeText": "보통"
+      "pm10": 26,
+      "pm25": 11,
+      "grade": "good",
+      "gradeText": "좋음"
     }
   ],
   "fire": [
