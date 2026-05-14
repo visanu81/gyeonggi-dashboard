@@ -1,7 +1,7 @@
 // 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.
-// 마지막 갱신: 2026-05-14 13:38:58
+// 마지막 갱신: 2026-05-14 13:44:08
 window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 13:38:02",
+  "updated": "2026-05-14 13:43:02",
   "regions": [
     {
       "name": "의정부",
@@ -18,12 +18,12 @@ window.DASHBOARD_DATA = {
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 34,
+          "reh": 33,
           "rn1": 0.0,
           "t1h": 29.6,
-          "vec": 93.0,
-          "wsd": 1.8,
-          "base_time": "12:00"
+          "vec": 147.0,
+          "wsd": 1.6,
+          "base_time": "13:00"
         },
         "rain_cumul": {
           "1h": 0.0,
@@ -31,7 +31,7 @@ window.DASHBOARD_DATA = {
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "동",
+        "wind_dir_name": "남남동",
         "feels_like": 29.6,
         "tmax": 30.0,
         "tmin": null,
@@ -391,12 +391,12 @@ window.DASHBOARD_DATA = {
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 34,
+          "reh": 33,
           "rn1": 0.0,
           "t1h": 29.6,
-          "vec": 93.0,
-          "wsd": 1.8,
-          "base_time": "12:00"
+          "vec": 147.0,
+          "wsd": 1.6,
+          "base_time": "13:00"
         },
         "rain_cumul": {
           "1h": 0.0,
@@ -404,7 +404,7 @@ window.DASHBOARD_DATA = {
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "동",
+        "wind_dir_name": "남남동",
         "feels_like": 29.6,
         "tmax": 31.0,
         "tmin": null,
@@ -764,12 +764,12 @@ window.DASHBOARD_DATA = {
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 28,
+          "reh": 21,
           "rn1": 0.0,
-          "t1h": 29.2,
-          "vec": 95.0,
-          "wsd": 2.1,
-          "base_time": "12:00"
+          "t1h": 29.7,
+          "vec": 121.0,
+          "wsd": 1.7,
+          "base_time": "13:00"
         },
         "rain_cumul": {
           "1h": 0.0,
@@ -777,8 +777,8 @@ window.DASHBOARD_DATA = {
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "동",
-        "feels_like": 29.2,
+        "wind_dir_name": "동남동",
+        "feels_like": 29.7,
         "tmax": 30.0,
         "tmin": null,
         "pop": 0,
@@ -1137,12 +1137,12 @@ window.DASHBOARD_DATA = {
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 38,
+          "reh": 33,
           "rn1": 0.0,
-          "t1h": 28.4,
-          "vec": 152.0,
-          "wsd": 1.7,
-          "base_time": "12:00"
+          "t1h": 28.7,
+          "vec": 126.0,
+          "wsd": 2.3,
+          "base_time": "13:00"
         },
         "rain_cumul": {
           "1h": 0.0,
@@ -1150,8 +1150,8 @@ window.DASHBOARD_DATA = {
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "남남동",
-        "feels_like": 28.4,
+        "wind_dir_name": "남동",
+        "feels_like": 28.6,
         "tmax": 29.0,
         "tmin": null,
         "pop": 0,
@@ -1510,12 +1510,12 @@ window.DASHBOARD_DATA = {
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 30,
+          "reh": 29,
           "rn1": 0.0,
-          "t1h": 28.7,
-          "vec": 37.0,
-          "wsd": 1.5,
-          "base_time": "12:00"
+          "t1h": 29.6,
+          "vec": 16.0,
+          "wsd": 1.4,
+          "base_time": "13:00"
         },
         "rain_cumul": {
           "1h": 0.0,
@@ -1523,8 +1523,8 @@ window.DASHBOARD_DATA = {
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "북동",
-        "feels_like": 28.7,
+        "wind_dir_name": "북북동",
+        "feels_like": 29.6,
         "tmax": 30.0,
         "tmin": null,
         "pop": 0,
@@ -1883,12 +1883,12 @@ window.DASHBOARD_DATA = {
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 38,
+          "reh": 34,
           "rn1": 0.0,
-          "t1h": 28.0,
-          "vec": 15.0,
-          "wsd": 3.1,
-          "base_time": "12:00"
+          "t1h": 28.6,
+          "vec": 68.0,
+          "wsd": 3.4,
+          "base_time": "13:00"
         },
         "rain_cumul": {
           "1h": 0.0,
@@ -1896,8 +1896,8 @@ window.DASHBOARD_DATA = {
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "북북동",
-        "feels_like": 27.7,
+        "wind_dir_name": "동북동",
+        "feels_like": 28.2,
         "tmax": 29.0,
         "tmin": null,
         "pop": 0,
@@ -2256,12 +2256,12 @@ window.DASHBOARD_DATA = {
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 36,
+          "reh": 33,
           "rn1": 0.0,
-          "t1h": 29.4,
-          "vec": 93.0,
-          "wsd": 2.2,
-          "base_time": "12:00"
+          "t1h": 30.1,
+          "vec": 96.0,
+          "wsd": 1.0,
+          "base_time": "13:00"
         },
         "rain_cumul": {
           "1h": 0.0,
@@ -2270,7 +2270,7 @@ window.DASHBOARD_DATA = {
           "12h": 0.0
         },
         "wind_dir_name": "동",
-        "feels_like": 29.3,
+        "feels_like": 30.1,
         "tmax": 30.0,
         "tmin": null,
         "pop": 0,
@@ -2629,12 +2629,12 @@ window.DASHBOARD_DATA = {
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 28,
+          "reh": 26,
           "rn1": 0.0,
-          "t1h": 29.2,
-          "vec": 101.0,
-          "wsd": 2.6,
-          "base_time": "12:00"
+          "t1h": 29.3,
+          "vec": 69.0,
+          "wsd": 2.4,
+          "base_time": "13:00"
         },
         "rain_cumul": {
           "1h": 0.0,
@@ -2642,8 +2642,8 @@ window.DASHBOARD_DATA = {
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "동",
-        "feels_like": 29.0,
+        "wind_dir_name": "동북동",
+        "feels_like": 29.2,
         "tmax": 31.0,
         "tmin": null,
         "pop": 20,
@@ -3002,12 +3002,12 @@ window.DASHBOARD_DATA = {
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 35,
+          "reh": 32,
           "rn1": 0.0,
-          "t1h": 29.3,
-          "vec": 146.0,
+          "t1h": 29.5,
+          "vec": 121.0,
           "wsd": 2.3,
-          "base_time": "12:00"
+          "base_time": "13:00"
         },
         "rain_cumul": {
           "1h": 0.0,
@@ -3015,8 +3015,8 @@ window.DASHBOARD_DATA = {
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "남동",
-        "feels_like": 29.2,
+        "wind_dir_name": "동남동",
+        "feels_like": 29.4,
         "tmax": 31.0,
         "tmin": null,
         "pop": 0,
@@ -3377,10 +3377,10 @@ window.DASHBOARD_DATA = {
           "pty": "0",
           "reh": 32,
           "rn1": 0.0,
-          "t1h": 29.2,
-          "vec": 83.0,
-          "wsd": 1.7,
-          "base_time": "12:00"
+          "t1h": 30.0,
+          "vec": 81.0,
+          "wsd": 1.9,
+          "base_time": "13:00"
         },
         "rain_cumul": {
           "1h": 0.0,
@@ -3389,7 +3389,7 @@ window.DASHBOARD_DATA = {
           "12h": 0.0
         },
         "wind_dir_name": "동",
-        "feels_like": 29.2,
+        "feels_like": 30.0,
         "tmax": 31.0,
         "tmin": null,
         "pop": 20,
