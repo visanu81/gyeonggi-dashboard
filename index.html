@@ -9,21 +9,61 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  /* === 다크 테마 (기본) — 정부 관제실 / 항공관제 톤 === */
+  /* === 라이트 테마 (기본) — 공공기관 PoC 톤 === */
   :root {
+    --bg: #f4f0e6;                 /* 따뜻한 베이지 (PoC 메인) */
+    --bg-grad-from: #f8f4ea;
+    --bg-grad-to: #efeadb;
+    --bg-card: #ffffff;            /* 카드는 깔끔한 흰색 */
+    --bg-card-2: #f8f5ec;
+    --bg-header: #1e3a5f;          /* 진한 네이비 (정부기관 헤더) */
+    --bg-header-deep: #162d4a;
+    --border: #d6d0bf;             /* 베이지 톤 경계선 */
+    --border-strong: #b8b29d;
+    --text: #1a2b4a;               /* 진한 네이비 텍스트 */
+    --text-on-header: #ffffff;     /* 헤더 위 흰 텍스트 */
+    --text-dim: #6b7280;
+    --text-sub: #9ca3af;
+    --accent: #1e3a5f;             /* 메인 네이비 */
+    --accent-strong: #162d4a;
+    --accent-glow: rgba(30, 58, 95, 0.08);
+    --highlight: #f4c537;           /* 강조 노랑 (정부 보고서 톤) */
+    --highlight-bg: #fef3c7;
+    --danger: #dc2626;
+    --danger-bg: #fee2e2;
+    --warning: #ea580c;
+    --warning-bg: #ffedd5;
+    --caution: #facc15;
+    --safe: #059669;
+    --safe-bg: #d1fae5;
+    --pm-good: #3b82f6;
+    --pm-normal: #10b981;
+    --pm-bad: #f59e0b;
+    --pm-vbad: #ef4444;
+    --shadow-sm: 0 1px 2px rgba(26, 43, 74, 0.06);
+    --shadow-md: 0 2px 8px rgba(26, 43, 74, 0.08);
+  }
+
+  /* === 다크 테마 (옵션) — 관제실 야간 운영용 === */
+  [data-theme="dark"] {
     --bg: #0a0e1a;
     --bg-grad-from: #0f1729;
     --bg-grad-to: #0a0e1a;
     --bg-card: #131a2c;
     --bg-card-2: #1a2236;
+    --bg-header: #131a2c;
+    --bg-header-deep: #0a0e1a;
     --border: #2a3450;
     --border-strong: #3a4666;
     --text: #e5e9f0;
+    --text-on-header: #e5e9f0;
     --text-dim: #8b95ab;
     --text-sub: #5d6580;
     --accent: #3b82f6;
     --accent-strong: #2563eb;
     --accent-glow: rgba(59, 130, 246, 0.18);
+    --highlight: #fbbf24;
+    --highlight-bg: rgba(251, 191, 36, 0.1);
     --danger: #ef4444;
     --danger-bg: rgba(239, 68, 68, 0.1);
     --warning: #f59e0b;
@@ -31,36 +71,8 @@
     --caution: #fbbf24;
     --safe: #10b981;
     --safe-bg: rgba(16, 185, 129, 0.08);
-    --highlight-bg: rgba(59, 130, 246, 0.06);
-    --pm-good: #3b82f6;
-    --pm-normal: #10b981;
-    --pm-bad: #f59e0b;
-    --pm-vbad: #ef4444;
-  }
-
-  /* === 라이트 테마 === */
-  [data-theme="light"] {
-    --bg: #f5f7fa;
-    --bg-grad-from: #ffffff;
-    --bg-grad-to: #eef2f7;
-    --bg-card: #ffffff;
-    --bg-card-2: #f3f6fa;
-    --border: #d8dee6;
-    --border-strong: #b8c1d0;
-    --text: #1a2236;
-    --text-dim: #5d6580;
-    --text-sub: #8b95ab;
-    --accent: #1e40af;
-    --accent-strong: #1e3a8a;
-    --accent-glow: rgba(30, 64, 175, 0.15);
-    --danger: #b91c1c;
-    --danger-bg: rgba(185, 28, 28, 0.06);
-    --warning: #b45309;
-    --warning-bg: rgba(180, 83, 9, 0.08);
-    --caution: #ca8a04;
-    --safe: #047857;
-    --safe-bg: rgba(4, 120, 87, 0.06);
-    --highlight-bg: rgba(30, 64, 175, 0.04);
+    --shadow-sm: none;
+    --shadow-md: none;
   }
 
   html, body {
