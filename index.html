@@ -119,9 +119,13 @@
     background: var(--highlight);
     border-radius: 4px;
     display: flex; align-items: center; justify-content: center;
-    font-weight: 900; font-size: 20px;
     color: var(--bg-header);
-    letter-spacing: -1px;
+    flex-shrink: 0;
+  }
+  .logo-mark svg {
+    width: 22px;
+    height: 22px;
+    display: block;
   }
 
   .title {
@@ -1827,7 +1831,18 @@
 
 <div class="header">
   <div class="header-left">
-    <div class="logo-mark">소</div>
+    <div class="logo-mark" aria-label="비상 사이렌">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M7 18v-6a5 5 0 1 1 10 0v6"/>
+        <path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 0-.5-.5h-13a.5.5 0 0 0-.5.5z"/>
+        <path d="M21 12h1.5"/>
+        <path d="M18.36 5.64l1.06-1.06"/>
+        <path d="M1.5 12H3"/>
+        <path d="M12 2v1.5"/>
+        <path d="M4.58 4.58l1.06 1.06"/>
+        <path d="M12 12v6"/>
+      </svg>
+    </div>
     <div>
       <div class="title">경기북부 기상·재난 상황판</div>
       <div class="subtitle">기상·하천·재난문자 실시간 모니터링 및 의사결정 지원</div>
