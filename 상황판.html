@@ -646,12 +646,13 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* === 신천 수위 카드 === */
+  /* === 인근 수위 카드 (여러 관측소 동시 표시) === */
   .focus-river-body {
     display: flex; flex-direction: column;
-    justify-content: center; align-items: center;
     gap: 10px;
-    padding: 16px;
+    padding: 14px;
+    align-items: stretch;
+    justify-content: flex-start;
   }
   .river-big {
     display: flex; align-items: baseline; gap: 4px;
@@ -662,6 +663,43 @@
   .river-big.safe .num,    .river-big.safe .unit    { color: var(--safe); }
   .river-big.warning .num, .river-big.warning .unit { color: var(--warning); }
   .river-big.danger .num,  .river-big.danger .unit  { color: var(--danger); }
+
+  /* 미니 하천 카드 (시군 안 여러 관측소) */
+  .river-mini-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 9px 11px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .river-mini-item:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+  .river-mini-top {
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .river-mini-name {
+    font-size: 12px; font-weight: 700; color: var(--text);
+  }
+  .river-mini-value {
+    font-size: 15px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .river-mini-value.safe    { color: var(--safe); }
+  .river-mini-value.warning { color: var(--warning); }
+  .river-mini-value.danger  { color: var(--danger); }
+  .river-mini-bottom {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 10px; color: var(--text-sub);
+    flex-wrap: wrap; gap: 4px;
+  }
+  .river-mini-extra {
+    color: var(--accent);
+    font-weight: 600;
+  }
 
   /* === 미세먼지 카드 === */
   .focus-pm-body {
@@ -1901,9 +1939,9 @@
 </div>
 
 <!-- 실데이터 (tools/update_data.py 가 자동 생성). 없으면 아래 SAMPLE_DATA 사용. -->
-<!-- 2026-05-14 10:25:25 스냅샷. 이 파일 하나로 작동. -->
+<!-- 2026-05-14 10:29:26 스냅샷. 이 파일 하나로 작동. -->
 <script>window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 10:24:14",
+  "updated": "2026-05-14 10:28:02",
   "regions": [
     {
       "name": "의정부",
@@ -6415,7 +6453,20 @@
       "api": "waterlevel"
     }
   ],
-  "messages": [],
+  "messages": [
+    {
+      "sender": "광주시",
+      "time": "10:15",
+      "text": "금일 야외활동인구 증가 예상으로 산불위험 높음. ▲광주시 전지역 입산 금지 ▲산림 내 불법 야영·취사 금지. 현재 단속 중. 적발 시 과태료 부과.[광주시]",
+      "region": "광주"
+    },
+    {
+      "sender": "김포시",
+      "time": "08:20",
+      "text": "현재 고촌읍 향산리 1-44 한강시네폴리스 서울에서 김포방향 1차로 차량 연쇄 추돌사고로 정체 발생 중. 교통정보 확인 바랍니다. [김포시]",
+      "region": "김포"
+    }
+  ],
   "forecast": [
     {
       "time": "11시",
@@ -7512,6 +7563,13 @@ document.addEventListener('click', (e) => {
     if (r) openRiverModal(r);
     return;
   }
+  // 내관서 중점 모드: 미니 하천 카드 (여러 관측소 중 하나)
+  const miniItem = e.target.closest('.river-mini-item[data-river-name]');
+  if (miniItem) {
+    const r = (DATA.rivers || []).find(x => x.name === miniItem.dataset.riverName);
+    if (r) openRiverModal(r);
+    return;
+  }
   // 모달 닫기
   if (e.target.id === 'riverModalClose' || e.target.id === 'riverModalOverlay') {
     closeRiverModal();
@@ -7604,15 +7662,18 @@ function renderFire(data) {
   document.getElementById('fireGrid').innerHTML = html;
 }
 
-// 시군별 인근 하천 매핑 (data.rivers 안에 어느 관측소가 그 시군을 대표하는가)
+// 시군별 인근 하천 매핑 — 배열로 여러 관측소 동시 표시 가능
 const REGION_RIVER_MATCH = {
-  '동두천': '동두천', '연천': '연천',   '포천':  '포천',
-  '남양주': '남양주', '의정부': '의정부',
-  '양주':  '연천',  // 양주 인근 = 연천 신천
-  '가평':  '남양주', // 가평 인근 = 남양주 왕숙
-  '구리':  '남양주', // 구리 인근
-  '파주':  '연천',  // 파주 인근 = 연천 임진강
-  '고양':  '남양주',
+  '동두천': ['동두천', '군남댐'],     // 신천(동두천) + 임진강 군남댐
+  '연천':  ['연천', '군남댐', '임진교'], // 신천(연천) + 군남댐 + 임진교
+  '포천':  ['포천'],
+  '남양주': ['남양주'],
+  '의정부': ['의정부'],
+  '양주':  ['연천'],   // 양주 인근
+  '가평':  ['남양주'],  // 가평 인근
+  '구리':  ['남양주'],  // 구리 인근
+  '파주':  ['임진교'],  // 파주 인근 = 연천 임진교
+  '고양':  ['남양주'],
 };
 
 // 시군별 산불 권역 매핑
@@ -7635,8 +7696,19 @@ function renderFocusMode(data) {
   const selPm = data.pm.find(p => p.region === region);
   const fireRegionKey = REGION_FIRE_MATCH[region] || '';
   const selFire = data.fire.find(f => f.region === fireRegionKey);
-  const riverKey = REGION_RIVER_MATCH[region] || region;
-  const selRiver = data.rivers.find(r => r.name.includes(riverKey));
+  // 인근 하천 — 여러 개 매칭 가능 (중복 제거)
+  const riverKeys = REGION_RIVER_MATCH[region] || [region];
+  const selRiversArr = [];
+  const seenRiverCodes = new Set();
+  for (const key of riverKeys) {
+    for (const r of (data.rivers || [])) {
+      if (r.name.includes(key) && !seenRiverCodes.has(r.code)) {
+        selRiversArr.push(r);
+        seenRiverCodes.add(r.code);
+      }
+    }
+  }
+  const selRiver = selRiversArr[0];  // 첫 번째를 대표(헤더 표시·이전 코드 호환)
   const selMsgs = prioritizeMessages(data.messages || []);
   const selWarnings = data.warnings.filter(w =>
     w.area.includes(region) || w.area.includes('전역') || w.area.includes('경기북부'));
@@ -7699,29 +7771,37 @@ function renderFocusMode(data) {
     statusBadge.style.background = 'var(--safe-bg)';
   }
 
-  // ===== 2. 신천(또는 시군별) 수위 카드 — 클릭 시 CCTV 포함 상세 모달 =====
+  // ===== 2. 인근 수위 카드 — 여러 관측소 동시 표시, 각각 클릭 시 모달 =====
   const riverPanel = document.querySelector('.focus-panel-river');
   const riverBody = document.getElementById('focusRiverBody');
-  if (ddcRiver) {
-    const pct = Math.min(100, (ddcRiver.value / ddcRiver.danger) * 100);
-    riverBody.innerHTML = `
-      <div class="river-big ${ddcRiver.level}">
-        <span class="num">${ddcRiver.value.toFixed(2)}</span>
-        <span class="unit">m</span>
-      </div>
-      <div class="river-bar-bg" style="width:100%;">
-        <div class="river-bar-fill ${ddcRiver.level}" style="width:${pct}%"></div>
-      </div>
-      <div style="width:100%;display:flex;justify-content:space-between;font-size:11px;color:var(--text-sub);">
-        <span>주의 ${ddcRiver.warning}m</span>
-        <span>위험 ${ddcRiver.danger}m</span>
-      </div>
-      <div style="margin-top:6px;font-size:10px;color:var(--accent);font-weight:600;">
-        📹 클릭하면 CCTV + 24시간 변화
-      </div>`;
-    riverPanel.style.cursor = 'pointer';
-    riverPanel.dataset.riverName = ddcRiver.name;
-    riverPanel.title = `${ddcRiver.name} CCTV 및 24시간 수위 변화 보기`;
+  if (selRiversArr.length > 0) {
+    riverBody.innerHTML = selRiversArr.map(r => {
+      const pct = Math.min(100, (r.value / r.danger) * 100);
+      // 댐과 하천 명칭 압축 (예: "신천 (동두천 송천교)" → "신천 (동두천)")
+      const shortName = r.name.replace(/\s*\(([가-힣]+)\s*[가-힣]+(?:교|댐|대교|보|리|동)\)/, ' ($1)');
+      const isDam = r.api === 'dam';
+      const damExtra = isDam && r.dam_info ?
+        `<span class="river-mini-extra">방류 ${(r.dam_info.outflow || 0).toFixed(1)} m³/s · 저수율 ${(r.dam_info.storage_rate || 0).toFixed(0)}%</span>` :
+        '';
+      return `
+        <div class="river-mini-item" data-river-name="${r.name}" title="${r.name} 상세">
+          <div class="river-mini-top">
+            <span class="river-mini-name">${isDam ? '🌊 ' : ''}${shortName}</span>
+            <span class="river-mini-value ${r.level}">${r.value.toFixed(2)}m</span>
+          </div>
+          <div class="river-bar-bg" style="height:5px;">
+            <div class="river-bar-fill ${r.level}" style="width:${pct}%"></div>
+          </div>
+          <div class="river-mini-bottom">
+            <span>주의 ${r.warning}m · 위험 ${r.danger}m</span>
+            ${damExtra}
+          </div>
+        </div>`;
+    }).join('');
+    // 패널 전체 클릭으로 모달 안 띄움 — 각 미니카드에서 처리
+    riverPanel.style.cursor = '';
+    delete riverPanel.dataset.riverName;
+    riverPanel.removeAttribute('title');
   } else {
     riverBody.innerHTML = '<div class="focus-empty">하천 데이터 없음</div>';
     riverPanel.style.cursor = '';
@@ -8012,7 +8092,7 @@ updateClock();
 setInterval(updateClock, 1000);
 
 // 페이지를 5분마다 새로고침해서 최신 data.js를 다시 읽음
-// 단일 HTML 스냅샷 — 자동 새로고침 비활성 (생성 시각: 2026-05-14 10:25:25)
+// 단일 HTML 스냅샷 — 자동 새로고침 비활성 (생성 시각: 2026-05-14 10:29:26)
 </script>
 </body>
 </html>
