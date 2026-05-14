@@ -90,104 +90,149 @@
   body::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
   body {
-    background: radial-gradient(ellipse at top, var(--bg-grad-from) 0%, var(--bg-grad-to) 70%) fixed;
+    background: var(--bg);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
   }
+  [data-theme="dark"] body {
+    background: radial-gradient(ellipse at top, var(--bg-grad-from) 0%, var(--bg-grad-to) 70%) fixed;
+  }
 
-  /* HEADER */
+  /* HEADER — 진한 네이비 (공공기관 공식 헤더) */
   .header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 28px;
-    background: var(--bg-card);
-    border-bottom: 2px solid var(--accent);
+    padding: 16px 28px;
+    background: var(--bg-header);
+    color: var(--text-on-header);
     flex-shrink: 0;
     position: relative;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.1);
   }
 
   .header-left { display: flex; align-items: center; gap: 16px; }
 
   .logo-mark {
-    width: 44px; height: 44px;
-    background: var(--accent);
-    border-radius: 6px;
+    width: 40px; height: 40px;
+    background: var(--highlight);
+    border-radius: 4px;
     display: flex; align-items: center; justify-content: center;
     font-weight: 900; font-size: 20px;
-    color: #fff;
+    color: var(--bg-header);
     letter-spacing: -1px;
   }
 
   .title {
     font-size: 22px; font-weight: 800; letter-spacing: -0.4px;
-    color: var(--text);
+    color: var(--text-on-header);
   }
   .subtitle {
-    font-size: 11px; color: var(--text-sub); margin-top: 3px;
-    letter-spacing: 0.3px; text-transform: uppercase;
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+    margin-top: 3px;
+    letter-spacing: 0.3px;
+  }
+  /* 헤더 우상단 강조 배지 */
+  .header-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--highlight);
+    color: var(--bg-header);
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+  }
+  .header-tagline {
+    font-size: 10px;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 0.3px;
+    text-align: right;
+    margin-top: 4px;
   }
 
   .header-right { display: flex; align-items: center; gap: 18px; }
 
-  /* 토글 그룹 */
+  /* 토글 그룹 — 헤더(네이비) 위 흰 톤 */
   .toggle-group {
     display: inline-flex;
-    background: var(--bg-card-2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 4px;
     padding: 3px;
     gap: 2px;
   }
   .toggle-btn {
     border: none;
     background: transparent;
-    color: var(--text-dim);
-    padding: 6px 12px;
+    color: rgba(255,255,255,0.7);
+    padding: 6px 14px;
     font-size: 12px;
     font-weight: 600;
-    border-radius: 5px;
+    border-radius: 3px;
     cursor: pointer;
     font-family: inherit;
-    transition: all 0.2s;
+    transition: all 0.15s;
   }
-  .toggle-btn:hover { color: var(--text); }
+  .toggle-btn:hover { color: #fff; background: rgba(255,255,255,0.06); }
   .toggle-btn.active {
-    background: var(--accent);
-    color: #fff;
-    box-shadow: 0 2px 8px var(--accent-glow);
+    background: var(--highlight);
+    color: var(--bg-header);
+    font-weight: 800;
   }
-  [data-theme="light"] .toggle-btn.active { color: #fff; }
+  [data-theme="dark"] .toggle-btn { color: var(--text-dim); }
+  [data-theme="dark"] .toggle-btn.active { background: var(--accent); color: #fff; }
 
   .icon-btn {
     width: 34px; height: 34px;
-    border: 1px solid var(--border);
-    background: var(--bg-card-2);
-    border-radius: 8px;
-    color: var(--text-dim);
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08);
+    border-radius: 4px;
+    color: rgba(255,255,255,0.85);
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     font-size: 16px;
-    transition: all 0.2s;
+    transition: all 0.15s;
   }
-  .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .icon-btn:hover {
+    background: var(--highlight);
+    color: var(--bg-header);
+    border-color: var(--highlight);
+  }
+  [data-theme="dark"] .icon-btn {
+    border-color: var(--border);
+    background: var(--bg-card-2);
+    color: var(--text-dim);
+  }
+  [data-theme="dark"] .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
 
-  /* 시군 변경 버튼 (내관서 중점 모드일 때만 보임) */
+  /* 시군 변경 버튼 (헤더 위 노란 강조) */
   .region-changer {
     display: inline-flex; align-items: center;
     padding: 7px 12px;
-    background: var(--highlight-bg);
-    border: 1px solid var(--accent);
-    border-radius: 8px;
-    color: var(--accent);
+    background: var(--highlight);
+    border: 1px solid var(--highlight);
+    border-radius: 4px;
+    color: var(--bg-header);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
     cursor: pointer;
     font-family: inherit;
-    transition: all 0.2s;
+    transition: all 0.15s;
+    letter-spacing: 0.3px;
   }
   .region-changer:hover {
+    background: #f9d460;
+    border-color: #f9d460;
+  }
+  [data-theme="dark"] .region-changer {
+    background: var(--highlight-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  [data-theme="dark"] .region-changer:hover {
     background: var(--accent);
     color: #fff;
   }
@@ -219,27 +264,56 @@
     box-shadow: 0 0 12px var(--accent-glow);
   }
 
-  .clock-block { text-align: right; padding-left: 8px; border-left: 1px solid var(--border); }
+  .clock-block { text-align: right; padding-left: 14px; border-left: 1px solid rgba(255,255,255,0.15); }
   .clock-time {
     font-size: 28px; font-weight: 800;
     font-variant-numeric: tabular-nums;
-    color: var(--text);
+    color: var(--highlight);
     letter-spacing: 1.5px;
     line-height: 1;
   }
   .clock-date {
-    font-size: 11px; color: var(--text-dim); margin-top: 4px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.65);
+    margin-top: 5px;
     letter-spacing: 0.5px;
   }
 
+  .header-info-block { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+  .header-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    background: var(--highlight);
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--bg-header);
+    letter-spacing: 0.5px;
+  }
+  .header-badge .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--bg-header);
+    animation: blink-soft 2s infinite;
+  }
+  .header-badge.warning {
+    background: var(--warning);
+    color: #fff;
+  }
+  .header-badge.warning .dot { background: #fff; }
+  .header-badge.danger {
+    background: var(--danger);
+    color: #fff;
+  }
+  .header-badge.danger .dot { background: #fff; }
+  /* 호환용 — focus 모드 안에 남아있는 status-pill */
   .status-pill {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 7px 12px;
     background: var(--safe-bg);
     border: 1px solid var(--safe);
-    border-radius: 18px;
+    border-radius: 4px;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--safe);
   }
   .status-pill .dot {
@@ -252,61 +326,66 @@
     50% { opacity: 0.4; }
   }
 
-  /* === KPI 대시보드 바 (사령부 디스플레이) === */
+  /* === KPI 대시보드 바 (공공기관 PoC 톤) === */
   .kpi-bar {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
-    gap: 1px;
-    background: var(--border);
-    border-bottom: 1px solid var(--border);
+    gap: 10px;
+    padding: 14px 28px;
+    background: var(--bg);
     flex-shrink: 0;
   }
   .kpi-item {
     background: var(--bg-card);
-    padding: 14px 18px 14px 22px;
+    padding: 16px 18px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     position: relative;
-    transition: background 0.2s;
+    overflow: hidden;
   }
   .kpi-item::before {
     content: '';
     position: absolute;
-    left: 0; top: 12px; bottom: 12px;
-    width: 3px;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
     background: var(--accent);
   }
   .kpi-item.alert::before { background: var(--danger); }
   .kpi-item.warning::before { background: var(--warning); }
-  .kpi-item.alert { background: rgba(239, 68, 68, 0.06); }
-  .kpi-item.warning { background: rgba(245, 158, 11, 0.05); }
+  .kpi-item.alert { background: var(--danger-bg); }
+  .kpi-item.warning { background: var(--warning-bg); }
 
   .kpi-label {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.3px;
     font-weight: 700;
   }
   .kpi-value {
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 800;
     color: var(--text);
     font-variant-numeric: tabular-nums;
     line-height: 1;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.8px;
     white-space: nowrap;
   }
   .kpi-value.status-safe    { color: var(--safe); }
   .kpi-value.status-warning { color: var(--warning); }
   .kpi-value.status-danger  { color: var(--danger); }
   .kpi-unit {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-dim);
     font-weight: 600;
     margin-left: 3px;
   }
+  [data-theme="dark"] .kpi-bar { padding: 0; gap: 1px; background: var(--border); }
+  [data-theme="dark"] .kpi-item { border-radius: 0; border: none; box-shadow: none; padding: 14px 18px 14px 22px; }
+  [data-theme="dark"] .kpi-item::before { left: 0; top: 12px; bottom: 12px; }
 
   /* 작은 화면 — KPI 3x2 */
   @media (max-width: 1199px) {
@@ -361,6 +440,7 @@
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 6px;
+    box-shadow: var(--shadow-sm);
     display: flex; flex-direction: column;
     overflow: hidden;
     min-height: 0;
@@ -1477,15 +1557,16 @@
 
   body[data-view="wide"] .main-grid { grid-template-columns: 1.5fr 1fr 1fr; grid-auto-rows: minmax(min-content, max-content); }
 
-  /* FOOTER */
+  /* FOOTER — 공식 발신자 톤 */
   .footer {
-    padding: 7px 24px;
+    padding: 10px 28px;
     display: flex; justify-content: space-between; align-items: center;
     font-size: 11px;
-    color: var(--text-sub);
+    color: var(--text-dim);
     border-top: 1px solid var(--border);
     background: var(--bg-card);
     flex-shrink: 0;
+    letter-spacing: 0.3px;
   }
   .footer-left { display: flex; gap: 14px; align-items: center; }
   .refresh-indicator { display: inline-flex; align-items: center; gap: 6px; }
@@ -1699,10 +1780,10 @@
 
 <div class="header">
   <div class="header-left">
-    <div class="logo-mark">⚡</div>
+    <div class="logo-mark">소</div>
     <div>
       <div class="title">경기북부 기상·재난 상황판</div>
-      <div class="subtitle">Gyeonggi-Bukbu Weather & Disaster Operations Center</div>
+      <div class="subtitle">기상·하천·재난문자 실시간 모니터링 및 의사결정 지원</div>
     </div>
   </div>
   <div class="header-right">
@@ -1714,13 +1795,16 @@
       <span id="currentFocusRegionText">동두천</span>
       <span style="font-size:9px;margin-left:4px;">▾</span>
     </button>
-    <button class="region-changer" id="weatherImgBtn" style="background:rgba(245,158,11,0.1);border-color:var(--warning);color:var(--warning);" title="기상 레이더·위성영상 보기">
+    <button class="region-changer" id="weatherImgBtn" title="기상 레이더·위성영상 보기">
       📡 기상영상
     </button>
     <button class="icon-btn" id="themeBtn" title="테마 전환">🌙</button>
-    <div class="status-pill" id="overallStatus">
-      <span class="dot"></span>
-      <span id="overallStatusText">정상 운영중</span>
+    <div class="header-info-block">
+      <span class="header-badge" id="overallStatus">
+        <span class="dot"></span>
+        <span id="overallStatusText">실시간 운영</span>
+      </span>
+      <div class="header-tagline">5분 자동 갱신 · 공공데이터 연동</div>
     </div>
     <div class="clock-block">
       <div class="clock-time" id="clockTime">--:--:--</div>
@@ -3237,27 +3321,24 @@ function updateClock() {
 }
 
 function updateOverallStatus(warnings) {
-  const pill = document.getElementById('overallStatus');
+  const badge = document.getElementById('overallStatus');
   const text = document.getElementById('overallStatusText');
   const banner = document.getElementById('alertBanner');
   const hasSevere = warnings.some(w => w.level === 'severe');
   const hasWarning = warnings.some(w => w.level === 'warning');
 
+  // 헤더 배지 색상 클래스 토글
+  badge.classList.remove('danger', 'warning');
   if (hasSevere) {
-    pill.style.background = 'rgba(255,59,92,0.15)';
-    pill.style.borderColor = 'var(--danger)';
-    pill.style.color = 'var(--danger)';
-    pill.querySelector('.dot').style.background = 'var(--danger)';
-    text.textContent = '경계';
+    badge.classList.add('danger');
+    text.textContent = '경계 발효';
     banner.style.display = 'flex';
   } else if (hasWarning) {
-    pill.style.background = 'rgba(255,170,0,0.12)';
-    pill.style.borderColor = 'var(--warning)';
-    pill.style.color = 'var(--warning)';
-    pill.querySelector('.dot').style.background = 'var(--warning)';
-    text.textContent = '주의';
+    badge.classList.add('warning');
+    text.textContent = '주의 발효';
     banner.style.display = 'flex';
   } else {
+    text.textContent = '실시간 운영';
     banner.style.display = 'none';
   }
 }
@@ -3356,18 +3437,19 @@ function renderKpiBar(data) {
   }
 }
 
-// === 테마 토글 ===
+// === 테마 토글 (라이트 = 기본, 다크는 야간 옵션) ===
 const themeBtn = document.getElementById('themeBtn');
 function setTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
-  themeBtn.textContent = theme === 'light' ? '☀' : '🌙';
+  themeBtn.textContent = theme === 'dark' ? '☀' : '🌙';
+  themeBtn.title = theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환';
   localStorage.setItem('dashboardTheme', theme);
 }
 themeBtn.addEventListener('click', () => {
-  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  const cur = document.documentElement.getAttribute('data-theme') || 'light';
   setTheme(cur === 'dark' ? 'light' : 'dark');
 });
-setTheme(localStorage.getItem('dashboardTheme') || 'dark');
+setTheme(localStorage.getItem('dashboardTheme') || 'light');
 
 // === 시군 선택 모달 ===
 const REGION_LIST = ['의정부', '양주', '동두천', '포천', '연천', '가평', '남양주', '구리', '파주', '고양'];
