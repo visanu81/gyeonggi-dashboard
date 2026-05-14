@@ -1,7 +1,7 @@
 // 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.
-// 마지막 갱신: 2026-05-14 18:14:00
+// 마지막 갱신: 2026-05-14 18:19:06
 window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 18:13:01",
+  "updated": "2026-05-14 18:18:01",
   "regions": [
     {
       "name": "의정부",
@@ -4591,73 +4591,66 @@ window.DASHBOARD_DATA = {
   "pm": [
     {
       "region": "의정부",
-      "pm10": 20,
-      "pm25": 11,
-      "grade": "good",
-      "gradeText": "좋음"
-    },
-    {
-      "region": "양주",
-      "pm10": 15,
+      "pm10": 26,
       "pm25": 8,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "동두천",
-      "pm10": 17,
-      "pm25": 7,
+      "pm10": 27,
+      "pm25": 9,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "포천",
-      "pm10": 43,
-      "pm25": 18,
+      "pm10": 37,
+      "pm25": 14,
       "grade": "normal",
       "gradeText": "보통"
     },
     {
       "region": "연천",
-      "pm10": 18,
+      "pm10": 20,
       "pm25": 14,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "가평",
-      "pm10": 14,
-      "pm25": 11,
+      "pm10": 16,
+      "pm25": 12,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "남양주",
-      "pm10": 21,
-      "pm25": 15,
+      "pm10": 16,
+      "pm25": 9,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "구리",
-      "pm10": 35,
-      "pm25": 4,
-      "grade": "normal",
-      "gradeText": "보통"
+      "pm10": 24,
+      "pm25": 9,
+      "grade": "good",
+      "gradeText": "좋음"
     },
     {
       "region": "파주",
-      "pm10": 24,
-      "pm25": 11,
+      "pm10": 25,
+      "pm25": 12,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "고양",
-      "pm10": 28,
-      "pm25": 15,
-      "grade": "good",
-      "gradeText": "좋음"
+      "pm10": 68,
+      "pm25": 27,
+      "grade": "normal",
+      "gradeText": "보통"
     }
   ],
   "fire": [
