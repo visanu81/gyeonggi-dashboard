@@ -240,6 +240,72 @@
     50% { opacity: 0.4; }
   }
 
+  /* === KPI 대시보드 바 (사령부 디스플레이) === */
+  .kpi-bar {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .kpi-item {
+    background: var(--bg-card);
+    padding: 14px 18px 14px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+    transition: background 0.2s;
+  }
+  .kpi-item::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 12px; bottom: 12px;
+    width: 3px;
+    background: var(--accent);
+  }
+  .kpi-item.alert::before { background: var(--danger); }
+  .kpi-item.warning::before { background: var(--warning); }
+  .kpi-item.alert { background: rgba(239, 68, 68, 0.06); }
+  .kpi-item.warning { background: rgba(245, 158, 11, 0.05); }
+
+  .kpi-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+  .kpi-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    letter-spacing: -0.5px;
+    white-space: nowrap;
+  }
+  .kpi-value.status-safe    { color: var(--safe); }
+  .kpi-value.status-warning { color: var(--warning); }
+  .kpi-value.status-danger  { color: var(--danger); }
+  .kpi-unit {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 600;
+    margin-left: 3px;
+  }
+
+  /* 작은 화면 — KPI 3x2 */
+  @media (max-width: 1199px) {
+    .kpi-bar { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .kpi-bar { grid-template-columns: repeat(2, 1fr); }
+    .kpi-value { font-size: 22px; }
+    .kpi-item { padding: 10px 14px 10px 18px; }
+  }
+
   /* ALERT BANNER — 절제된 발광 */
   .alert-banner {
     margin: 12px 28px 0;
@@ -1636,11 +1702,8 @@
       <span id="currentFocusRegionText">동두천</span>
       <span style="font-size:9px;margin-left:4px;">▾</span>
     </button>
-    <button class="region-changer" id="weatherImgBtn" style="background:rgba(255,170,0,0.12);border-color:var(--warning);color:var(--warning);" title="기상 레이더·위성영상 보기">
+    <button class="region-changer" id="weatherImgBtn" style="background:rgba(245,158,11,0.1);border-color:var(--warning);color:var(--warning);" title="기상 레이더·위성영상 보기">
       📡 기상영상
-    </button>
-    <button class="region-changer" id="fireInfoBtn" style="background:rgba(255,59,92,0.12);border-color:var(--danger);color:var(--danger);" title="산림청 실시간 산불정보">
-      🔥 산불정보
     </button>
     <button class="icon-btn" id="themeBtn" title="테마 전환">🌙</button>
     <div class="status-pill" id="overallStatus">
@@ -1651,6 +1714,34 @@
       <div class="clock-time" id="clockTime">--:--:--</div>
       <div class="clock-date" id="clockDate">----년 --월 --일</div>
     </div>
+  </div>
+</div>
+
+<!-- KPI 대시보드 바 (사령부 디스플레이) -->
+<div class="kpi-bar" id="kpiBar">
+  <div class="kpi-item" id="kpiStatusBox">
+    <div class="kpi-label">종합 상태</div>
+    <div class="kpi-value" id="kpiStatus">정상</div>
+  </div>
+  <div class="kpi-item">
+    <div class="kpi-label">발효 특보</div>
+    <div class="kpi-value" id="kpiWarn">0<span class="kpi-unit">건</span></div>
+  </div>
+  <div class="kpi-item">
+    <div class="kpi-label">재난문자</div>
+    <div class="kpi-value" id="kpiMsg">0<span class="kpi-unit">건</span></div>
+  </div>
+  <div class="kpi-item">
+    <div class="kpi-label">동두천 기온</div>
+    <div class="kpi-value" id="kpiTemp">--<span class="kpi-unit">°</span></div>
+  </div>
+  <div class="kpi-item">
+    <div class="kpi-label">신천 수위</div>
+    <div class="kpi-value" id="kpiRiver">--<span class="kpi-unit">m</span></div>
+  </div>
+  <div class="kpi-item">
+    <div class="kpi-label">군남댐 저수율</div>
+    <div class="kpi-value" id="kpiDam">--<span class="kpi-unit">%</span></div>
   </div>
 </div>
 
@@ -1828,33 +1919,6 @@
   </div>
   <div>
     <span>마지막 업데이트: <span id="lastUpdate">--:--</span></span>
-  </div>
-</div>
-
-<!-- 산림청 실시간 산불정보 모달 -->
-<div class="modal-overlay" id="fireInfoOverlay">
-  <div class="modal" style="max-width: 1100px;">
-    <div class="modal-header">
-      <div class="modal-title-block">
-        <div class="modal-title">🔥 실시간 산불정보</div>
-        <div class="modal-subtitle">산림청 산불상황 관제시스템 · 실시간 산불정보</div>
-      </div>
-      <button class="modal-close" id="fireInfoClose" title="닫기 (ESC)">×</button>
-    </div>
-    <div class="modal-body" style="display:block;padding:14px 18px 18px;">
-      <div class="weather-img-tabs">
-        <button class="fire-tab active" data-fire="sanbul">산불상황 관제</button>
-        <button class="fire-tab" data-fire="ffas">실시간 산불정보</button>
-        <button class="fire-tab" data-fire="nifos">산불위험예보</button>
-      </div>
-      <div class="weather-img-frame" id="fireInfoFrame" style="aspect-ratio: 16 / 11;">
-        <!-- iframe 동적 -->
-      </div>
-      <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-sub);">
-        <span>📡 산림청 실시간 시스템</span>
-        <a id="fireInfoExternal" href="https://sanbul.forest.go.kr/" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">↗ 산림청 사이트에서 보기</a>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -2536,45 +2600,7 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// ============ 산림청 실시간 산불정보 모달 ============
-const FIRE_INFO_SOURCES = {
-  sanbul: { url: 'https://sanbul.forest.go.kr/',                       label: '산림청 산불상황 관제시스템' },
-  ffas:   { url: 'https://fd.forest.go.kr/ffas/pubConn/movePage/sub1.do', label: '산림청 실시간 산불정보' },
-  nifos:  { url: 'https://forestfire.nifos.go.kr/',                    label: '국가산불위험예보시스템' },
-};
-
-function loadFireInfo(kind) {
-  const src = FIRE_INFO_SOURCES[kind];
-  if (!src) return;
-  const frame = document.getElementById('fireInfoFrame');
-  const ext = document.getElementById('fireInfoExternal');
-  frame.innerHTML = `<iframe src="${src.url}" referrerpolicy="no-referrer" allow="fullscreen" style="width:100%;height:100%;border:0;"></iframe>`;
-  ext.href = src.url;
-  ext.textContent = `↗ ${src.label} 새 창에서 보기`;
-}
-
-function openFireInfoModal() {
-  document.getElementById('fireInfoOverlay').classList.add('open');
-  document.querySelectorAll('.fire-tab').forEach((b, i) => b.classList.toggle('active', i === 0));
-  loadFireInfo('sanbul');
-}
-function closeFireInfoModal() {
-  document.getElementById('fireInfoOverlay').classList.remove('open');
-  document.getElementById('fireInfoFrame').innerHTML = '';
-}
-
-document.getElementById('fireInfoBtn').addEventListener('click', openFireInfoModal);
-document.getElementById('fireInfoClose').addEventListener('click', closeFireInfoModal);
-document.getElementById('fireInfoOverlay').addEventListener('click', (e) => {
-  if (e.target.id === 'fireInfoOverlay') closeFireInfoModal();
-});
-document.addEventListener('click', (e) => {
-  const tab = e.target.closest('.fire-tab[data-fire]');
-  if (tab) {
-    document.querySelectorAll('.fire-tab').forEach(b => b.classList.toggle('active', b === tab));
-    loadFireInfo(tab.dataset.fire);
-  }
-});
+// 산불정보 모달 제거됨 (실시간 데이터 아님)
 
 // ----- 미세먼지 상세 -----
 function buildPmModalBody(data) {
@@ -3250,6 +3276,7 @@ function renderAll(data) {
   data.pm = data.pm || [];
   data.fire = data.fire || [];
 
+  renderKpiBar(data);  // 상단 KPI 대시보드
   renderRegions(data.regions);
   renderWarnings(data.warnings, 'warningList', 'warningBadge');
   renderRivers(data.rivers);
@@ -3259,6 +3286,62 @@ function renderAll(data) {
   renderFocusMode(data);
   updateOverallStatus(data.warnings);
   updateLastUpdateTime(data.updated);
+}
+
+function renderKpiBar(data) {
+  const $ = id => document.getElementById(id);
+  const safeNum = (v, d = 1) => (v != null && !isNaN(v)) ? Number(v).toFixed(d) : '-';
+
+  // 종합 상태
+  const warnings = data.warnings || [];
+  const hasSevere = warnings.some(w => w.level === 'severe');
+  const hasWarn = warnings.some(w => w.level === 'warning');
+  const statusBox = $('kpiStatusBox');
+  const statusVal = $('kpiStatus');
+  statusBox.classList.remove('alert', 'warning');
+  statusVal.classList.remove('status-safe', 'status-warning', 'status-danger');
+  if (hasSevere) {
+    statusVal.textContent = '경계'; statusVal.classList.add('status-danger');
+    statusBox.classList.add('alert');
+  } else if (hasWarn) {
+    statusVal.textContent = '주의'; statusVal.classList.add('status-warning');
+    statusBox.classList.add('warning');
+  } else {
+    statusVal.textContent = '정상'; statusVal.classList.add('status-safe');
+  }
+
+  // 발효 특보 수
+  $('kpiWarn').innerHTML = `${warnings.length}<span class="kpi-unit">건</span>`;
+
+  // 재난문자 수 (북부+경기도 전역 우선, 없으면 전체 카운트)
+  const msgs = data.messages || [];
+  $('kpiMsg').innerHTML = `${msgs.length}<span class="kpi-unit">건</span>`;
+
+  // 동두천 기온
+  const ddc = (data.regions || []).find(r => r.name === '동두천');
+  const temp = ddc ? safeNum(ddc.temp) : '-';
+  $('kpiTemp').innerHTML = `${temp}<span class="kpi-unit">°</span>`;
+
+  // 신천 (동두천 송천교) 수위
+  const river = (data.rivers || []).find(r => r.name.includes('동두천 송천교'));
+  if (river) {
+    const cls = river.level === 'danger' ? 'status-danger' : (river.level === 'warning' ? 'status-warning' : '');
+    $('kpiRiver').className = 'kpi-value ' + cls;
+    $('kpiRiver').innerHTML = `${river.value.toFixed(2)}<span class="kpi-unit">m</span>`;
+  } else {
+    $('kpiRiver').innerHTML = `--<span class="kpi-unit">m</span>`;
+  }
+
+  // 군남댐 저수율
+  const dam = (data.rivers || []).find(r => r.api === 'dam');
+  if (dam && dam.dam_info) {
+    const rate = dam.dam_info.storage_rate;
+    const cls = (rate || 0) >= 80 ? 'status-warning' : '';
+    $('kpiDam').className = 'kpi-value ' + cls;
+    $('kpiDam').innerHTML = rate != null ? `${rate.toFixed(0)}<span class="kpi-unit">%</span>` : `--<span class="kpi-unit">%</span>`;
+  } else {
+    $('kpiDam').innerHTML = `--<span class="kpi-unit">%</span>`;
+  }
 }
 
 // === 테마 토글 ===
