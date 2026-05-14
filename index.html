@@ -1892,6 +1892,7 @@
     <button class="region-changer" id="weatherImgBtn" title="기상 레이더·위성영상 보기">
       📡 기상영상
     </button>
+    <button class="icon-btn" id="alarmTestBtn" title="알람 테스트 — 현재 위급도에 맞는 알람음 재생" style="font-size:14px;">🚨</button>
     <button class="icon-btn" id="muteBtn" title="알람 사운드 켜기/끄기">🔊</button>
     <button class="icon-btn" id="themeBtn" title="테마 전환">🌙</button>
     <div class="header-info-block">
@@ -3589,8 +3590,19 @@ function playAlarm(level) {
 }
 
 // 첫 사용자 클릭으로 오디오 활성화 (브라우저 정책)
+// + 활성화 순간 발효 중 특보가 있으면 즉시 알람 (사장님이 시연 시 들리도록)
 document.addEventListener('click', () => {
-  if (!audioReady) ensureAudio();
+  if (!audioReady) {
+    ensureAudio();
+    // 200ms 후 현재 발효 중 특보 확인 후 알람
+    setTimeout(() => {
+      const warnings = (typeof DATA !== 'undefined' && DATA.warnings) ? DATA.warnings : [];
+      if (warnings.length > 0 && !soundMuted) {
+        const hasSevere = warnings.some(w => w.level === 'severe');
+        playAlarm(hasSevere ? 'severe' : 'warning');
+      }
+    }, 200);
+  }
 }, { once: false });
 
 // 새 특보 감지 (이전 발효 특보와 비교)
@@ -3598,24 +3610,33 @@ let lastAlertSignature = null;
 function checkNewAlert(warnings) {
   const sig = warnings.map(w => w.type + w.area).sort().join('|');
   if (lastAlertSignature === null) {
-    // 첫 로드: 비교만, 알람 X
     lastAlertSignature = sig;
     return;
   }
   if (sig === lastAlertSignature) return;
-  // 변화 있음 — 알람
   const newCount = warnings.length;
   const prevWasEmpty = lastAlertSignature === '';
   const hasSevere = warnings.some(w => w.level === 'severe');
-  const hasWarn = warnings.some(w => w.level === 'warning');
   if (newCount > 0 && prevWasEmpty) {
-    // 0건 → 발효 (가장 중요한 알람)
     playAlarm(hasSevere ? 'severe' : 'warning');
   } else if (hasSevere && !lastAlertSignature.includes('경보')) {
-    // 주의 → 경보 격상
     playAlarm('severe');
   }
   lastAlertSignature = sig;
+}
+
+// 알람 테스트 버튼 (수동 재생)
+function testAlarm() {
+  ensureAudio();
+  const warnings = (typeof DATA !== 'undefined' && DATA.warnings) ? DATA.warnings : [];
+  const hasSevere = warnings.some(w => w.level === 'severe');
+  const hasWarn = warnings.some(w => w.level === 'warning');
+  if (soundMuted) {
+    soundMuted = false;
+    localStorage.setItem('alarmMuted', '0');
+    refreshMuteBtn();
+  }
+  setTimeout(() => playAlarm(hasSevere ? 'severe' : (hasWarn ? 'warning' : 'severe')), 100);
 }
 
 // 음소거 토글 버튼
@@ -3630,10 +3651,15 @@ muteBtn.addEventListener('click', () => {
   refreshMuteBtn();
   if (!soundMuted) {
     ensureAudio();
-    beep(880, 0.12, 0, 0.1);  // 활성화 확인음
+    // 활성화 확인음: 짧은 2비프
+    beep(880, 0.15, 0, 0.15);
+    beep(1100, 0.15, 0.2, 0.15);
   }
 });
 refreshMuteBtn();
+
+// 알람 테스트 버튼
+document.getElementById('alarmTestBtn').addEventListener('click', testAlarm);
 
 // === 테마 토글 (라이트 = 기본, 다크는 야간 옵션) ===
 const themeBtn = document.getElementById('themeBtn');
