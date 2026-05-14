@@ -1,7 +1,7 @@
 // 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.
-// 마지막 갱신: 2026-05-14 18:57:22
+// 마지막 갱신: 2026-05-14 18:59:05
 window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 18:56:36",
+  "updated": "2026-05-14 18:58:02",
   "regions": [
     {
       "name": "의정부",
@@ -767,8 +767,8 @@ window.DASHBOARD_DATA = {
           "reh": 36,
           "rn1": 0.0,
           "t1h": 27.6,
-          "vec": 334.0,
-          "wsd": 0.7,
+          "vec": 333.0,
+          "wsd": 0.6,
           "base_time": "18:00"
         },
         "rain_cumul": {
@@ -1513,8 +1513,8 @@ window.DASHBOARD_DATA = {
           "reh": 44,
           "rn1": 0.0,
           "t1h": 27.5,
-          "vec": 29.0,
-          "wsd": 0.7,
+          "vec": 27.0,
+          "wsd": 0.6,
           "base_time": "18:00"
         },
         "rain_cumul": {
@@ -2259,7 +2259,7 @@ window.DASHBOARD_DATA = {
           "reh": 39,
           "rn1": 0.0,
           "t1h": 28.1,
-          "vec": 298.0,
+          "vec": 297.0,
           "wsd": 0.2,
           "base_time": "18:00"
         },
@@ -2632,7 +2632,7 @@ window.DASHBOARD_DATA = {
           "reh": 37,
           "rn1": 0.0,
           "t1h": 28.5,
-          "vec": 251.0,
+          "vec": 252.0,
           "wsd": 2.5,
           "base_time": "18:00"
         },
@@ -3005,7 +3005,7 @@ window.DASHBOARD_DATA = {
           "reh": 54,
           "rn1": 0.0,
           "t1h": 25.8,
-          "vec": 250.0,
+          "vec": 251.0,
           "wsd": 3.6,
           "base_time": "18:00"
         },
