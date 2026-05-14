@@ -1,7 +1,7 @@
 // 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.
-// 마지막 갱신: 2026-05-14 15:04:22
+// 마지막 갱신: 2026-05-14 15:09:06
 window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 15:03:02",
+  "updated": "2026-05-14 15:08:02",
   "regions": [
     {
       "name": "의정부",
@@ -3745,10 +3745,6 @@ window.DASHBOARD_DATA = {
       "level": "safe",
       "history": [
         {
-          "time": "2026051315",
-          "value": 1.28
-        },
-        {
           "time": "2026051316",
           "value": 1.28
         },
@@ -3838,6 +3834,10 @@ window.DASHBOARD_DATA = {
         },
         {
           "time": "2026051414",
+          "value": 1.27
+        },
+        {
+          "time": "2026051415",
           "value": 1.27
         }
       ],
@@ -3965,15 +3965,11 @@ window.DASHBOARD_DATA = {
     {
       "name": "신천 (연천)",
       "code": "1022670",
-      "value": 0.87,
+      "value": 0.86,
       "warning": 3.5,
       "danger": 5.5,
       "level": "safe",
       "history": [
-        {
-          "time": "2026051315",
-          "value": 0.88
-        },
         {
           "time": "2026051316",
           "value": 0.88
@@ -4065,25 +4061,25 @@ window.DASHBOARD_DATA = {
         {
           "time": "2026051414",
           "value": 0.87
+        },
+        {
+          "time": "2026051415",
+          "value": 0.86
         }
       ],
-      "delta_1h": 0.0,
-      "delta_3h": 0.0,
+      "delta_1h": -0.01,
+      "delta_3h": -0.01,
       "has_cctv": true,
       "api": "waterlevel"
     },
     {
       "name": "임진강 (연천 임진교)",
       "code": "1021680",
-      "value": 0.58,
+      "value": 0.59,
       "warning": 5.9,
       "danger": 10.8,
       "level": "safe",
       "history": [
-        {
-          "time": "2026051315",
-          "value": 0.65
-        },
         {
           "time": "2026051316",
           "value": 0.65
@@ -4175,25 +4171,25 @@ window.DASHBOARD_DATA = {
         {
           "time": "2026051414",
           "value": 0.58
+        },
+        {
+          "time": "2026051415",
+          "value": 0.59
         }
       ],
       "delta_1h": 0.01,
-      "delta_3h": 0.0,
+      "delta_3h": 0.01,
       "has_cctv": true,
       "api": "waterlevel"
     },
     {
       "name": "한탄강 (포천 용담교)",
       "code": "1022640",
-      "value": 0.95,
+      "value": 0.96,
       "warning": 9.5,
       "danger": 18.0,
       "level": "safe",
       "history": [
-        {
-          "time": "2026051315",
-          "value": 0.99
-        },
         {
           "time": "2026051316",
           "value": 0.99
@@ -4285,10 +4281,14 @@ window.DASHBOARD_DATA = {
         {
           "time": "2026051414",
           "value": 0.95
+        },
+        {
+          "time": "2026051415",
+          "value": 0.96
         }
       ],
-      "delta_1h": -0.01,
-      "delta_3h": -0.02,
+      "delta_1h": 0.01,
+      "delta_3h": 0.0,
       "has_cctv": true,
       "api": "waterlevel"
     },
@@ -4300,10 +4300,6 @@ window.DASHBOARD_DATA = {
       "danger": 8.0,
       "level": "safe",
       "history": [
-        {
-          "time": "2026051315",
-          "value": 1.0
-        },
         {
           "time": "2026051316",
           "value": 1.0
@@ -4394,6 +4390,10 @@ window.DASHBOARD_DATA = {
         },
         {
           "time": "2026051414",
+          "value": 0.99
+        },
+        {
+          "time": "2026051415",
           "value": 0.99
         }
       ],
@@ -4411,10 +4411,6 @@ window.DASHBOARD_DATA = {
       "level": "safe",
       "history": [
         {
-          "time": "2026051315",
-          "value": 0.4
-        },
-        {
           "time": "2026051316",
           "value": 0.4
         },
@@ -4505,6 +4501,10 @@ window.DASHBOARD_DATA = {
         {
           "time": "2026051414",
           "value": 0.39
+        },
+        {
+          "time": "2026051415",
+          "value": 0.39
         }
       ],
       "delta_1h": 0.0,
@@ -4513,7 +4513,20 @@ window.DASHBOARD_DATA = {
       "api": "waterlevel"
     }
   ],
-  "messages": [],
+  "messages": [
+    {
+      "sender": "광주시",
+      "time": "10:15",
+      "text": "금일 야외활동인구 증가 예상으로 산불위험 높음. ▲광주시 전지역 입산 금지 ▲산림 내 불법 야영·취사 금지. 현재 단속 중. 적발 시 과태료 부과.[광주시]",
+      "region": "광주"
+    },
+    {
+      "sender": "김포시",
+      "time": "08:20",
+      "text": "현재 고촌읍 향산리 1-44 한강시네폴리스 서울에서 김포방향 1차로 차량 연쇄 추돌사고로 정체 발생 중. 교통정보 확인 바랍니다. [김포시]",
+      "region": "김포"
+    }
+  ],
   "forecast": [
     {
       "time": "16시",
