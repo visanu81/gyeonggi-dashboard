@@ -626,9 +626,9 @@ def fetch_pm():
 
 def fetch_fire_incidents():
     """산림청 산불발생통계정보 — 올해 산불 발생 통계.
-    endpoint: https://apis.data.go.kr/1400000/forestStusService/getfirestatsservice
-    활용신청 직후엔 403 발생 가능 (1~2시간 활성화 대기)."""
-    url = 'https://apis.data.go.kr/1400000/forestStusService/getfirestatsservice'
+    endpoint: https://apis.data.go.kr/1400000/forestStusServiceAPI/getfirestatsservice
+    활용신청 직후엔 403/500 발생 가능 (1~2시간 활성화 대기)."""
+    url = 'https://apis.data.go.kr/1400000/forestStusServiceAPI/getfirestatsservice'
     year = datetime.now().strftime('%Y')
     try:
         # XML 응답이 기본 — _type=json 시도 후 안 되면 XML 파싱
