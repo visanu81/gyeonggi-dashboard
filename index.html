@@ -1,0 +1,3203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>경기북부 기상·재난 상황판</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* === 다크 테마 (기본) === */
+  :root {
+    --bg: #060a18;
+    --bg-grad-from: #0a1530;
+    --bg-grad-to: #060a18;
+    --bg-card: #0f1730;
+    --bg-card-2: #141d3a;
+    --border: #1f2a4e;
+    --text: #e6ebff;
+    --text-dim: #8a96bd;
+    --text-sub: #5a6890;
+    --accent: #00d4ff;
+    --accent-glow: rgba(0, 212, 255, 0.4);
+    --danger: #ff3b5c;
+    --danger-bg: rgba(255, 59, 92, 0.12);
+    --warning: #ffaa00;
+    --warning-bg: rgba(255, 170, 0, 0.12);
+    --caution: #ffd84d;
+    --safe: #00d68f;
+    --safe-bg: rgba(0, 214, 143, 0.1);
+    --highlight-bg: rgba(0, 212, 255, 0.08);
+    --pm-good: #4a90e2;
+    --pm-normal: #00d68f;
+    --pm-bad: #ffaa00;
+    --pm-vbad: #ff3b5c;
+  }
+
+  /* === 라이트 테마 === */
+  [data-theme="light"] {
+    --bg: #f3f5fa;
+    --bg-grad-from: #ffffff;
+    --bg-grad-to: #e9eef7;
+    --bg-card: #ffffff;
+    --bg-card-2: #f5f7fb;
+    --border: #dde3ed;
+    --text: #1a2138;
+    --text-dim: #5a6890;
+    --text-sub: #8a96bd;
+    --accent: #0077b6;
+    --accent-glow: rgba(0, 119, 182, 0.3);
+    --danger: #d32f3a;
+    --danger-bg: rgba(211, 47, 58, 0.08);
+    --warning: #e08e00;
+    --warning-bg: rgba(224, 142, 0, 0.1);
+    --caution: #f5b800;
+    --safe: #00a672;
+    --safe-bg: rgba(0, 166, 114, 0.08);
+    --highlight-bg: rgba(0, 119, 182, 0.06);
+  }
+
+  html, body {
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-feature-settings: 'tnum';
+    transition: background 0.3s, color 0.3s;
+    /* 스크롤바 완전 숨김 (Firefox / IE / Edge) */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  /* 스크롤바 완전 숨김 (Chrome / Safari / Edge) — 단, 스크롤 동작은 가능 */
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+  body {
+    background: radial-gradient(ellipse at top, var(--bg-grad-from) 0%, var(--bg-grad-to) 70%) fixed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: linear-gradient(180deg, var(--highlight-bg) 0%, transparent 100%);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 14px; }
+
+  .logo-mark {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), #0088ff);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 18px var(--accent-glow);
+    font-weight: 900; font-size: 18px;
+    color: #fff;
+  }
+
+  .title { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
+  .subtitle { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+  .header-right { display: flex; align-items: center; gap: 18px; }
+
+  /* 토글 그룹 */
+  .toggle-group {
+    display: inline-flex;
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .toggle-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .toggle-btn:hover { color: var(--text); }
+  .toggle-btn.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 8px var(--accent-glow);
+  }
+  [data-theme="light"] .toggle-btn.active { color: #fff; }
+
+  .icon-btn {
+    width: 34px; height: 34px;
+    border: 1px solid var(--border);
+    background: var(--bg-card-2);
+    border-radius: 8px;
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    transition: all 0.2s;
+  }
+  .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* 시군 변경 버튼 (내관서 중점 모드일 때만 보임) */
+  .region-changer {
+    display: inline-flex; align-items: center;
+    padding: 7px 12px;
+    background: var(--highlight-bg);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .region-changer:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* 시군 선택 그리드 (선택 모달 안) */
+  .region-pick-btn {
+    padding: 14px 8px;
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .region-pick-btn:hover {
+    border-color: var(--accent);
+    background: var(--highlight-bg);
+    color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .region-pick-btn.current {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  .clock-block { text-align: right; }
+  .clock-time {
+    font-size: 24px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+  .clock-date { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 12px;
+    background: var(--safe-bg);
+    border: 1px solid var(--safe);
+    border-radius: 18px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--safe);
+  }
+  .status-pill .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--safe);
+    animation: blink-soft 2s infinite;
+  }
+  @keyframes blink-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ALERT BANNER */
+  .alert-banner {
+    margin: 12px 24px 0;
+    padding: 14px 20px;
+    background: linear-gradient(90deg, var(--danger-bg), rgba(255,59,92,0.02));
+    border: 1px solid var(--danger);
+    border-left: 4px solid var(--danger);
+    border-radius: 10px;
+    display: flex; align-items: center; gap: 16px;
+    animation: pulse-danger 2s infinite;
+  }
+  @keyframes pulse-danger {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,59,92,0.3); }
+    50% { box-shadow: 0 0 20px 4px rgba(255,59,92,0.15); }
+  }
+  .alert-icon {
+    width: 40px; height: 40px;
+    background: var(--danger);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+    color: #fff;
+  }
+  .alert-content { flex: 1; min-width: 0; }
+  .alert-title {
+    font-size: 15px; font-weight: 800; color: var(--danger);
+    margin-bottom: 3px;
+  }
+  .alert-message { font-size: 13px; color: var(--text); }
+  .alert-time { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+
+  /* MAIN GRID — 광역 모드 (자동 높이, 콘텐츠 잘림 없음) */
+  .main-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr;
+    grid-auto-rows: minmax(min-content, max-content);
+    gap: 12px;
+    padding: 12px 24px 14px;
+  }
+
+  .panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .panel-region    { grid-column: 1; grid-row: 1 / span 3; }
+  .panel-warning   { grid-column: 2; grid-row: 1; }
+  .panel-pm        { grid-column: 2; grid-row: 2; }
+  .panel-fire      { grid-column: 2; grid-row: 3; }
+  .panel-msg       { grid-column: 3; grid-row: 1; }
+  .panel-river     { grid-column: 3; grid-row: 2; }
+  .panel-forecast  { grid-column: 3; grid-row: 3; }
+
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card-2);
+    flex-shrink: 0;
+  }
+  .panel-title {
+    font-size: 12px; font-weight: 700;
+    color: var(--text);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .panel-title::before {
+    content: ''; width: 3px; height: 12px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+  .panel-badge {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: var(--border);
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+
+  .panel-body {
+    flex: 1; padding: 12px;
+    overflow: visible;
+    min-height: 0;
+  }
+  /* 패널 내부 스크롤바 숨김 (혹시 발생해도 안 보이게) */
+  .panel-body { scrollbar-width: none; -ms-overflow-style: none; }
+  .panel-body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+  /* 시군 그리드 */
+  .region-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .region-card {
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    position: relative;
+    transition: all 0.2s;
+  }
+  .region-card.warning { border-color: var(--warning); background: var(--warning-bg); }
+  .region-card.danger { border-color: var(--danger); background: var(--danger-bg); }
+  .region-card.dongducheon {
+    border-color: var(--accent);
+    background: var(--highlight-bg);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+  }
+
+  .region-name {
+    font-size: 12px; font-weight: 700;
+    margin-bottom: 5px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .region-tag {
+    font-size: 9px; padding: 1px 5px; border-radius: 4px;
+    background: var(--warning); color: #000;
+    font-weight: 700;
+  }
+  .region-tag.danger { background: var(--danger); color: #fff; }
+
+  .region-main {
+    display: flex; align-items: baseline; gap: 6px;
+    margin-bottom: 6px;
+  }
+  .region-temp {
+    font-size: 22px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    line-height: 1;
+  }
+  .region-weather { font-size: 11px; color: var(--text-dim); }
+
+  .region-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  .region-stats div { display: flex; flex-direction: column; gap: 1px; }
+  .region-stats .v { color: var(--text); font-weight: 600; font-size: 11px; }
+
+  /* 특보 */
+  .warning-item {
+    padding: 9px 11px;
+    margin-bottom: 6px;
+    background: var(--bg-card-2);
+    border-left: 3px solid var(--warning);
+    border-radius: 5px;
+  }
+  .warning-item:last-child { margin-bottom: 0; }
+  .warning-item.severe { border-left-color: var(--danger); }
+  .warning-item.info { border-left-color: var(--accent); }
+  .warning-top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 3px;
+  }
+  .warning-name { font-size: 12px; font-weight: 700; color: var(--text); }
+  .warning-time { font-size: 10px; color: var(--text-sub); }
+  .warning-area { font-size: 11px; color: var(--text-dim); }
+
+  /* 재난문자 */
+  .msg-item {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .msg-item:last-child { border-bottom: none; }
+  .msg-top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 3px;
+  }
+  .msg-sender { font-size: 10px; color: var(--accent); font-weight: 600; }
+  .msg-time { font-size: 10px; color: var(--text-sub); }
+  .msg-text {
+    font-size: 11px; color: var(--text);
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* 하천 */
+  .river-item { margin-bottom: 10px; }
+  .river-item:last-child { margin-bottom: 0; }
+  .river-top {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 4px;
+  }
+  .river-name { font-size: 12px; font-weight: 700; }
+  .river-value {
+    font-size: 13px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .river-value.safe { color: var(--safe); }
+  .river-value.warning { color: var(--warning); }
+  .river-value.danger { color: var(--danger); }
+  .river-bar-bg {
+    height: 6px; background: var(--border); border-radius: 3px;
+    overflow: hidden;
+  }
+  .river-bar-fill {
+    height: 100%; border-radius: 3px;
+    transition: width 0.5s;
+  }
+  .river-bar-fill.safe { background: linear-gradient(90deg, var(--safe), #4ade80); }
+  .river-bar-fill.warning { background: linear-gradient(90deg, var(--warning), #ffd84d); }
+  .river-bar-fill.danger { background: linear-gradient(90deg, var(--danger), #ff7090); }
+  .river-stats {
+    display: flex; justify-content: space-between;
+    font-size: 10px; color: var(--text-sub);
+    margin-top: 3px;
+  }
+
+  /* 미세먼지 */
+  .pm-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .pm-card {
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 10px;
+  }
+  .pm-region {
+    font-size: 11px; font-weight: 700; color: var(--text);
+    margin-bottom: 4px;
+  }
+  .pm-grade {
+    font-size: 11px; font-weight: 800;
+    margin-bottom: 2px;
+  }
+  .pm-grade.good { color: var(--pm-good); }
+  .pm-grade.normal { color: var(--pm-normal); }
+  .pm-grade.bad { color: var(--pm-bad); }
+  .pm-grade.vbad { color: var(--pm-vbad); }
+  .pm-values { font-size: 10px; color: var(--text-dim); }
+  .pm-values .v { color: var(--text); font-weight: 600; }
+
+  /* 산불위험 */
+  .fire-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .fire-card {
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .fire-card.level-2 { border-color: var(--caution); }
+  .fire-card.level-3 { border-color: var(--warning); background: var(--warning-bg); }
+  .fire-card.level-4 { border-color: var(--danger); background: var(--danger-bg); }
+  .fire-region { font-size: 11px; font-weight: 700; color: var(--text); }
+  .fire-gauge {
+    width: 100%; height: 6px;
+    background: var(--border);
+    border-radius: 3px; overflow: hidden;
+  }
+  .fire-gauge-fill {
+    height: 100%; border-radius: 3px;
+  }
+  .fire-label {
+    font-size: 11px; font-weight: 800;
+  }
+  .fire-label.level-1 { color: var(--safe); }
+  .fire-label.level-2 { color: var(--caution); }
+  .fire-label.level-3 { color: var(--warning); }
+  .fire-label.level-4 { color: var(--danger); }
+
+  /* 예보 */
+  .forecast-row {
+    display: flex; gap: 5px;
+    min-height: 110px;
+  }
+  .forecast-col {
+    flex: 1;
+    background: var(--bg-card-2);
+    border-radius: 5px;
+    padding: 10px 4px;
+    text-align: center;
+    display: flex; flex-direction: column; justify-content: space-between;
+    gap: 6px;
+    min-width: 0;
+  }
+  .forecast-time { font-size: 10px; color: var(--text-dim); font-weight: 600; }
+  .forecast-icon { font-size: 22px; margin: 2px 0; }
+  .forecast-temp {
+    font-size: 14px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .forecast-rain { font-size: 10px; color: var(--accent); font-weight: 700; }
+
+  /* 동두천 중점 모드의 시간대별 예보는 더 크게 */
+  .focus-sub-card .forecast-row { min-height: 140px; }
+  .focus-sub-card .forecast-col { padding: 12px 6px; gap: 8px; }
+  .focus-sub-card .forecast-time { font-size: 11px; }
+  .focus-sub-card .forecast-icon { font-size: 26px; }
+  .focus-sub-card .forecast-temp { font-size: 16px; }
+  .focus-sub-card .forecast-rain { font-size: 11px; }
+
+  /* === 동두천 중점 모드 — 3x3 그리드 === */
+  .main-grid.focus-mode {
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-auto-rows: minmax(min-content, max-content);
+  }
+
+  /* 동두천 패널 위치 (3x3 + 가로 전체 한 줄) */
+  body[data-view="focus"] .focus-panel-weather  { grid-column: 1; grid-row: 1; }
+  body[data-view="focus"] .focus-panel-river    { grid-column: 2; grid-row: 1; }
+  body[data-view="focus"] .focus-panel-pm       { grid-column: 3; grid-row: 1; }
+  body[data-view="focus"] .focus-panel-forecast { grid-column: 1; grid-row: 2; }
+  body[data-view="focus"] .focus-panel-fire     { grid-column: 2; grid-row: 2; }
+  body[data-view="focus"] .focus-panel-warning  { grid-column: 3; grid-row: 2; }
+  body[data-view="focus"] .focus-panel-msg      { grid-column: 1 / span 2; grid-row: 3; }
+  body[data-view="focus"] .focus-panel-broad    { grid-column: 3; grid-row: 3; }
+  body[data-view="focus"] .focus-panel-hourly   { grid-column: 1 / -1; grid-row: 4; }
+
+  /* === 24시간 상세 시간대별 표 === */
+  .hourly-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+  .hourly-table th {
+    padding: 6px 4px;
+    text-align: left;
+    color: var(--text-dim);
+    font-weight: 700;
+    font-size: 10px;
+    background: var(--bg-card-2);
+    position: sticky; left: 0; z-index: 2;
+    border-right: 1px solid var(--border);
+    min-width: 60px;
+    white-space: nowrap;
+  }
+  .hourly-table td {
+    padding: 6px 4px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    min-width: 38px;
+    color: var(--text);
+  }
+  .hourly-table td.label {
+    font-size: 10px; color: var(--text-dim); font-weight: 600;
+  }
+  .hourly-table tr.row-hour td { color: var(--accent); font-weight: 700; font-size: 11px; }
+  .hourly-table tr.row-icon td { font-size: 18px; line-height: 1; padding: 4px; }
+  .hourly-table tr.row-temp td { font-weight: 700; font-size: 12px; }
+  .hourly-table tr.row-feel td { color: var(--text-dim); font-size: 10px; }
+  .hourly-table tr.row-rain td.has-rain { color: var(--accent); font-weight: 700; }
+  .hourly-table tr.row-rain td.severe-rain { color: var(--danger); font-weight: 700; background: var(--danger-bg); }
+  .hourly-table tr.row-pop td.has-pop { color: var(--accent); font-weight: 600; }
+  .hourly-table tr.row-pop td.high-pop { color: var(--warning); font-weight: 700; }
+  .hourly-table tr.row-wind td { color: var(--text); font-size: 10px; }
+  .hourly-table tr.row-humid td { color: var(--text-dim); }
+
+  /* 야간 시간대 (0~6시, 19~23시) 배경 약간 어둡게 */
+  .hourly-table td.night { background: rgba(255,255,255,0.02); }
+
+  /* 동두천 메인 카드(현재 기상)는 강조 테두리 */
+  .focus-panel-weather {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 18px var(--accent-glow);
+  }
+
+  /* === 동두천 현재 기상 카드 내부 === */
+  .focus-weather-body {
+    display: flex; flex-direction: column;
+    gap: 14px;
+    padding: 14px;
+  }
+  .focus-temp-row {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .focus-temp-icon { font-size: 44px; line-height: 1; }
+  .focus-temp-block { flex: 1; min-width: 0; }
+  .focus-temp-big {
+    font-size: 44px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: var(--text);
+  }
+  .focus-weather-sub {
+    font-size: 12px; color: var(--text-dim); margin-top: 4px;
+  }
+  .focus-mini-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .focus-mini-stats > div {
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 6px;
+    text-align: center;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .focus-mini-stats span {
+    font-size: 10px; color: var(--text-dim);
+  }
+  .focus-mini-stats .v {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* === 신천 수위 카드 === */
+  .focus-river-body {
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    gap: 10px;
+    padding: 16px;
+  }
+  .river-big {
+    display: flex; align-items: baseline; gap: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .river-big .num { font-size: 38px; font-weight: 800; }
+  .river-big .unit { font-size: 16px; font-weight: 600; }
+  .river-big.safe .num,    .river-big.safe .unit    { color: var(--safe); }
+  .river-big.warning .num, .river-big.warning .unit { color: var(--warning); }
+  .river-big.danger .num,  .river-big.danger .unit  { color: var(--danger); }
+
+  /* === 미세먼지 카드 === */
+  .focus-pm-body {
+    display: flex; flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px;
+  }
+  .pm-big-item {
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 12px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .pm-big-label { font-size: 12px; color: var(--text-dim); font-weight: 600; }
+  .pm-big-value {
+    font-size: 20px; font-weight: 800; color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .pm-big-value .unit { font-size: 10px; color: var(--text-dim); margin-left: 3px; font-weight: 600; }
+
+  /* === 산불 위험 카드 === */
+  .focus-fire-body {
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    gap: 12px;
+    padding: 16px;
+  }
+  .fire-big-label {
+    font-size: 30px; font-weight: 800;
+  }
+  .fire-big-gauge {
+    width: 80%; height: 8px;
+    background: var(--border);
+    border-radius: 4px; overflow: hidden;
+  }
+  .fire-big-gauge > div { height: 100%; border-radius: 4px; }
+  .fire-big-sub {
+    font-size: 11px; color: var(--text-dim);
+  }
+
+  /* === 동두천 발효 특보 카드 === */
+  .focus-warn-body { padding: 12px; }
+  .focus-warn-empty {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px 10px;
+    color: var(--safe);
+    font-size: 13px; font-weight: 600;
+    gap: 4px;
+  }
+  .focus-warn-empty .icon { font-size: 28px; }
+
+  /* === 공통: 데이터 없음 표시 === */
+  .focus-empty {
+    text-align: center;
+    color: var(--text-sub);
+    padding: 30px 10px;
+    font-size: 12px;
+  }
+
+  /* === 미세먼지 시군 비교 차트 === */
+  .pm-compare-table {
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr 60px;
+    gap: 6px 12px;
+    align-items: center;
+    font-size: 12px;
+  }
+  .pm-compare-row {
+    display: contents;
+  }
+  .pm-compare-row > div {
+    padding: 4px 0;
+  }
+  .pm-compare-row .name { font-weight: 700; }
+  .pm-compare-row .bar-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    height: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .pm-compare-row .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+  .pm-compare-row .bar-fill.good   { background: linear-gradient(90deg, var(--pm-good), #6ba9e8); }
+  .pm-compare-row .bar-fill.normal { background: linear-gradient(90deg, var(--pm-normal), #4ade80); }
+  .pm-compare-row .bar-fill.bad    { background: linear-gradient(90deg, var(--pm-bad), #ffd84d); }
+  .pm-compare-row .bar-fill.vbad   { background: linear-gradient(90deg, var(--pm-vbad), #ff7090); }
+  .pm-compare-row .bar-value {
+    position: absolute; left: 6px; top: 50%; transform: translateY(-50%);
+    font-size: 10px; font-weight: 700; color: #fff;
+    text-shadow: 0 0 3px rgba(0,0,0,0.5);
+  }
+  .pm-compare-row .grade {
+    text-align: right; font-weight: 700; font-size: 11px;
+  }
+  .pm-compare-row .grade.good   { color: var(--pm-good); }
+  .pm-compare-row .grade.normal { color: var(--pm-normal); }
+  .pm-compare-row .grade.bad    { color: var(--pm-bad); }
+  .pm-compare-row .grade.vbad   { color: var(--pm-vbad); }
+
+  .pm-standard-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  .pm-standard-table th, .pm-standard-table td {
+    padding: 6px 8px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .pm-standard-table th {
+    background: var(--bg-card-2);
+    color: var(--text-dim);
+    font-weight: 700;
+  }
+  .pm-standard-table td.good   { color: var(--pm-good); font-weight: 700; }
+  .pm-standard-table td.normal { color: var(--pm-normal); font-weight: 700; }
+  .pm-standard-table td.bad    { color: var(--pm-bad); font-weight: 700; }
+  .pm-standard-table td.vbad   { color: var(--pm-vbad); font-weight: 700; }
+
+  /* 산불 등급 표 */
+  .fire-grade-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--text-dim);
+    border-radius: 7px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+  }
+  .fire-grade-card.lv1 { border-left-color: var(--safe); }
+  .fire-grade-card.lv2 { border-left-color: var(--caution); }
+  .fire-grade-card.lv3 { border-left-color: var(--warning); }
+  .fire-grade-card.lv4 { border-left-color: var(--danger); }
+  .fire-grade-card .grade-name {
+    font-size: 13px; font-weight: 800;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 3px;
+  }
+  .fire-grade-card.lv1 .grade-name { color: var(--safe); }
+  .fire-grade-card.lv2 .grade-name { color: var(--caution); }
+  .fire-grade-card.lv3 .grade-name { color: var(--warning); }
+  .fire-grade-card.lv4 .grade-name { color: var(--danger); }
+  .fire-grade-card .grade-desc { font-size: 11px; color: var(--text-dim); line-height: 1.5; }
+
+  /* 패널 헤더 클릭 가능 표시 */
+  .clickable-panel { cursor: pointer; transition: border-color 0.15s; }
+  .clickable-panel:hover { border-color: var(--accent); }
+  .clickable-panel .panel-header::after {
+    content: '↗';
+    color: var(--text-sub);
+    font-size: 11px;
+    margin-left: 4px;
+  }
+
+  /* 메시지 항목 클릭 가능 */
+  .msg-item { cursor: pointer; transition: background 0.15s; border-radius: 4px; padding: 8px 6px; margin: 0 -6px; }
+  .msg-item:hover { background: var(--bg-card-2); }
+
+  /* === 기상영상 모달 === */
+  .weather-img-tabs {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+  .wimg-tab {
+    padding: 7px 14px;
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .wimg-tab:hover { color: var(--text); border-color: var(--accent); }
+  .wimg-tab.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+  .weather-img-frame {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: #000;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+  }
+  .weather-img-frame iframe {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+  .weather-img-frame .fallback {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 12px;
+    padding: 30px;
+    color: var(--text-dim);
+    font-size: 13px;
+    text-align: center;
+    background: var(--bg-card-2);
+  }
+  .weather-img-frame .fallback a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 700;
+    padding: 8px 18px;
+    background: var(--highlight-bg);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+  }
+  .weather-img-frame .fallback a:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* 통보문 카드 (모달 안) */
+  .bulletin-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .bulletin-card.severe { border-left-color: var(--danger); }
+  .bulletin-card.warn { border-left-color: var(--warning); }
+  .bulletin-title {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    margin-bottom: 4px;
+  }
+  .bulletin-meta {
+    font-size: 11px; color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .bulletin-row {
+    font-size: 12px; line-height: 1.55; margin-top: 4px;
+    color: var(--text); white-space: pre-wrap;
+  }
+  .bulletin-row .lbl {
+    color: var(--text-dim); font-weight: 700;
+    display: inline-block; min-width: 44px;
+  }
+
+  .info-item {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .info-item:last-child { border-bottom: none; }
+  .info-title { font-size: 12px; color: var(--text); flex: 1; }
+  .info-time { font-size: 11px; color: var(--text-sub); white-space: nowrap; }
+
+  /* 발효 특보 패널 클릭 가능 */
+  .panel-warning, .focus-panel-warning {
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .panel-warning:hover, .focus-panel-warning:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+  .panel-warning:hover .panel-header::after,
+  .focus-panel-warning:hover .panel-header::after {
+    content: '통보문 ↗';
+    margin-left: 6px;
+    font-size: 10px;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* 미세먼지·산불 패널 클릭 가능 — hover 시 테두리 강조 */
+  .panel-pm, .panel-fire,
+  .focus-panel-pm, .focus-panel-fire {
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .panel-pm:hover, .panel-fire:hover,
+  .focus-panel-pm:hover, .focus-panel-fire:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+  /* hover 시 panel-header에 작은 안내 표시 */
+  .panel-pm:hover .panel-header::after,
+  .panel-fire:hover .panel-header::after,
+  .focus-panel-pm:hover .panel-header::after,
+  .focus-panel-fire:hover .panel-header::after {
+    content: '클릭 ↗';
+    margin-left: 6px;
+    font-size: 10px;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* === CCTV 프레임 (영상 부분만 정확히 보이도록) ===
+     홍수정보시스템 cctvView 페이지는 영상(4:3) + 헤더 + 컨트롤바 + 주소·지도보기 영역.
+     영상 본체가 페이지의 좌측·상단 일부만 차지하므로:
+     - iframe을 1.5배 확대해서 영상이 frame 전체에 차게 함
+     - translate로 위쪽 "지점명" 헤더를 끌어올려 가림
+     - frame을 16:13 비율로 잡아서 컨트롤바도 자연스럽게 노출되도록 */
+  .cctv-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 13;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+    border: 1px solid var(--border);
+  }
+  .cctv-frame iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    transform-origin: top left;
+    transform: scale(1.5) translateY(-46px);
+  }
+
+  /* === 하천 수위 차트 (모달 안) === */
+  .river-chart {
+    position: relative;
+    height: 200px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 12px 26px;
+    margin-top: 8px;
+  }
+  .river-chart-inner {
+    position: relative;
+    height: 100%;
+    display: flex; align-items: flex-end;
+    gap: 2px;
+  }
+  .river-chart-bar {
+    flex: 1;
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+    transition: opacity 0.15s, transform 0.15s;
+    cursor: default;
+    position: relative;
+  }
+  .river-chart-bar:hover { opacity: 0.85; transform: scaleY(1.02); transform-origin: bottom; }
+  .river-chart-bar.safe    { background: linear-gradient(180deg, #4ade80, var(--safe)); }
+  .river-chart-bar.warning { background: linear-gradient(180deg, #ffd84d, var(--warning)); }
+  .river-chart-bar.danger  { background: linear-gradient(180deg, #ff7090, var(--danger)); }
+
+  /* 경계선 (주의/위험 수위) */
+  .river-chart-line {
+    position: absolute;
+    left: 12px; right: 12px;
+    border-top: 1px dashed;
+    pointer-events: none;
+  }
+  .river-chart-line.warning-line { border-color: var(--warning); }
+  .river-chart-line.danger-line  { border-color: var(--danger); }
+  .river-chart-line .label {
+    position: absolute; right: 0; top: -16px;
+    font-size: 9px; font-weight: 600;
+    padding: 1px 5px; border-radius: 3px;
+  }
+  .river-chart-line.warning-line .label { color: var(--warning); background: var(--warning-bg); }
+  .river-chart-line.danger-line  .label { color: var(--danger);  background: var(--danger-bg); }
+
+  .river-chart-axis {
+    display: flex; justify-content: space-between;
+    font-size: 9px; color: var(--text-sub);
+    margin-top: 4px;
+    padding: 0 4px;
+  }
+
+  .river-stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 12px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .river-stat-card .label { font-size: 11px; color: var(--text-dim); }
+  .river-stat-card .val {
+    font-size: 15px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .river-stat-card .val.up   { color: var(--danger); }
+  .river-stat-card .val.down { color: var(--safe); }
+  .river-stat-card .val.flat { color: var(--text-dim); }
+
+  .river-item { cursor: pointer; transition: all 0.15s; padding: 8px 4px; border-radius: 5px; }
+  .river-item:hover { background: var(--bg-card-2); }
+
+  /* === 시군 상세 모달 === */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(6, 10, 24, 0.85);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+    animation: fadeIn 0.2s ease-out;
+  }
+  .modal-overlay.open { display: flex; }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .modal {
+    background: var(--bg-card);
+    border: 1px solid var(--accent);
+    border-radius: 14px;
+    width: 100%;
+    max-width: 820px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px var(--accent-glow);
+    animation: slideUp 0.25s ease-out;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .modal::-webkit-scrollbar { display: none; }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);   opacity: 1; }
+  }
+  .modal-header {
+    position: sticky; top: 0;
+    background: linear-gradient(180deg, var(--bg-card-2), var(--bg-card));
+    padding: 16px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    z-index: 1;
+  }
+  .modal-title-block { flex: 1; min-width: 0; }
+  .modal-title {
+    font-size: 22px; font-weight: 800;
+    color: var(--accent);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .modal-subtitle {
+    font-size: 11px; color: var(--text-dim); margin-top: 3px;
+  }
+  .modal-close {
+    width: 32px; height: 32px;
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .modal-close:hover { color: var(--danger); border-color: var(--danger); }
+
+  .modal-body {
+    padding: 16px 20px 20px;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 14px;
+  }
+
+  .modal-section {
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .modal-section-title {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 7px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .modal-section-title::before {
+    content: ''; width: 3px; height: 12px;
+    background: var(--accent); border-radius: 2px;
+  }
+
+  /* 모달 1열 (큰 카드): 현재 실측 + 누적 강수 */
+  .modal-col-main { grid-column: 1; display: flex; flex-direction: column; gap: 14px; }
+  .modal-col-side { grid-column: 2; display: flex; flex-direction: column; gap: 14px; }
+
+  /* 실측 헤로 */
+  .obs-hero {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 10px;
+  }
+  .obs-hero-temp {
+    font-size: 48px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: var(--text);
+  }
+  .obs-hero-info { flex: 1; min-width: 0; }
+  .obs-hero-feel {
+    font-size: 13px; color: var(--accent); font-weight: 600;
+  }
+  .obs-hero-time { font-size: 11px; color: var(--text-sub); margin-top: 3px; }
+
+  .obs-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .obs-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 10px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .obs-item .label { font-size: 11px; color: var(--text-dim); }
+  .obs-item .val {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 누적 강수 */
+  .rain-cumul-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .rain-cumul-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 6px;
+    text-align: center;
+  }
+  .rain-cumul-item.has-rain { border-color: var(--accent); background: var(--highlight-bg); }
+  .rain-cumul-item.severe { border-color: var(--danger); background: var(--danger-bg); }
+  .rain-cumul-label { font-size: 10px; color: var(--text-dim); }
+  .rain-cumul-value {
+    font-size: 18px; font-weight: 800;
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .rain-cumul-value.has-rain { color: var(--accent); }
+  .rain-cumul-value.severe { color: var(--danger); }
+  .rain-cumul-unit { font-size: 10px; color: var(--text-dim); margin-left: 2px; }
+
+  /* 예보 미니 */
+  .modal-forecast-min {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .modal-forecast-min .obs-item { flex-direction: column; align-items: flex-start; gap: 4px; }
+
+  /* 모바일 */
+  @media (max-width: 767px) {
+    .modal { max-height: 95vh; }
+    .modal-body { grid-template-columns: 1fr; padding: 12px; }
+    .modal-col-main, .modal-col-side { grid-column: 1; }
+    .obs-hero-temp { font-size: 38px; }
+    .rain-cumul-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* === 카드 클릭 가능 표시 === */
+  .region-card { cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+  .region-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+    border-color: var(--accent);
+  }
+
+  /* === 광역/동두천 모드 토글 시 보이고 숨김 === */
+  body[data-view="wide"] .focus-panel-weather,
+  body[data-view="wide"] .focus-panel-river,
+  body[data-view="wide"] .focus-panel-pm,
+  body[data-view="wide"] .focus-panel-forecast,
+  body[data-view="wide"] .focus-panel-fire,
+  body[data-view="wide"] .focus-panel-warning,
+  body[data-view="wide"] .focus-panel-msg,
+  body[data-view="wide"] .focus-panel-broad,
+  body[data-view="wide"] .focus-panel-hourly { display: none; }
+
+  /* === 기존 focus-hero 관련 (백워드 호환용 — 안 쓰지만 충돌 방지) === */
+  .focus-mode .focus-hero,
+  .focus-mode .focus-hero-top,
+  body .focus-hero {
+    display: none;
+  }
+  .focus-hero-top {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 14px;
+  }
+  .focus-hero-name {
+    font-size: 28px; font-weight: 900;
+    background: linear-gradient(135deg, var(--accent), #0088ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .focus-hero-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+  .focus-temp-big {
+    font-size: 64px; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: var(--text);
+  }
+  .focus-weather-row {
+    display: flex; align-items: baseline; gap: 14px;
+    margin-bottom: 14px;
+  }
+  .focus-weather-icon { font-size: 40px; }
+  .focus-weather-text { font-size: 16px; color: var(--text-dim); }
+
+  .focus-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .focus-stat {
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+  }
+  .focus-stat-label { font-size: 10px; color: var(--text-dim); margin-bottom: 4px; }
+  .focus-stat-value { font-size: 18px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+  .focus-stat-unit { font-size: 11px; color: var(--text-dim); margin-left: 2px; }
+
+  .focus-sub-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+  .focus-sub-card {
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    overflow: visible;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .focus-sub-card::-webkit-scrollbar { display: none; }
+  .focus-sub-title {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .focus-sub-title::before {
+    content: ''; width: 2px; height: 10px;
+    background: var(--accent);
+  }
+
+  .focus-mode .focus-side-1 { grid-column: 2; grid-row: 1; }
+  .focus-mode .focus-side-2 { grid-column: 2; grid-row: 2; }
+
+  /* 광역 모드일 때 focus 패널 숨김, 그 반대도 */
+  body[data-view="focus"] .panel-region,
+  body[data-view="focus"] .panel-warning,
+  body[data-view="focus"] .panel-pm,
+  body[data-view="focus"] .panel-fire,
+  body[data-view="focus"] .panel-msg,
+  body[data-view="focus"] .panel-river,
+  body[data-view="focus"] .panel-forecast { display: none; }
+
+  body[data-view="wide"] .focus-hero,
+  body[data-view="wide"] .focus-side-1,
+  body[data-view="wide"] .focus-side-2 { display: none; }
+
+  body[data-view="wide"] .main-grid { grid-template-columns: 1.5fr 1fr 1fr; grid-auto-rows: minmax(min-content, max-content); }
+
+  /* FOOTER */
+  .footer {
+    padding: 7px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px;
+    color: var(--text-sub);
+    border-top: 1px solid var(--border);
+    background: var(--bg-card);
+    flex-shrink: 0;
+  }
+  .footer-left { display: flex; gap: 14px; align-items: center; }
+  .refresh-indicator { display: inline-flex; align-items: center; gap: 6px; }
+  .refresh-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    animation: blink-soft 1.5s infinite;
+  }
+
+  /* ========================================================== */
+  /* === 반응형: 태블릿 (1200px 이하) — 2열 그리드 === */
+  /* ========================================================== */
+  @media (max-width: 1199px) {
+    body[data-view="wide"] .main-grid {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto auto auto;
+    }
+    body[data-view="wide"] .panel-region    { grid-column: 1 / -1; grid-row: auto; min-height: 360px; }
+    body[data-view="wide"] .panel-warning   { grid-column: 1; grid-row: auto; min-height: 200px; }
+    body[data-view="wide"] .panel-msg       { grid-column: 2; grid-row: auto; min-height: 200px; }
+    body[data-view="wide"] .panel-pm        { grid-column: 1; grid-row: auto; min-height: 200px; }
+    body[data-view="wide"] .panel-river     { grid-column: 2; grid-row: auto; min-height: 200px; }
+    body[data-view="wide"] .panel-fire      { grid-column: 1; grid-row: auto; min-height: 180px; }
+    body[data-view="wide"] .panel-forecast  { grid-column: 2; grid-row: auto; min-height: 180px; }
+
+    body[data-view="focus"] .main-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    body[data-view="focus"] .focus-panel-weather  { grid-column: 1 / -1; grid-row: 1; }
+    body[data-view="focus"] .focus-panel-river    { grid-column: 1; grid-row: 2; }
+    body[data-view="focus"] .focus-panel-pm       { grid-column: 2; grid-row: 2; }
+    body[data-view="focus"] .focus-panel-forecast { grid-column: 1 / -1; grid-row: 3; }
+    body[data-view="focus"] .focus-panel-fire     { grid-column: 1; grid-row: 4; }
+    body[data-view="focus"] .focus-panel-warning  { grid-column: 2; grid-row: 4; }
+    body[data-view="focus"] .focus-panel-msg      { grid-column: 1 / -1; grid-row: 5; }
+    body[data-view="focus"] .focus-panel-broad    { grid-column: 1 / -1; grid-row: 6; }
+    body[data-view="focus"] .focus-panel-hourly   { grid-column: 1 / -1; grid-row: 7; }
+
+    html, body { overflow: auto; height: auto; min-height: 100vh; }
+    body { overflow-x: hidden; }
+  }
+
+  /* ========================================================== */
+  /* === 반응형: 모바일 (767px 이하) — 1열 세로 스택 === */
+  /* ========================================================== */
+  @media (max-width: 767px) {
+    html, body {
+      overflow: auto;
+      height: auto;
+      min-height: 100vh;
+    }
+    body { overflow-x: hidden; }
+
+    /* 헤더: 2줄 구조 */
+    .header {
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px 14px;
+    }
+    .header-left { gap: 10px; flex: 1; min-width: 0; }
+    .title { font-size: 15px; letter-spacing: -0.5px; }
+    .subtitle { display: none; }
+    .logo-mark { width: 32px; height: 32px; font-size: 16px; }
+
+    .header-right {
+      width: 100%;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .toggle-group { order: 1; flex: 1; }
+    .toggle-btn { padding: 6px 10px; font-size: 11px; flex: 1; }
+    #themeBtn { order: 2; }
+    .status-pill {
+      order: 4; width: 100%; justify-content: center;
+      padding: 6px 10px; font-size: 11px;
+    }
+    .clock-block { order: 3; text-align: right; }
+    .clock-time { font-size: 18px; letter-spacing: 0.5px; }
+    .clock-date { font-size: 10px; }
+
+    /* 경보 배너 */
+    .alert-banner {
+      margin: 10px 14px 0;
+      padding: 12px 14px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .alert-icon { width: 34px; height: 34px; font-size: 18px; }
+    .alert-content { flex-basis: calc(100% - 50px); }
+    .alert-title { font-size: 13px; }
+    .alert-message { font-size: 12px; }
+    .alert-time { width: 100%; text-align: right; font-size: 10px; }
+
+    /* 메인 그리드 — 1열 세로 스택 */
+    .main-grid,
+    body[data-view="wide"] .main-grid,
+    body[data-view="focus"] .main-grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto;
+      gap: 10px;
+      padding: 10px 14px 14px;
+    }
+
+    .panel,
+    body[data-view="wide"] .panel-region,
+    body[data-view="wide"] .panel-warning,
+    body[data-view="wide"] .panel-pm,
+    body[data-view="wide"] .panel-fire,
+    body[data-view="wide"] .panel-msg,
+    body[data-view="wide"] .panel-river,
+    body[data-view="wide"] .panel-forecast,
+    body[data-view="focus"] .focus-panel-weather,
+    body[data-view="focus"] .focus-panel-river,
+    body[data-view="focus"] .focus-panel-pm,
+    body[data-view="focus"] .focus-panel-forecast,
+    body[data-view="focus"] .focus-panel-fire,
+    body[data-view="focus"] .focus-panel-warning,
+    body[data-view="focus"] .focus-panel-msg,
+    body[data-view="focus"] .focus-panel-broad,
+    body[data-view="focus"] .focus-panel-hourly {
+      grid-column: 1;
+      grid-row: auto;
+      min-height: auto;
+      max-height: none;
+    }
+    body[data-view="wide"] .panel-region { min-height: auto; max-height: none; }
+
+    /* 시군 카드 */
+    .region-grid { grid-template-columns: 1fr 1fr; gap: 7px; }
+    .region-card { padding: 9px; }
+    .region-name { font-size: 12px; }
+    .region-temp { font-size: 20px; }
+    .region-stats { font-size: 9px; }
+    .region-stats .v { font-size: 10px; }
+
+    /* 동두천 중점 모드 */
+    .focus-hero { padding: 14px; }
+    .focus-hero-name { font-size: 22px; }
+    .focus-hero-sub { font-size: 11px; }
+    .focus-temp-big { font-size: 48px; }
+    .focus-weather-icon { font-size: 32px; }
+    .focus-weather-text { font-size: 13px; }
+    .focus-weather-row { gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .focus-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 7px; margin-bottom: 10px; }
+    .focus-stat { padding: 8px; }
+    .focus-stat-value { font-size: 16px; }
+    .focus-stat-label { font-size: 9px; }
+    .focus-sub-grid { grid-template-columns: 1fr; gap: 10px; }
+
+    /* 미세먼지·산불 카드 */
+    .pm-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+    .pm-card { padding: 7px 9px; }
+    .pm-region { font-size: 11px; }
+    .fire-grid { grid-template-columns: 1fr 1fr; gap: 7px; }
+
+    /* 예보 카드 */
+    .forecast-col { padding: 6px 2px; }
+    .forecast-icon { font-size: 14px; }
+    .forecast-temp { font-size: 11px; }
+    .forecast-time { font-size: 9px; }
+    .forecast-rain { font-size: 8px; }
+
+    /* Footer */
+    .footer {
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 8px 14px;
+      font-size: 10px;
+      justify-content: center;
+      text-align: center;
+    }
+    .footer-left { flex-wrap: wrap; justify-content: center; gap: 8px; }
+  }
+
+  /* ========================================================== */
+  /* === 매우 작은 화면 (480px 이하) — 시군 카드도 1열 === */
+  /* ========================================================== */
+  @media (max-width: 480px) {
+    .region-grid { grid-template-columns: 1fr; }
+    .region-temp { font-size: 24px; }
+    .focus-stats-grid { grid-template-columns: 1fr 1fr; }
+    .title { font-size: 14px; }
+    .clock-time { font-size: 16px; }
+  }
+
+  /* ========================================================== */
+  /* === 가로 회전한 모바일 (landscape, 짧은 높이) === */
+  /* ========================================================== */
+  @media (max-width: 900px) and (orientation: landscape) and (max-height: 500px) {
+    .panel { max-height: 340px; }
+  }
+</style>
+</head>
+<body data-view="wide">
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo-mark">⚡</div>
+    <div>
+      <div class="title">경기북부 기상·재난 상황판</div>
+      <div class="subtitle">Gyeonggi-Bukbu Weather & Disaster Operations Center</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="toggle-group" role="tablist" aria-label="보기 모드">
+      <button class="toggle-btn active" data-view-btn="wide">광역</button>
+      <button class="toggle-btn" data-view-btn="focus">내관서 중점</button>
+    </div>
+    <button class="region-changer" id="changeRegionBtn" style="display:none;" title="관할 시군 변경">
+      <span id="currentFocusRegionText">동두천</span>
+      <span style="font-size:9px;margin-left:4px;">▾</span>
+    </button>
+    <button class="region-changer" id="weatherImgBtn" style="background:rgba(255,170,0,0.12);border-color:var(--warning);color:var(--warning);" title="기상 레이더·위성영상 보기">
+      📡 기상영상
+    </button>
+    <button class="icon-btn" id="themeBtn" title="테마 전환">🌙</button>
+    <div class="status-pill" id="overallStatus">
+      <span class="dot"></span>
+      <span id="overallStatusText">정상 운영중</span>
+    </div>
+    <div class="clock-block">
+      <div class="clock-time" id="clockTime">--:--:--</div>
+      <div class="clock-date" id="clockDate">----년 --월 --일</div>
+    </div>
+  </div>
+</div>
+
+<div class="alert-banner" id="alertBanner">
+  <div class="alert-icon">⚠</div>
+  <div class="alert-content">
+    <div class="alert-title" id="alertTitle">호우주의보 발효 중</div>
+    <div class="alert-message" id="alertMessage">의정부, 양주, 동두천, 포천 등 4개 시군 — 시간당 30mm 이상의 강한 비가 예상됩니다. 저지대 침수, 하천 범람에 주의하세요.</div>
+  </div>
+  <div class="alert-time" id="alertTime">14:32 발효</div>
+</div>
+
+<div class="main-grid">
+
+  <!-- === 광역 모드 패널 === -->
+  <div class="panel panel-region">
+    <div class="panel-header">
+      <div class="panel-title">시군별 현재 기상</div>
+      <div class="panel-badge" id="regionBadge">10개 시군</div>
+    </div>
+    <div class="panel-body">
+      <div class="region-grid" id="regionGrid"></div>
+    </div>
+  </div>
+
+  <div class="panel panel-warning">
+    <div class="panel-header">
+      <div class="panel-title">발효중 기상특보</div>
+      <div class="panel-badge" id="warningBadge">0건</div>
+    </div>
+    <div class="panel-body" id="warningList"></div>
+  </div>
+
+  <div class="panel panel-pm">
+    <div class="panel-header">
+      <div class="panel-title">미세먼지 (PM10·PM2.5)</div>
+      <div class="panel-badge">μg/m³</div>
+    </div>
+    <div class="panel-body">
+      <div class="pm-grid" id="pmGrid"></div>
+    </div>
+  </div>
+
+  <div class="panel panel-fire">
+    <div class="panel-header">
+      <div class="panel-title">산불 위험도</div>
+      <div class="panel-badge">국립산림과학원</div>
+    </div>
+    <div class="panel-body">
+      <div class="fire-grid" id="fireGrid"></div>
+    </div>
+  </div>
+
+  <div class="panel panel-msg">
+    <div class="panel-header">
+      <div class="panel-title">최근 재난문자</div>
+      <div class="panel-badge" id="msgBadge">최근 24시간</div>
+    </div>
+    <div class="panel-body" id="msgList"></div>
+  </div>
+
+  <div class="panel panel-river">
+    <div class="panel-header">
+      <div class="panel-title">주요 하천 수위</div>
+      <div class="panel-badge">실시간</div>
+    </div>
+    <div class="panel-body" id="riverList"></div>
+  </div>
+
+  <div class="panel panel-forecast">
+    <div class="panel-header">
+      <div class="panel-title">시간대별 예보 (동두천)</div>
+      <div class="panel-badge">12시간</div>
+    </div>
+    <div class="panel-body" style="padding: 10px;">
+      <div class="forecast-row" id="forecastRow"></div>
+    </div>
+  </div>
+
+  <!-- === 동두천 중점 모드 — 9개 개별 카드 === -->
+
+  <!-- 1행 -->
+  <div class="panel focus-panel-weather">
+    <div class="panel-header">
+      <div class="panel-title">동두천 현재 기상</div>
+      <div class="panel-badge" id="focusStatusBadge">정상</div>
+    </div>
+    <div class="panel-body focus-weather-body">
+      <div class="focus-temp-row">
+        <span class="focus-temp-icon" id="focusIcon">☀</span>
+        <div class="focus-temp-block">
+          <div class="focus-temp-big" id="focusTemp">--°</div>
+          <div class="focus-weather-sub" id="focusWeatherText">- · 체감 -°</div>
+        </div>
+      </div>
+      <div class="focus-mini-stats">
+        <div><span>강수</span><span class="v" id="focusRain">-</span></div>
+        <div><span>풍속</span><span class="v" id="focusWind">-</span></div>
+        <div><span>습도</span><span class="v" id="focusHumid">-</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel focus-panel-river">
+    <div class="panel-header">
+      <div class="panel-title">신천 수위</div>
+      <div class="panel-badge">동두천 송천교</div>
+    </div>
+    <div class="panel-body focus-river-body" id="focusRiverBody">
+      <div class="focus-empty">로딩 중</div>
+    </div>
+  </div>
+
+  <div class="panel focus-panel-pm">
+    <div class="panel-header">
+      <div class="panel-title">동두천 미세먼지</div>
+      <div class="panel-badge" id="focusPmGrade">-</div>
+    </div>
+    <div class="panel-body focus-pm-body" id="focusPmBody">
+      <div class="focus-empty">로딩 중</div>
+    </div>
+  </div>
+
+  <!-- 2행 -->
+  <div class="panel focus-panel-forecast">
+    <div class="panel-header">
+      <div class="panel-title">시간대별 예보</div>
+      <div class="panel-badge">12시간</div>
+    </div>
+    <div class="panel-body" style="padding: 12px;">
+      <div class="forecast-row" id="focusForecastRow"></div>
+    </div>
+  </div>
+
+  <div class="panel focus-panel-fire">
+    <div class="panel-header">
+      <div class="panel-title">산불 위험도</div>
+      <div class="panel-badge">동두천·연천</div>
+    </div>
+    <div class="panel-body focus-fire-body" id="focusFireBody">
+      <div class="focus-empty">로딩 중</div>
+    </div>
+  </div>
+
+  <div class="panel focus-panel-warning">
+    <div class="panel-header">
+      <div class="panel-title">동두천 발효 특보</div>
+      <div class="panel-badge" id="focusWarnBadge">없음</div>
+    </div>
+    <div class="panel-body focus-warn-body" id="focusWarnBody"></div>
+  </div>
+
+  <!-- 3행 -->
+  <div class="panel focus-panel-msg">
+    <div class="panel-header">
+      <div class="panel-title">재난문자</div>
+      <div class="panel-badge" id="focusMsgBadge">최근 24시간</div>
+    </div>
+    <div class="panel-body" id="focusMsgList"></div>
+  </div>
+
+  <div class="panel focus-panel-broad">
+    <div class="panel-header">
+      <div class="panel-title">광역 발효 특보</div>
+      <div class="panel-badge" id="focusWarningBadge">0건</div>
+    </div>
+    <div class="panel-body" id="focusWarningList"></div>
+  </div>
+
+  <!-- 4행: 24시간 상세 시간대별 예보 (가로 전체) -->
+  <div class="panel focus-panel-hourly">
+    <div class="panel-header">
+      <div class="panel-title">24시간 시간대별 상세 예보</div>
+      <div class="panel-badge">기상청 단기예보</div>
+    </div>
+    <div class="panel-body" style="padding:14px;overflow-x:auto;">
+      <table class="hourly-table" id="focusHourlyTable">
+        <!-- JS로 채움 -->
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <div class="footer-left">
+    <span class="refresh-indicator">
+      <span class="refresh-dot"></span>
+      <span>자동 갱신 5분</span>
+    </span>
+    <span>데이터: 기상청 · 행정안전부 · 한강홍수통제소 · 에어코리아 · 국립산림과학원</span>
+  </div>
+  <div>
+    <span>마지막 업데이트: <span id="lastUpdate">--:--</span></span>
+  </div>
+</div>
+
+<!-- 기상영상 모달 (레이더·위성·종합영상) -->
+<div class="modal-overlay" id="weatherImgOverlay">
+  <div class="modal" style="max-width: 1000px;">
+    <div class="modal-header">
+      <div class="modal-title-block">
+        <div class="modal-title">실시간 기상영상</div>
+        <div class="modal-subtitle">기상청 레이더 · 위성 · 종합영상</div>
+      </div>
+      <button class="modal-close" id="weatherImgClose" title="닫기 (ESC)">×</button>
+    </div>
+    <div class="modal-body" style="display:block;padding:14px 18px 18px;">
+      <div class="weather-img-tabs">
+        <button class="wimg-tab active" data-wimg="radar">레이더</button>
+        <button class="wimg-tab" data-wimg="satellite">위성 (적외)</button>
+        <button class="wimg-tab" data-wimg="satellite-vis">위성 (가시)</button>
+        <button class="wimg-tab" data-wimg="synthesis">종합영상</button>
+        <button class="wimg-tab" data-wimg="lightning">낙뢰</button>
+      </div>
+      <div class="weather-img-frame" id="weatherImgFrame">
+        <!-- iframe 동적 삽입 -->
+      </div>
+      <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-sub);">
+        <span>📡 기상청 날씨누리 실시간 영상</span>
+        <a href="https://www.weather.go.kr/w/image/radar.do" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">↗ 기상청 사이트에서 보기</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 범용 상세 모달 (미세먼지·산불·재난문자 공용) -->
+<div class="modal-overlay" id="genericModalOverlay">
+  <div class="modal" id="genericModalContent" style="max-width: 720px;">
+    <div class="modal-header">
+      <div class="modal-title-block">
+        <div class="modal-title" id="genericModalTitle">--</div>
+        <div class="modal-subtitle" id="genericModalSubtitle">--</div>
+      </div>
+      <button class="modal-close" id="genericModalClose" title="닫기 (ESC)">×</button>
+    </div>
+    <div class="modal-body" id="genericModalBody" style="display:block;padding:18px 20px 22px;">
+      <!-- JS로 채움 -->
+    </div>
+  </div>
+</div>
+
+<!-- 하천 수위 상세 모달 -->
+<div class="modal-overlay" id="riverModalOverlay">
+  <div class="modal" style="max-width: 760px;">
+    <div class="modal-header">
+      <div class="modal-title-block">
+        <div class="modal-title" id="riverModalTitle">--</div>
+        <div class="modal-subtitle" id="riverModalSubtitle">--</div>
+      </div>
+      <button class="modal-close" id="riverModalClose" title="닫기 (ESC)">×</button>
+    </div>
+    <div class="modal-body" id="riverModalBody" style="display:block;padding:18px 20px 22px;">
+      <!-- JS로 채움 -->
+    </div>
+  </div>
+</div>
+
+<!-- 시군 선택 모달 (내관서 중점 모드용) -->
+<div class="modal-overlay" id="regionPickerOverlay">
+  <div class="modal" style="max-width: 560px;">
+    <div class="modal-header">
+      <div class="modal-title-block">
+        <div class="modal-title">관할 시군 선택</div>
+        <div class="modal-subtitle">중점 모니터링할 시군을 선택하세요</div>
+      </div>
+      <button class="modal-close" id="regionPickerClose" title="닫기 (ESC)">×</button>
+    </div>
+    <div class="modal-body" style="display:block;padding:20px;">
+      <div id="regionPickerGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+        <!-- JS로 채움 -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 시군 상세 모달 -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title-block">
+        <div class="modal-title" id="modalTitle">--</div>
+        <div class="modal-subtitle" id="modalSubtitle">--</div>
+      </div>
+      <button class="modal-close" id="modalClose" title="닫기 (ESC)">×</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <!-- JS로 채움 -->
+    </div>
+  </div>
+</div>
+
+<!-- 실데이터 (tools/update_data.py 가 자동 생성). 없으면 아래 SAMPLE_DATA 사용. -->
+<script src="data.js" onerror="console.warn('data.js 없음 — 샘플 데이터 사용')"></script>
+<script>
+// ============ 샘플 데이터 (실데이터 연동 전 디자인 확인용) ============
+const SAMPLE_DATA = {
+  regions: [
+    { name: '의정부', temp: 18.3, weather: '비',   rain: 12.5, wind: 4.2, humid: 88, level: 'warning', tag: '호우' },
+    { name: '양주',   temp: 17.8, weather: '비',   rain: 15.2, wind: 5.1, humid: 91, level: 'warning', tag: '호우' },
+    { name: '동두천', temp: 17.5, weather: '비',   rain: 18.7, wind: 6.3, humid: 92, level: 'danger',  tag: '경보' },
+    { name: '포천',   temp: 16.9, weather: '비',   rain: 22.4, wind: 5.8, humid: 93, level: 'danger',  tag: '경보' },
+    { name: '연천',   temp: 16.2, weather: '비',   rain: 19.3, wind: 4.9, humid: 90, level: 'warning', tag: '호우' },
+    { name: '가평',   temp: 15.8, weather: '비',   rain:  8.4, wind: 3.7, humid: 87, level: 'normal' },
+    { name: '남양주', temp: 18.1, weather: '흐림', rain:  2.1, wind: 3.2, humid: 82, level: 'normal' },
+    { name: '구리',   temp: 18.5, weather: '흐림', rain:  0.8, wind: 2.8, humid: 78, level: 'normal' },
+    { name: '파주',   temp: 17.2, weather: '비',   rain: 11.6, wind: 5.4, humid: 89, level: 'warning', tag: '호우' },
+    { name: '고양',   temp: 18.0, weather: '흐림', rain:  3.5, wind: 3.9, humid: 81, level: 'normal' }
+  ],
+  warnings: [
+    { type: '호우경보',   area: '포천, 동두천',                 time: '14:32', level: 'severe'  },
+    { type: '호우주의보', area: '의정부, 양주, 연천, 파주',     time: '13:15', level: 'warning' },
+    { type: '강풍주의보', area: '경기북부 전역',                 time: '12:40', level: 'warning' },
+    { type: '풍랑주의보', area: '서해5도',                       time: '11:20', level: 'info'    }
+  ],
+  rivers: [
+    { name: '임진강 (적성)',   value: 4.82, warning: 5.5, danger: 7.0, level: 'warning' },
+    { name: '한탄강 (전곡)',   value: 3.21, warning: 4.0, danger: 5.5, level: 'safe'    },
+    { name: '신천 (동두천)',   value: 2.85, warning: 2.5, danger: 3.5, level: 'danger'  },
+    { name: '한강 (행주)',     value: 2.14, warning: 4.0, danger: 6.0, level: 'safe'    },
+    { name: '왕숙천 (퇴계원)', value: 1.78, warning: 2.5, danger: 3.8, level: 'safe'    },
+    { name: '공릉천 (파주)',   value: 2.43, warning: 2.8, danger: 3.5, level: 'warning' }
+  ],
+  messages: [
+    { sender: '포천시',   time: '14:35', text: '[포천시] 시간당 30mm 이상의 강한 비가 내리고 있습니다. 저지대·하천변·산사태 위험지역 주민은 안전한 곳으로 대피하시기 바랍니다.', region: '포천' },
+    { sender: '동두천시', time: '14:28', text: '[동두천시] 신천 수위 급상승. 신천변 산책로 진입을 통제하니 우회하시기 바랍니다.', region: '동두천' },
+    { sender: '경기도',   time: '13:50', text: '[경기도] 호우특보 발효. 차량 침수에 주의하고 지하차도 통행을 자제해 주세요.', region: '경기도' },
+    { sender: '양주시',   time: '13:22', text: '[양주시] 회천천 범람 우려. 회천1동·회천2동 주민은 이동 시 주의하시기 바랍니다.', region: '양주' },
+    { sender: '연천군',   time: '12:15', text: '[연천군] 임진강 수위 상승. 군남댐 방류 예정이오니 하천변 접근을 자제해 주세요.', region: '연천' },
+    { sender: '동두천시', time: '11:42', text: '[동두천시] 송내동·생연동 일대 정전 발생. 한전 복구 작업 중. 우회로 이용 바랍니다.', region: '동두천' }
+  ],
+  forecast: [
+    { time: '15시', icon: '🌧', temp: 18, rain: 85 },
+    { time: '16시', icon: '⛈', temp: 17, rain: 95 },
+    { time: '17시', icon: '⛈', temp: 17, rain: 90 },
+    { time: '18시', icon: '🌧', temp: 16, rain: 70 },
+    { time: '19시', icon: '🌧', temp: 16, rain: 60 },
+    { time: '20시', icon: '🌦', temp: 15, rain: 40 },
+    { time: '21시', icon: '☁',  temp: 15, rain: 20 },
+    { time: '22시', icon: '☁',  temp: 14, rain: 10 },
+    { time: '23시', icon: '🌙', temp: 14, rain:  0 },
+    { time: '00시', icon: '🌙', temp: 13, rain:  0 },
+    { time: '01시', icon: '🌙', temp: 13, rain:  0 },
+    { time: '02시', icon: '🌙', temp: 12, rain:  0 }
+  ],
+  pm: [
+    { region: '의정부', pm10: 32, pm25: 16, grade: 'good',   gradeText: '좋음' },
+    { region: '양주',   pm10: 38, pm25: 19, grade: 'normal', gradeText: '보통' },
+    { region: '동두천', pm10: 28, pm25: 14, grade: 'good',   gradeText: '좋음' },
+    { region: '포천',   pm10: 45, pm25: 22, grade: 'normal', gradeText: '보통' },
+    { region: '연천',   pm10: 41, pm25: 20, grade: 'normal', gradeText: '보통' },
+    { region: '파주',   pm10: 52, pm25: 28, grade: 'normal', gradeText: '보통' },
+    { region: '고양',   pm10: 48, pm25: 24, grade: 'normal', gradeText: '보통' },
+    { region: '남양주', pm10: 35, pm25: 17, grade: 'good',   gradeText: '좋음' }
+  ],
+  fire: [
+    { region: '의정부·양주', level: 1, levelText: '낮음' },
+    { region: '동두천·연천', level: 1, levelText: '낮음' },
+    { region: '포천·가평',   level: 2, levelText: '보통' },
+    { region: '파주·고양',   level: 1, levelText: '낮음' }
+  ]
+};
+
+const weatherIcon = (w) => {
+  const map = { '비': '🌧', '흐림': '☁', '맑음': '☀', '구름많음': '🌥', '눈': '❄', '소나기': '🌦' };
+  return map[w] || '☁';
+};
+
+function renderRegions(data) {
+  const html = data.map(r => {
+    const tag = r.tag ? `<span class="region-tag ${r.level === 'danger' ? 'danger' : ''}">${r.tag}</span>` : '';
+    const dongduClass = r.name === '동두천' ? ' dongducheon' : '';
+    const temp = (r.temp != null && !isNaN(r.temp)) ? Number(r.temp).toFixed(1) : '-';
+    const rain = r.rain != null ? r.rain : 0;
+    const wind = r.wind != null ? r.wind : 0;
+    const humid = r.humid != null ? r.humid : 0;
+    return `
+      <div class="region-card ${r.level || 'normal'}${dongduClass}" data-region="${r.name}" title="${r.name} 상세보기">
+        <div class="region-name"><span>${r.name}</span>${tag}</div>
+        <div class="region-main">
+          <span class="region-temp">${temp}°</span>
+          <span class="region-weather">${weatherIcon(r.weather)} ${r.weather || '-'}</span>
+        </div>
+        <div class="region-stats">
+          <div><span>강수</span><span class="v">${rain}mm</span></div>
+          <div><span>풍속</span><span class="v">${wind}m/s</span></div>
+          <div><span>습도</span><span class="v">${humid}%</span></div>
+        </div>
+      </div>`;
+  }).join('');
+  document.getElementById('regionGrid').innerHTML = html;
+  document.getElementById('regionBadge').textContent = `${data.length}개 시군`;
+}
+
+// ============ 시군 상세 모달 ============
+function openRegionModal(regionName, data) {
+  const r = data.regions.find(x => x.name === regionName);
+  if (!r) return;
+  const detail = r.detail || {};
+  const obs = detail.observation || {};
+  const cumul = detail.rain_cumul || {};
+  const pm = (data.pm || []).find(p => p.region === regionName);
+  const warnings = (data.warnings || []).filter(w =>
+    w.area.includes(regionName) || w.area.includes('전역') || w.area.includes('경기북부'));
+  const msgs = (data.messages || []).filter(m => m.region === regionName || m.region === '경기도');
+  const fire = (data.fire || []).find(f => f.region.includes(regionName));
+  const river = (data.rivers || []).find(rv => rv.name.includes(regionName));
+
+  const safeNum = (v, d = 1) => (v != null && !isNaN(v)) ? Number(v).toFixed(d) : '-';
+  const pmColors = {good: '좋음', normal: '보통', bad: '나쁨', vbad: '매우나쁨'};
+
+  // 누적 강수 등급
+  const cumulClass = (v) => {
+    if (v >= 30) return 'severe';
+    if (v >= 5)  return 'has-rain';
+    return '';
+  };
+
+  // 타이틀
+  document.getElementById('modalTitle').textContent = `${regionName} 상세 상황`;
+  document.getElementById('modalSubtitle').textContent =
+    `실황 ${obs.base_time || '-'} 기준 · 예보 데이터: ${data.updated || '-'}`;
+
+  // 본문
+  const html = `
+    <!-- 좌측 컬럼 -->
+    <div class="modal-col-main">
+      <!-- 1. 현재 실측 -->
+      <div class="modal-section">
+        <div class="modal-section-title">현재 실측 (초단기실황)</div>
+        <div class="obs-hero">
+          <span style="font-size:42px;">${weatherIcon(r.weather)}</span>
+          <span class="obs-hero-temp">${safeNum(obs.t1h ?? r.temp)}°</span>
+          <div class="obs-hero-info">
+            <div style="font-size:14px;font-weight:600;">${r.weather || '-'}</div>
+            <div class="obs-hero-feel">체감 ${safeNum(detail.feels_like)}°</div>
+            <div class="obs-hero-time">${obs.base_time || '-'} 기상청 관측</div>
+          </div>
+        </div>
+        <div class="obs-grid">
+          <div class="obs-item"><span class="label">시간당 강수</span><span class="val">${safeNum(obs.rn1, 1)} mm</span></div>
+          <div class="obs-item"><span class="label">습도</span><span class="val">${obs.reh ?? '-'}%</span></div>
+          <div class="obs-item"><span class="label">풍속</span><span class="val">${safeNum(obs.wsd)} m/s</span></div>
+          <div class="obs-item"><span class="label">풍향</span><span class="val">${detail.wind_dir_name || '-'} (${obs.vec != null ? Math.round(obs.vec)+'°' : '-'})</span></div>
+        </div>
+      </div>
+
+      <!-- 2. 누적 강수량 -->
+      <div class="modal-section">
+        <div class="modal-section-title">시간대별 누적 강수량</div>
+        <div class="rain-cumul-grid">
+          <div class="rain-cumul-item ${cumulClass(cumul['1h'] || 0)}">
+            <div class="rain-cumul-label">최근 1시간</div>
+            <div class="rain-cumul-value ${cumulClass(cumul['1h'] || 0)}">${safeNum(cumul['1h'], 1)}<span class="rain-cumul-unit">mm</span></div>
+          </div>
+          <div class="rain-cumul-item ${cumulClass(cumul['3h'] || 0)}">
+            <div class="rain-cumul-label">최근 3시간</div>
+            <div class="rain-cumul-value ${cumulClass(cumul['3h'] || 0)}">${safeNum(cumul['3h'], 1)}<span class="rain-cumul-unit">mm</span></div>
+          </div>
+          <div class="rain-cumul-item ${cumulClass(cumul['6h'] || 0)}">
+            <div class="rain-cumul-label">최근 6시간</div>
+            <div class="rain-cumul-value ${cumulClass(cumul['6h'] || 0)}">${safeNum(cumul['6h'], 1)}<span class="rain-cumul-unit">mm</span></div>
+          </div>
+          <div class="rain-cumul-item ${cumulClass(cumul['12h'] || 0)}">
+            <div class="rain-cumul-label">최근 12시간</div>
+            <div class="rain-cumul-value ${cumulClass(cumul['12h'] || 0)}">${safeNum(cumul['12h'], 1)}<span class="rain-cumul-unit">mm</span></div>
+          </div>
+        </div>
+        <div style="margin-top:8px;font-size:10px;color:var(--text-sub);">
+          ※ 시스템 가동 시점부터 시간별 누적. 6시간/12시간 값은 시스템 운영 시간이 짧으면 부정확할 수 있음.
+        </div>
+      </div>
+
+      <!-- 3. 오늘 예보 -->
+      <div class="modal-section">
+        <div class="modal-section-title">오늘 예보</div>
+        <div class="modal-forecast-min">
+          <div class="obs-item"><span class="label">최고 기온</span><span class="val" style="color:var(--danger)">${safeNum(detail.tmax)}°</span></div>
+          <div class="obs-item"><span class="label">최저 기온</span><span class="val" style="color:var(--accent)">${safeNum(detail.tmin)}°</span></div>
+          <div class="obs-item"><span class="label">강수확률</span><span class="val">${detail.pop ?? 0}%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 우측 컬럼 -->
+    <div class="modal-col-side">
+      <!-- 4. 발효 특보 -->
+      <div class="modal-section">
+        <div class="modal-section-title">발효 특보</div>
+        ${warnings.length > 0 ? warnings.map(w => `
+          <div class="warning-item ${w.level}" style="margin-bottom:6px;">
+            <div class="warning-top">
+              <span class="warning-name">${w.type}</span>
+              <span class="warning-time">${w.time}</span>
+            </div>
+            <div class="warning-area">${w.area}</div>
+          </div>`).join('') : '<div style="text-align:center;color:var(--safe);font-size:12px;padding:8px;">✓ 발효 중인 특보 없음</div>'}
+      </div>
+
+      <!-- 5. 미세먼지 -->
+      <div class="modal-section">
+        <div class="modal-section-title">미세먼지</div>
+        ${pm ? `
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+            <span style="font-size:13px;color:var(--text-dim);">통합 등급</span>
+            <span class="pm-grade ${pm.grade}" style="font-size:18px;font-weight:800;">${pm.gradeText}</span>
+          </div>
+          <div class="obs-grid">
+            <div class="obs-item"><span class="label">PM10</span><span class="val">${pm.pm10} μg</span></div>
+            <div class="obs-item"><span class="label">PM2.5</span><span class="val">${pm.pm25} μg</span></div>
+          </div>` : '<div style="text-align:center;color:var(--text-sub);font-size:12px;padding:8px;">측정소 데이터 없음</div>'}
+      </div>
+
+      <!-- 6. 산불 + 하천 -->
+      <div class="modal-section">
+        <div class="modal-section-title">기타 위험 지표</div>
+        <div class="obs-item" style="margin-bottom:6px;">
+          <span class="label">산불 위험</span>
+          <span class="val" style="color:${fire ? ['var(--safe)','var(--safe)','var(--caution)','var(--warning)','var(--danger)'][fire.level] : 'var(--text-sub)'}">${fire ? fire.levelText + ' ('+fire.region+')' : '-'}</span>
+        </div>
+        ${river ? `
+        <div class="obs-item">
+          <span class="label">${river.name.split(' ')[0]} 수위</span>
+          <span class="val" style="color:var(--${river.level})">${river.value.toFixed(2)}m / 위험 ${river.danger}m</span>
+        </div>` : ''}
+      </div>
+
+      <!-- 7. 재난문자 -->
+      <div class="modal-section">
+        <div class="modal-section-title">최근 재난문자 (해당 시군)</div>
+        ${msgs.length > 0 ? msgs.slice(0, 4).map(m => `
+          <div class="msg-item">
+            <div class="msg-top"><span class="msg-sender">${m.sender}</span><span class="msg-time">${m.time}</span></div>
+            <div class="msg-text">${m.text}</div>
+          </div>`).join('') : '<div style="text-align:center;color:var(--text-sub);font-size:12px;padding:8px;">최근 24시간 내 재난문자 없음</div>'}
+      </div>
+    </div>
+  `;
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeRegionModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+// 모달 이벤트 바인딩 (전역 위임)
+document.addEventListener('click', (e) => {
+  // 카드 클릭 → 모달 열기
+  const card = e.target.closest('.region-card[data-region]');
+  if (card) {
+    openRegionModal(card.dataset.region, DATA);
+    return;
+  }
+  // 닫기 버튼 또는 배경 클릭 → 모달 닫기
+  if (e.target.id === 'modalClose' || e.target.id === 'modalOverlay') {
+    closeRegionModal();
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeRegionModal();
+});
+
+function renderWarnings(data, targetId, badgeId) {
+  const html = data.map(w => `
+    <div class="warning-item ${w.level}">
+      <div class="warning-top">
+        <span class="warning-name">${w.type}</span>
+        <span class="warning-time">${w.time}</span>
+      </div>
+      <div class="warning-area">${w.area}</div>
+    </div>`).join('');
+  document.getElementById(targetId).innerHTML = html || '<div style="text-align:center;color:var(--text-sub);padding:20px;">현재 발효 중인 특보 없음</div>';
+  if (badgeId) document.getElementById(badgeId).textContent = `${data.length}건`;
+}
+
+function renderRivers(data) {
+  if (!data || data.length === 0) {
+    document.getElementById('riverList').innerHTML =
+      '<div style="text-align:center;color:var(--text-sub);padding:18px;font-size:11px;">하천수위 데이터 없음</div>';
+    return;
+  }
+  const html = data.map((r, i) => {
+    const pct = Math.min(100, (r.value / r.danger) * 100);
+    return `
+      <div class="river-item" data-river-index="${i}" title="${r.name} 상세보기">
+        <div class="river-top">
+          <span class="river-name">${r.name}</span>
+          <span class="river-value ${r.level}">${r.value.toFixed(2)}m</span>
+        </div>
+        <div class="river-bar-bg"><div class="river-bar-fill ${r.level}" style="width:${pct}%"></div></div>
+        <div class="river-stats"><span>주의 ${r.warning}m</span><span>위험 ${r.danger}m</span></div>
+      </div>`;
+  }).join('');
+  document.getElementById('riverList').innerHTML = html;
+}
+
+// ============ 하천 수위 상세 모달 ============
+function formatRiverTime(ymdhm) {
+  // "202605131200" → "12:00"
+  if (!ymdhm || ymdhm.length < 12) return ymdhm || '-';
+  return `${ymdhm.slice(8, 10)}:${ymdhm.slice(10, 12)}`;
+}
+
+function openRiverModal(river) {
+  const history = river.history || [];
+  const pct = Math.min(100, (river.value / river.danger) * 100);
+
+  // 차트 Y축 최대치: 위험 수위 + 약간 여유
+  const valuesMax = Math.max(river.danger, ...history.map(h => h.value));
+  const yMax = valuesMax * 1.08;
+
+  const barsHtml = history.map(h => {
+    const heightPct = (h.value / yMax) * 100;
+    const lev = h.value >= river.danger ? 'danger' : (h.value >= river.warning ? 'warning' : 'safe');
+    return `<div class="river-chart-bar ${lev}" style="height:${heightPct}%;" title="${formatRiverTime(h.time)} · ${h.value.toFixed(2)}m"></div>`;
+  }).join('');
+
+  const warnLine = (river.warning / yMax) * 100;
+  const dangerLine = (river.danger / yMax) * 100;
+
+  // 변화량 화살표
+  const deltaIcon = (d) => {
+    if (d == null) return ['flat', '–', '데이터 부족'];
+    if (d > 0.02) return ['up', '↑', `+${d.toFixed(2)}m`];
+    if (d < -0.02) return ['down', '↓', `${d.toFixed(2)}m`];
+    return ['flat', '→', '변화 없음'];
+  };
+  const d1 = deltaIcon(river.delta_1h);
+  const d3 = deltaIcon(river.delta_3h);
+
+  const isDam = river.api === 'dam';
+  document.getElementById('riverModalTitle').textContent = river.name;
+  document.getElementById('riverModalSubtitle').textContent =
+    `한강홍수통제소 ${isDam ? '댐 관측소' : '수위 관측소'} ${river.code} · 최근 24시간 시간당 데이터`;
+
+  // 댐일 때 별도 정보 카드
+  const dam = river.dam_info;
+  const damCards = (isDam && dam) ? `
+    <div class="modal-section" style="margin-bottom:14px;background:linear-gradient(135deg, var(--bg-card-2), var(--highlight-bg));border-color:var(--accent);">
+      <div class="modal-section-title">댐 운영 현황</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px;">
+        <div class="river-stat-card" style="flex-direction:column;align-items:flex-start;">
+          <span class="label">저수율</span>
+          <span class="val" style="font-size:22px;color:${(dam.storage_rate||0)>=80?'var(--warning)':'var(--accent)'};">${dam.storage_rate != null ? dam.storage_rate.toFixed(1) + '%' : '-'}</span>
+        </div>
+        <div class="river-stat-card" style="flex-direction:column;align-items:flex-start;">
+          <span class="label">유입량</span>
+          <span class="val" style="font-size:18px;">${dam.inflow != null ? dam.inflow.toFixed(1) : '-'}<span style="font-size:10px;color:var(--text-dim);"> m³/s</span></span>
+        </div>
+        <div class="river-stat-card" style="flex-direction:column;align-items:flex-start;">
+          <span class="label">방류량</span>
+          <span class="val" style="font-size:18px;color:${(dam.outflow||0)>10?'var(--warning)':((dam.outflow||0)>50?'var(--danger)':'var(--text)')};">${dam.outflow != null ? dam.outflow.toFixed(1) : '-'}<span style="font-size:10px;color:var(--text-dim);"> m³/s</span></span>
+        </div>
+        <div class="river-stat-card" style="flex-direction:column;align-items:flex-start;">
+          <span class="label">총 유출량</span>
+          <span class="val" style="font-size:18px;">${dam.total_outflow != null ? dam.total_outflow.toFixed(1) : '-'}<span style="font-size:10px;color:var(--text-dim);"> m³/s</span></span>
+        </div>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--text-sub);">
+        ※ 방류량이 평상시(<10 m³/s)를 크게 넘으면 하류(연천·동두천 임진강·신천) 수위 급상승 가능. 출동 대비.
+      </div>
+    </div>` : '';
+
+  document.getElementById('riverModalBody').innerHTML = `
+    ${damCards}
+    <!-- 현재 수위/저수위 큰 카드 -->
+    <div class="modal-section" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+        <div>
+          <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">${isDam ? '현재 저수위' : '현재 수위'}</div>
+          <div class="river-big ${river.level}">
+            <span class="num" style="font-size:54px;">${river.value.toFixed(2)}</span>
+            <span class="unit" style="font-size:20px;">m</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div class="river-stat-card" style="min-width:130px;">
+            <span class="label">1시간 변화</span>
+            <span class="val ${d1[0]}">${d1[1]} ${d1[2]}</span>
+          </div>
+          <div class="river-stat-card" style="min-width:130px;">
+            <span class="label">3시간 변화</span>
+            <span class="val ${d3[0]}">${d3[1]} ${d3[2]}</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:14px;">
+        <div class="river-bar-bg" style="height:14px;">
+          <div class="river-bar-fill ${river.level}" style="width:${pct}%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-sub);margin-top:5px;">
+          <span>${isDam ? '평수위' : '0m'}</span>
+          <span>${isDam ? '홍수기 제한' : '주의'} ${river.warning}m</span>
+          <span>${isDam ? '만수위 근접' : '위험'} ${river.danger}m</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 24시간 차트 -->
+    <div class="modal-section">
+      <div class="modal-section-title">최근 24시간 수위 변화</div>
+      <div class="river-chart">
+        <div class="river-chart-inner">${barsHtml}</div>
+        <div class="river-chart-line warning-line" style="bottom:${warnLine}%;">
+          <span class="label">주의 ${river.warning}m</span>
+        </div>
+        <div class="river-chart-line danger-line" style="bottom:${dangerLine}%;">
+          <span class="label">위험 ${river.danger}m</span>
+        </div>
+      </div>
+      <div class="river-chart-axis">
+        <span>${history.length > 0 ? formatRiverTime(history[0].time) : '-'}</span>
+        <span>${history.length > 4 ? formatRiverTime(history[Math.floor(history.length/4)].time) : ''}</span>
+        <span>${history.length > 2 ? formatRiverTime(history[Math.floor(history.length/2)].time) : ''}</span>
+        <span>${history.length > 1 ? formatRiverTime(history[Math.floor(3*history.length/4)].time) : ''}</span>
+        <span>${history.length > 0 ? formatRiverTime(history[history.length-1].time) : '-'}</span>
+      </div>
+    </div>
+
+    <!-- 실시간 CCTV 또는 댐 상세자료 -->
+    ${(function(){
+      // 댐 URL은 sdt/edt/ymdhm 파라미터 필수
+      const _now = new Date();
+      const _ago = new Date(_now.getTime() - 24*60*60*1000);
+      const _fmt = (d) => {
+        const Y = d.getFullYear();
+        const M = String(d.getMonth()+1).padStart(2,'0');
+        const D = String(d.getDate()).padStart(2,'0');
+        const h = String(d.getHours()).padStart(2,'0');
+        const m = String(d.getMinutes()).padStart(2,'0');
+        return { iso: `${Y}-${M}-${D} ${h}:${m}`, compact: `${Y}${M}${D}${h}${m}` };
+      };
+      const a = _fmt(_ago), b = _fmt(_now);
+      const damUrl = `https://n.flood.go.kr/observation/dam/popup.do?obscd=${river.code}&sdt=${encodeURIComponent(a.iso)}&edt=${encodeURIComponent(b.iso)}&ymdhm=${b.compact}`;
+      const damListUrl = `https://n.flood.go.kr/observation/dam/list.do`;
+      return river.has_cctv === false ? `
+      <div class="modal-section" style="margin-top:14px;">
+        <div class="modal-section-title">댐 상세자료</div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px;text-align:center;">
+          <div style="font-size:32px;margin-bottom:10px;">🌊</div>
+          <div style="font-size:13px;color:var(--text);font-weight:700;margin-bottom:4px;">${river.name}</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-bottom:14px;">한강홍수통제소 자료 페이지에서 시계열 그래프·유입량·방류량 확인 가능</div>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+            <a href="${damUrl}" target="_blank" rel="noopener"
+               style="display:inline-block;padding:10px 18px;background:var(--accent);color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:12px;">
+              ↗ 군남댐 24시간 자료 (팝업)
+            </a>
+            <a href="${damListUrl}" target="_blank" rel="noopener"
+               style="display:inline-block;padding:10px 18px;background:var(--bg-card-2);color:var(--accent);border:1px solid var(--accent);border-radius:8px;text-decoration:none;font-weight:700;font-size:12px;">
+              ↗ 댐 전체 목록 페이지
+            </a>
+          </div>
+          <div style="margin-top:10px;font-size:10px;color:var(--text-sub);">
+            ※ 첫 번째 버튼이 팝업 차단되면 두 번째 버튼으로 들어가 ${river.name.split('(')[1]?.replace(')','') || '군남'} 검색
+          </div>
+        </div>
+      </div>
+    ` : `
+      <div class="modal-section" style="margin-top:14px;">
+        <div class="modal-section-title">
+          <span style="display:flex;align-items:center;gap:6px;">실시간 CCTV
+            <span style="font-size:9px;padding:2px 6px;background:var(--danger);color:#fff;border-radius:3px;font-weight:700;letter-spacing:0.5px;">LIVE</span>
+          </span>
+        </div>
+        <div class="cctv-frame">
+          <iframe src="https://n.flood.go.kr/main/cctvView.do?obscd=${river.code}&fcodvcd=01"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  referrerpolicy="no-referrer"
+                  scrolling="no"></iframe>
+        </div>
+        <div style="margin-top:8px;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-sub);">
+          <span>📡 한강홍수통제소 실시간 영상</span>
+          <a href="https://n.flood.go.kr/main/cctvView.do?obscd=${river.code}&fcodvcd=01"
+             target="_blank" rel="noopener"
+             style="color:var(--accent);text-decoration:none;font-weight:600;">↗ 새 창에서 크게 보기</a>
+        </div>
+      </div>
+    `;
+    })()}
+
+    <!-- 추가 안내 -->
+    <div style="margin-top:14px;font-size:11px;color:var(--text-sub);line-height:1.6;">
+      <strong style="color:var(--text-dim);">수위 단계 안내</strong><br>
+      • <span style="color:var(--safe);font-weight:700;">안전</span>: 주의 수위 미만 (정상 유량)<br>
+      • <span style="color:var(--warning);font-weight:700;">주의</span>: 주의 수위 초과 (저지대·하천변 주의)<br>
+      • <span style="color:var(--danger);font-weight:700;">위험</span>: 위험 수위 초과 (긴급 대피 검토)
+    </div>
+  `;
+
+  document.getElementById('riverModalOverlay').classList.add('open');
+}
+
+function closeRiverModal() {
+  document.getElementById('riverModalOverlay').classList.remove('open');
+}
+
+// ============ 범용 모달 (미세먼지·산불·재난문자) ============
+function openGenericModal(title, subtitle, bodyHtml, maxWidth = 720) {
+  document.getElementById('genericModalTitle').textContent = title;
+  document.getElementById('genericModalSubtitle').textContent = subtitle;
+  document.getElementById('genericModalBody').innerHTML = bodyHtml;
+  document.getElementById('genericModalContent').style.maxWidth = maxWidth + 'px';
+  document.getElementById('genericModalOverlay').classList.add('open');
+}
+function closeGenericModal() {
+  document.getElementById('genericModalOverlay').classList.remove('open');
+}
+
+// ============ 기상영상 모달 ============
+const WEATHER_IMG_SOURCES = {
+  radar:         { url: 'https://www.weather.go.kr/w/image/radar.do',                  label: '레이더 합성영상' },
+  satellite:     { url: 'https://www.weather.go.kr/w/image/satellite/sat-ir.do',       label: '위성 적외영상' },
+  'satellite-vis': { url: 'https://www.weather.go.kr/w/image/satellite/sat-vis.do',    label: '위성 가시영상' },
+  synthesis:     { url: 'https://www.weather.go.kr/w/image/synthesis.do',              label: '종합영상' },
+  lightning:     { url: 'https://www.weather.go.kr/w/image/lightning.do',              label: '낙뢰' },
+};
+
+function loadWeatherImg(kind) {
+  const src = WEATHER_IMG_SOURCES[kind];
+  if (!src) return;
+  const frame = document.getElementById('weatherImgFrame');
+
+  // 1차: iframe 시도. iframe load 이벤트로 차단 감지 (X-Frame-Options/CSP 등)
+  const fallback = `
+    <div class="fallback">
+      <div style="font-size:32px;">📡</div>
+      <div><strong>${src.label}</strong>은 페이지 내 표시가 차단되어 있어요.</div>
+      <div>아래 버튼을 누르면 기상청 사이트의 영상이 새 창에서 열립니다.</div>
+      <a href="${src.url}" target="_blank" rel="noopener">${src.label} 새 창에서 보기 ↗</a>
+    </div>`;
+
+  frame.innerHTML = `<iframe src="${src.url}" referrerpolicy="no-referrer" allow="fullscreen"></iframe>`;
+  // iframe이 차단되면 about:blank로 로드되거나 빈 화면. 1.5초 후 검사.
+  const iframe = frame.querySelector('iframe');
+  let loaded = false;
+  iframe.addEventListener('load', () => { loaded = true; });
+  setTimeout(() => {
+    try {
+      // 같은 출처가 아니라 contentDocument 접근은 보안 오류. 정상.
+      // 다만 iframe.contentWindow.length 같은 비교적 안전한 속성으로 차단 여부 추론은 불완전.
+      // 그래서 단순히 iframe 보여주고, 사장님이 차단된 화면을 보면 fallback 링크 사용하도록 안내.
+    } catch (e) {}
+  }, 1500);
+}
+
+function openWeatherImgModal() {
+  document.getElementById('weatherImgOverlay').classList.add('open');
+  // 탭 초기화: 첫 번째(레이더)
+  document.querySelectorAll('.wimg-tab').forEach((b, i) => {
+    b.classList.toggle('active', i === 0);
+  });
+  loadWeatherImg('radar');
+}
+
+function closeWeatherImgModal() {
+  document.getElementById('weatherImgOverlay').classList.remove('open');
+  // iframe 정지 (메모리·네트워크 절약)
+  document.getElementById('weatherImgFrame').innerHTML = '';
+}
+
+// 헤더 버튼 + 탭 이벤트
+document.getElementById('weatherImgBtn').addEventListener('click', openWeatherImgModal);
+document.getElementById('weatherImgClose').addEventListener('click', closeWeatherImgModal);
+document.getElementById('weatherImgOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'weatherImgOverlay') closeWeatherImgModal();
+});
+document.addEventListener('click', (e) => {
+  const tab = e.target.closest('.wimg-tab[data-wimg]');
+  if (tab) {
+    document.querySelectorAll('.wimg-tab').forEach(b => b.classList.toggle('active', b === tab));
+    loadWeatherImg(tab.dataset.wimg);
+  }
+});
+
+// ----- 미세먼지 상세 -----
+function buildPmModalBody(data) {
+  const pmList = data.pm || [];
+  if (pmList.length === 0) {
+    return '<div style="text-align:center;color:var(--text-sub);padding:40px;">미세먼지 데이터 없음</div>';
+  }
+  const maxPm10 = Math.max(80, ...pmList.map(p => p.pm10));
+  const maxPm25 = Math.max(35, ...pmList.map(p => p.pm25));
+  const rows = pmList.map(p => {
+    const pm10Pct = (p.pm10 / maxPm10) * 100;
+    const pm25Pct = (p.pm25 / maxPm25) * 100;
+    return `
+      <div class="pm-compare-row">
+        <div class="name">${p.region}</div>
+        <div class="bar-wrap"><div class="bar-fill ${p.grade}" style="width:${pm10Pct}%"></div><span class="bar-value">${p.pm10}</span></div>
+        <div class="bar-wrap"><div class="bar-fill ${p.grade}" style="width:${pm25Pct}%"></div><span class="bar-value">${p.pm25}</span></div>
+        <div class="grade ${p.grade}">${p.gradeText}</div>
+      </div>`;
+  }).join('');
+  return `
+    <div class="modal-section" style="margin-bottom:14px;">
+      <div class="modal-section-title">시군별 비교 (μg/m³)</div>
+      <div class="pm-compare-table" style="margin-top:10px;">
+        <div class="pm-compare-row" style="font-size:10px;color:var(--text-sub);font-weight:700;border-bottom:1px solid var(--border);padding-bottom:4px;">
+          <div>시군</div><div>PM10 (미세)</div><div>PM2.5 (초미세)</div><div style="text-align:right;">등급</div>
+        </div>
+        ${rows}
+      </div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">대기질 등급 기준</div>
+      <table class="pm-standard-table" style="margin-top:8px;">
+        <thead><tr><th>등급</th><th>PM10</th><th>PM2.5</th><th>행동요령</th></tr></thead>
+        <tbody>
+          <tr><td class="good">좋음</td><td>0~30</td><td>0~15</td><td>야외활동 적합</td></tr>
+          <tr><td class="normal">보통</td><td>31~80</td><td>16~35</td><td>일반인 활동 가능</td></tr>
+          <tr><td class="bad">나쁨</td><td>81~150</td><td>36~75</td><td>장시간 야외활동 자제</td></tr>
+          <tr><td class="vbad">매우나쁨</td><td>151+</td><td>76+</td><td>야외활동 금지·마스크</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:14px;font-size:11px;color:var(--text-sub);">📡 환경부 한국환경공단 에어코리아 · 실시간 측정자료</div>`;
+}
+
+// ----- 산불 위험도 상세 -----
+function buildFireModalBody(data) {
+  const fireList = data.fire || [];
+  if (fireList.length === 0) {
+    return '<div style="text-align:center;color:var(--text-sub);padding:40px;">산불 데이터 없음</div>';
+  }
+  const regions = fireList.map(f => `
+    <div class="fire-grade-card lv${f.level}">
+      <div class="grade-name">
+        <span>${f.region}</span>
+        <span>${f.levelText} (${f.level}단계)</span>
+      </div>
+    </div>`).join('');
+  return `
+    <div class="modal-section" style="margin-bottom:14px;">
+      <div class="modal-section-title">권역별 현재 위험도</div>
+      <div style="margin-top:8px;">${regions}</div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-title">위험 단계 기준</div>
+      <div style="margin-top:8px;">
+        <div class="fire-grade-card lv1">
+          <div class="grade-name"><span>1단계 — 낮음</span></div>
+          <div class="grade-desc">평상시 수준. 산불 발생 가능성 낮음. 일반 산행 가능.</div>
+        </div>
+        <div class="fire-grade-card lv2">
+          <div class="grade-name"><span>2단계 — 보통</span></div>
+          <div class="grade-desc">평년 수준. 입산 시 화기 사용 주의. 야영장 화기 단속.</div>
+        </div>
+        <div class="fire-grade-card lv3">
+          <div class="grade-name"><span>3단계 — 높음</span></div>
+          <div class="grade-desc">매우 건조. 산림 인접 화기 사용 금지. 산불 감시 강화.</div>
+        </div>
+        <div class="fire-grade-card lv4">
+          <div class="grade-name"><span>4단계 — 매우높음</span></div>
+          <div class="grade-desc">극도로 건조. 입산 통제. 산불경보 발효 검토. 출동 대기.</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:14px;font-size:11px;color:var(--text-sub);">📡 산림청 국립산림과학원 · 산불위험예보 V2</div>`;
+}
+
+// ----- 재난문자 전문 -----
+function buildMsgModalBody(msg) {
+  return `
+    <div class="modal-section" style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+        <div>
+          <div style="font-size:11px;color:var(--text-dim);">송출 기관</div>
+          <div style="font-size:18px;font-weight:800;color:var(--accent);">${msg.sender}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px;color:var(--text-dim);">발송 시각</div>
+          <div style="font-size:16px;font-weight:700;">${msg.time}</div>
+        </div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:6px;padding:14px;line-height:1.7;font-size:13px;color:var(--text);white-space:pre-wrap;">${msg.text}</div>
+    </div>
+    <div style="margin-top:14px;font-size:11px;color:var(--text-sub);">📡 행정안전부 재난안전데이터공유플랫폼 · 긴급재난문자</div>`;
+}
+
+// ----- 기상청 통보문·기상정보 상세 -----
+function buildBulletinsModalBody(data) {
+  const bulletins = data.bulletins || {};
+  const warningsFull = bulletins.warnings_full || [];
+  const infoList = bulletins.info_list || [];
+  const active = data.warnings || [];
+
+  let html = '';
+
+  // 1. 현재 발효 중인 특보 (요약)
+  if (active.length > 0) {
+    html += '<div class="modal-section" style="margin-bottom:14px;">';
+    html += '<div class="modal-section-title">현재 발효 중인 특보</div>';
+    html += active.map(w => `
+      <div class="warning-item ${w.level}" style="margin-bottom:6px;">
+        <div class="warning-top">
+          <span class="warning-name">${w.type}</span>
+          <span class="warning-time">${w.time}</span>
+        </div>
+        <div class="warning-area">${w.area}</div>
+      </div>`).join('');
+    html += '</div>';
+  } else {
+    html += `<div class="modal-section" style="margin-bottom:14px;">
+      <div class="focus-warn-empty"><span class="icon">✓</span><span>현재 발효 중인 특보 없음</span></div>
+    </div>`;
+  }
+
+  // 2. 특보 통보문 전문 (최근 3일)
+  if (warningsFull.length > 0) {
+    html += '<div class="modal-section" style="margin-bottom:14px;">';
+    html += '<div class="modal-section-title">최근 특보 통보문 (수도권/경기북부)</div>';
+    html += warningsFull.map(w => {
+      const cls = w.title.includes('경보') ? 'severe' : (w.title.includes('주의보') ? 'warn' : '');
+      const rows = [];
+      if (w.current && w.current !== '') rows.push(`<div class="bulletin-row"><span class="lbl">상황</span>${w.current}</div>`);
+      if (w.time && w.time !== '')       rows.push(`<div class="bulletin-row"><span class="lbl">시각</span>${w.time}</div>`);
+      if (w.extra && w.extra !== '')     rows.push(`<div class="bulletin-row"><span class="lbl">추가</span>${w.extra}</div>`);
+      const summary = (w.summary || '').replace(/^o\s*/, '').trim();
+      if (summary && !['없 음','없음',''].includes(summary)) {
+        rows.push(`<div class="bulletin-row"><span class="lbl">종합</span>${summary}</div>`);
+      }
+      return `
+        <div class="bulletin-card ${cls}">
+          <div class="bulletin-title">${w.title}</div>
+          <div class="bulletin-meta">${w.tmFc_display} 발표 · 제${w.seq}호</div>
+          ${rows.join('')}
+        </div>`;
+    }).join('');
+    html += '</div>';
+  }
+
+  // 3. 기상정보 (예보 해설)
+  if (infoList.length > 0) {
+    html += '<div class="modal-section">';
+    html += '<div class="modal-section-title">기상정보 발표 이력 (최근 3일)</div>';
+    html += infoList.slice(0, 12).map(i => `
+      <div class="info-item">
+        <div class="info-title">${i.title}</div>
+        <div class="info-time">${i.tmFc_display}</div>
+      </div>`).join('');
+    html += '</div>';
+  }
+
+  if (!html) {
+    html = '<div style="text-align:center;color:var(--text-sub);padding:40px;">발표문 없음</div>';
+  }
+  html += `<div style="margin-top:14px;font-size:11px;color:var(--text-sub);">📡 기상청 특보 조회서비스 (WthrWrnInfoService)</div>`;
+  return html;
+}
+
+// ----- 클릭 핸들러 (전역 위임) -----
+document.addEventListener('click', (e) => {
+  // 발효 특보 패널 클릭 → 통보문·기상정보 모달
+  const warnPanel = e.target.closest('.panel-warning, .focus-panel-warning');
+  if (warnPanel && !e.target.closest('.warning-item, button')) {
+    openGenericModal('기상청 발표문', '특보 통보문 · 기상정보 (최근 3일)', buildBulletinsModalBody(DATA), 760);
+    return;
+  }
+  // 미세먼지 패널 — 단, 시군 카드(region-card)나 자식 패널 안의 카드가 아닐 때만
+  const pmPanel = e.target.closest('.panel-pm, .focus-panel-pm');
+  if (pmPanel && !e.target.closest('.region-card, button')) {
+    openGenericModal('미세먼지 현황', '경기북부 10개 시군 실시간 측정', buildPmModalBody(DATA), 760);
+    return;
+  }
+  // 산불 패널
+  const firePanel = e.target.closest('.panel-fire, .focus-panel-fire');
+  if (firePanel && !e.target.closest('.region-card, button')) {
+    openGenericModal('산불 위험도', '국립산림과학원 권역별 등급', buildFireModalBody(DATA), 680);
+    return;
+  }
+  // 메시지 항목
+  const msgItem = e.target.closest('.msg-item[data-msg-idx]');
+  if (msgItem) {
+    const idx = parseInt(msgItem.dataset.msgIdx, 10);
+    const sortedMsgs = prioritizeMessages(DATA.messages || []);
+    const msg = sortedMsgs[idx];
+    if (msg) openGenericModal('재난문자 상세', '메시지 전문', buildMsgModalBody(msg), 640);
+    return;
+  }
+  // 모달 닫기
+  if (e.target.id === 'genericModalClose' || e.target.id === 'genericModalOverlay') {
+    closeGenericModal();
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeGenericModal();
+});
+
+// 하천 항목 클릭 핸들러 (전역 위임)
+document.addEventListener('click', (e) => {
+  // 광역 모드: 하천 리스트 항목
+  const item = e.target.closest('.river-item[data-river-index]');
+  if (item) {
+    const idx = parseInt(item.dataset.riverIndex, 10);
+    const river = (DATA.rivers || [])[idx];
+    if (river) openRiverModal(river);
+    return;
+  }
+  // 내관서 중점 모드: 시군별 인근 하천 수위 카드 전체
+  const riverPanel = e.target.closest('.focus-panel-river[data-river-name]');
+  if (riverPanel) {
+    const r = (DATA.rivers || []).find(x => x.name === riverPanel.dataset.riverName);
+    if (r) openRiverModal(r);
+    return;
+  }
+  // 모달 닫기
+  if (e.target.id === 'riverModalClose' || e.target.id === 'riverModalOverlay') {
+    closeRiverModal();
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeRiverModal();
+});
+
+// 경기북부 10개 시군 (동두천 제외 시 9개) + 경기도 전역
+const NORTH_REGIONS = new Set(['동두천','양주','의정부','포천','연천','가평','남양주','구리','파주','고양','경기도']);
+
+function prioritizeMessages(messages) {
+  /* 우선순위:
+     1) 동두천
+     2) 인근 북부 + 경기도 전역
+     3) 북부에 하나도 없을 때만 → 남부 표시
+     같은 그룹 내에서는 원본 순서(최신순) 유지 */
+  if (!messages || messages.length === 0) return [];
+  const dongdu = messages.filter(m => m.region === '동두천');
+  const north  = messages.filter(m => m.region !== '동두천' && NORTH_REGIONS.has(m.region));
+  const south  = messages.filter(m => !NORTH_REGIONS.has(m.region));
+  if (dongdu.length + north.length > 0) {
+    return [...dongdu, ...north];  // 북부만 (남부 숨김)
+  }
+  return south;  // 북부 0건이면 남부 표시
+}
+
+function renderMessages(data, targetId, badgeId) {
+  const sorted = prioritizeMessages(data);
+  const html = sorted.map((m, idx) => {
+    // 동두천 메시지는 시각적으로 강조 (왼쪽 청록 테두리)
+    const isDongdu = m.region === '동두천';
+    const style = isDongdu ? 'border-left:3px solid var(--accent);padding-left:8px;' : '';
+    const senderColor = isDongdu ? 'var(--accent)' : 'var(--text-dim)';
+    return `
+      <div class="msg-item" data-msg-idx="${idx}" title="메시지 전문 보기" style="${style}">
+        <div class="msg-top"><span class="msg-sender" style="color:${senderColor};font-weight:700;">${m.sender}</span><span class="msg-time">${m.time}</span></div>
+        <div class="msg-text">${m.text}</div>
+      </div>`;
+  }).join('');
+  const el = document.getElementById(targetId);
+  // 빈 상태 메시지 (북부도 남부도 없으면 진짜 0건)
+  el.innerHTML = html || '<div style="text-align:center;color:var(--text-sub);padding:14px;font-size:11px;">최근 24시간 내 경기도 재난문자 없음</div>';
+  if (badgeId) document.getElementById(badgeId).textContent = `${sorted.length}건`;
+}
+
+function renderForecast(data, targetId) {
+  const html = data.map(f => `
+    <div class="forecast-col">
+      <div class="forecast-time">${f.time}</div>
+      <div class="forecast-icon">${f.icon}</div>
+      <div class="forecast-temp">${f.temp}°</div>
+      <div class="forecast-rain">${f.rain}%</div>
+    </div>`).join('');
+  document.getElementById(targetId).innerHTML = html;
+}
+
+function renderPm(data) {
+  if (!data || data.length === 0) {
+    document.getElementById('pmGrid').innerHTML =
+      '<div style="grid-column:1/-1;text-align:center;color:var(--text-sub);padding:18px;font-size:11px;">미세먼지 데이터 없음</div>';
+    return;
+  }
+  const html = data.map(p => `
+    <div class="pm-card">
+      <div class="pm-region">${p.region}</div>
+      <div class="pm-grade ${p.grade}">${p.gradeText}</div>
+      <div class="pm-values">PM10 <span class="v">${p.pm10}</span> · PM2.5 <span class="v">${p.pm25}</span></div>
+    </div>`).join('');
+  document.getElementById('pmGrid').innerHTML = html;
+}
+
+function renderFire(data) {
+  if (!data || data.length === 0) {
+    document.getElementById('fireGrid').innerHTML =
+      '<div style="grid-column:1/-1;text-align:center;color:var(--text-sub);padding:18px;font-size:11px;">산불위험 데이터 준비 중</div>';
+    return;
+  }
+  const colors = { 1: 'var(--safe)', 2: 'var(--caution)', 3: 'var(--warning)', 4: 'var(--danger)' };
+  const html = data.map(f => {
+    const pct = (f.level / 4) * 100;
+    return `
+      <div class="fire-card level-${f.level}">
+        <div class="fire-region">${f.region}</div>
+        <div class="fire-gauge"><div class="fire-gauge-fill" style="width:${pct}%;background:${colors[f.level]}"></div></div>
+        <div class="fire-label level-${f.level}">${f.levelText}</div>
+      </div>`;
+  }).join('');
+  document.getElementById('fireGrid').innerHTML = html;
+}
+
+// 시군별 인근 하천 매핑 (data.rivers 안에 어느 관측소가 그 시군을 대표하는가)
+const REGION_RIVER_MATCH = {
+  '동두천': '동두천', '연천': '연천',   '포천':  '포천',
+  '남양주': '남양주', '의정부': '의정부',
+  '양주':  '연천',  // 양주 인근 = 연천 신천
+  '가평':  '남양주', // 가평 인근 = 남양주 왕숙
+  '구리':  '남양주', // 구리 인근
+  '파주':  '연천',  // 파주 인근 = 연천 임진강
+  '고양':  '남양주',
+};
+
+// 시군별 산불 권역 매핑
+const REGION_FIRE_MATCH = {
+  '의정부': '의정부·양주', '양주':  '의정부·양주',
+  '동두천': '동두천·연천', '연천':  '동두천·연천',
+  '포천':  '포천·가평',   '가평':  '포천·가평',
+  '파주':  '파주·고양',   '고양':  '파주·고양',
+  '남양주': '의정부·양주', '구리':  '의정부·양주',
+};
+
+// 현재 선택된 관서 시군 (localStorage)
+let CURRENT_FOCUS_REGION = localStorage.getItem('focusRegion') || '동두천';
+
+function renderFocusMode(data) {
+  const region = CURRENT_FOCUS_REGION;
+  const sel = data.regions.find(r => r.name === region);
+  if (!sel) return;
+
+  const selPm = data.pm.find(p => p.region === region);
+  const fireRegionKey = REGION_FIRE_MATCH[region] || '';
+  const selFire = data.fire.find(f => f.region === fireRegionKey);
+  const riverKey = REGION_RIVER_MATCH[region] || region;
+  const selRiver = data.rivers.find(r => r.name.includes(riverKey));
+  const selMsgs = prioritizeMessages(data.messages || []);
+  const selWarnings = data.warnings.filter(w =>
+    w.area.includes(region) || w.area.includes('전역') || w.area.includes('경기북부'));
+
+  // 화면의 시군명 라벨들 동적 갱신
+  document.querySelectorAll('[data-focus-region-name]').forEach(el => {
+    el.textContent = region;
+  });
+  // 패널 헤더 텍스트
+  const panelTitleMap = {
+    'panel-weather': region + ' 현재 기상',
+    'panel-river':   selRiver ? selRiver.name.split(' (')[0] + ' 수위' : '인근 하천 수위',
+    'panel-pm':      region + ' 미세먼지',
+    'panel-fire':    '산불 위험도',
+    'panel-warning': region + ' 발효 특보',
+    'panel-msg':     '재난문자',
+  };
+  for (const [key, title] of Object.entries(panelTitleMap)) {
+    const el = document.querySelector(`.focus-${key} .panel-title`);
+    if (el) el.textContent = title;
+  }
+  const fireBadge = document.querySelector('.focus-panel-fire .panel-badge');
+  if (fireBadge) fireBadge.textContent = fireRegionKey || '-';
+  const riverBadge = document.querySelector('.focus-panel-river .panel-badge');
+  if (riverBadge && selRiver) {
+    const parts = selRiver.name.match(/\((.+?)\)/);
+    riverBadge.textContent = parts ? parts[1] : '-';
+  }
+
+  // 변수명 호환을 위해 ddc 이름 유지
+  const ddc = sel, ddcPm = selPm, ddcFire = selFire, ddcRiver = selRiver,
+        ddcMsgs = selMsgs, ddcWarnings = selWarnings;
+
+  const safeNum = (v, digits = 1) => (v != null && !isNaN(v)) ? Number(v).toFixed(digits) : '-';
+
+  // ===== 1. 동두천 현재 기상 카드 =====
+  document.getElementById('focusIcon').textContent = weatherIcon(ddc.weather);
+  document.getElementById('focusTemp').textContent = `${safeNum(ddc.temp)}°`;
+  const feel = (ddc.temp != null && !isNaN(ddc.temp)) ? safeNum(ddc.temp - 1.3) : '-';
+  document.getElementById('focusWeatherText').textContent = `${ddc.weather || '-'} · 체감 ${feel}°`;
+  document.getElementById('focusRain').textContent = `${ddc.rain ?? 0}mm`;
+  document.getElementById('focusWind').textContent = `${ddc.wind ?? 0}m/s`;
+  document.getElementById('focusHumid').textContent = `${ddc.humid ?? 0}%`;
+
+  // 동두천 상태 배지 (현재 기상 카드 헤더)
+  const ddcSevere = ddcWarnings.find(w => w.level === 'severe');
+  const ddcAny = ddcSevere || ddcWarnings[0];
+  const statusBadge = document.getElementById('focusStatusBadge');
+  if (ddcSevere) {
+    statusBadge.textContent = ddcSevere.type;
+    statusBadge.style.color = 'var(--danger)';
+    statusBadge.style.background = 'rgba(255,59,92,0.15)';
+  } else if (ddcAny) {
+    statusBadge.textContent = ddcAny.type;
+    statusBadge.style.color = 'var(--warning)';
+    statusBadge.style.background = 'rgba(255,170,0,0.12)';
+  } else {
+    statusBadge.textContent = '정상';
+    statusBadge.style.color = 'var(--safe)';
+    statusBadge.style.background = 'var(--safe-bg)';
+  }
+
+  // ===== 2. 신천(또는 시군별) 수위 카드 — 클릭 시 CCTV 포함 상세 모달 =====
+  const riverPanel = document.querySelector('.focus-panel-river');
+  const riverBody = document.getElementById('focusRiverBody');
+  if (ddcRiver) {
+    const pct = Math.min(100, (ddcRiver.value / ddcRiver.danger) * 100);
+    riverBody.innerHTML = `
+      <div class="river-big ${ddcRiver.level}">
+        <span class="num">${ddcRiver.value.toFixed(2)}</span>
+        <span class="unit">m</span>
+      </div>
+      <div class="river-bar-bg" style="width:100%;">
+        <div class="river-bar-fill ${ddcRiver.level}" style="width:${pct}%"></div>
+      </div>
+      <div style="width:100%;display:flex;justify-content:space-between;font-size:11px;color:var(--text-sub);">
+        <span>주의 ${ddcRiver.warning}m</span>
+        <span>위험 ${ddcRiver.danger}m</span>
+      </div>
+      <div style="margin-top:6px;font-size:10px;color:var(--accent);font-weight:600;">
+        📹 클릭하면 CCTV + 24시간 변화
+      </div>`;
+    riverPanel.style.cursor = 'pointer';
+    riverPanel.dataset.riverName = ddcRiver.name;
+    riverPanel.title = `${ddcRiver.name} CCTV 및 24시간 수위 변화 보기`;
+  } else {
+    riverBody.innerHTML = '<div class="focus-empty">하천 데이터 없음</div>';
+    riverPanel.style.cursor = '';
+    delete riverPanel.dataset.riverName;
+    riverPanel.removeAttribute('title');
+  }
+
+  // ===== 3. 미세먼지 카드 =====
+  const pmBody = document.getElementById('focusPmBody');
+  const pmGrade = document.getElementById('focusPmGrade');
+  if (ddcPm) {
+    pmGrade.textContent = ddcPm.gradeText;
+    const pmColors = {good: 'var(--pm-good)', normal: 'var(--pm-normal)', bad: 'var(--pm-bad)', vbad: 'var(--pm-vbad)'};
+    pmGrade.style.color = pmColors[ddcPm.grade] || 'var(--text-dim)';
+    pmGrade.style.fontWeight = '700';
+    pmBody.innerHTML = `
+      <div class="pm-big-item">
+        <span class="pm-big-label">PM10 (미세먼지)</span>
+        <span class="pm-big-value">${ddcPm.pm10}<span class="unit">μg/m³</span></span>
+      </div>
+      <div class="pm-big-item">
+        <span class="pm-big-label">PM2.5 (초미세)</span>
+        <span class="pm-big-value">${ddcPm.pm25}<span class="unit">μg/m³</span></span>
+      </div>`;
+  } else {
+    pmBody.innerHTML = '<div class="focus-empty">미세먼지 데이터 없음</div>';
+    pmGrade.textContent = '-';
+  }
+
+  // ===== 4. 12시간 예보 카드 =====
+  renderForecast(data.forecast.slice(0, 12), 'focusForecastRow');
+
+  // ===== 5. 산불 위험 카드 =====
+  const fireBody = document.getElementById('focusFireBody');
+  if (ddcFire) {
+    const fireColors = ['var(--safe)', 'var(--safe)', 'var(--caution)', 'var(--warning)', 'var(--danger)'];
+    const c = fireColors[ddcFire.level] || 'var(--text)';
+    fireBody.innerHTML = `
+      <div class="fire-big-label" style="color:${c}">${ddcFire.levelText}</div>
+      <div class="fire-big-gauge">
+        <div style="width:${(ddcFire.level/4)*100}%;background:${c};"></div>
+      </div>
+      <div class="fire-big-sub">4단계 중 ${ddcFire.level}단계</div>`;
+  } else {
+    fireBody.innerHTML = '<div class="focus-empty">산불 데이터 없음</div>';
+  }
+
+  // ===== 6. 동두천 발효 특보 카드 =====
+  const warnBody = document.getElementById('focusWarnBody');
+  const warnBadge = document.getElementById('focusWarnBadge');
+  if (ddcWarnings.length > 0) {
+    warnBadge.textContent = `${ddcWarnings.length}건`;
+    warnBadge.style.color = ddcSevere ? 'var(--danger)' : 'var(--warning)';
+    warnBody.innerHTML = ddcWarnings.map(w => `
+      <div class="warning-item ${w.level}">
+        <div class="warning-top">
+          <span class="warning-name">${w.type}</span>
+          <span class="warning-time">${w.time}</span>
+        </div>
+        <div class="warning-area">${w.area}</div>
+      </div>`).join('');
+  } else {
+    warnBadge.textContent = '없음';
+    warnBadge.style.color = 'var(--safe)';
+    warnBody.innerHTML = `
+      <div class="focus-warn-empty">
+        <span class="icon">✓</span>
+        <span>현재 발효 중인 특보 없음</span>
+      </div>`;
+  }
+
+  // ===== 7. 재난문자 카드 (우선순위 로직 적용) =====
+  renderMessages(data.messages || [], 'focusMsgList', 'focusMsgBadge');
+
+  // ===== 8. 광역 발효 특보 카드 =====
+  renderWarnings(data.warnings, 'focusWarningList', 'focusWarningBadge');
+
+  // ===== 9. 24시간 상세 시간대별 예보 표 =====
+  renderHourlyDetail(sel.detail && sel.detail.hourly || []);
+}
+
+// 24시간 상세 표
+function renderHourlyDetail(hourly) {
+  const tbl = document.getElementById('focusHourlyTable');
+  if (!tbl) return;
+  if (!hourly || hourly.length === 0) {
+    tbl.innerHTML = '<tr><td colspan="25" style="text-align:center;color:var(--text-sub);padding:20px;">시간대별 예보 데이터 없음</td></tr>';
+    return;
+  }
+
+  // 야간 판정 (0~6시, 19~23시)
+  const isNight = (h) => {
+    const hr = parseInt(h.hour, 10);
+    return hr < 6 || hr >= 19;
+  };
+  const rainClass = (mm) => mm >= 15 ? 'severe-rain' : (mm >= 1 ? 'has-rain' : '');
+  const popClass = (p) => p >= 70 ? 'high-pop' : (p >= 30 ? 'has-pop' : '');
+
+  const cellNight = (h, content, extraClass = '') => {
+    const cls = (isNight(h) ? 'night ' : '') + extraClass;
+    return `<td class="${cls.trim()}">${content}</td>`;
+  };
+
+  const tdHour    = hourly.map(h => cellNight(h, h.hour)).join('');
+  const tdIcon    = hourly.map(h => cellNight(h, h.icon)).join('');
+  const tdTemp    = hourly.map(h => cellNight(h, `${h.temp}°`)).join('');
+  const tdFeel    = hourly.map(h => cellNight(h, `${h.feels_like}°`)).join('');
+  const tdRain    = hourly.map(h => cellNight(h, h.rain_mm > 0 ? `${h.rain_mm}` : '-', rainClass(h.rain_mm))).join('');
+  const tdPop     = hourly.map(h => cellNight(h, h.rain_pop > 0 ? `${h.rain_pop}%` : '-', popClass(h.rain_pop))).join('');
+  const tdWind    = hourly.map(h => cellNight(h, `${h.wind_dir}<br>${h.wind_ms}`)).join('');
+  const tdHumid   = hourly.map(h => cellNight(h, `${h.humid}%`)).join('');
+
+  tbl.innerHTML = `
+    <tr class="row-hour"><th>시각</th>${tdHour}</tr>
+    <tr class="row-icon"><th>날씨</th>${tdIcon}</tr>
+    <tr class="row-temp"><th>기온</th>${tdTemp}</tr>
+    <tr class="row-feel"><th>체감온도</th>${tdFeel}</tr>
+    <tr class="row-rain"><th>강수량 (mm)</th>${tdRain}</tr>
+    <tr class="row-pop"><th>강수확률</th>${tdPop}</tr>
+    <tr class="row-wind"><th>바람 (m/s)</th>${tdWind}</tr>
+    <tr class="row-humid"><th>습도</th>${tdHumid}</tr>
+  `;
+}
+
+function updateClock() {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+  const yyyy = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const weekday = ['일','월','화','수','목','금','토'][now.getDay()];
+  document.getElementById('clockTime').textContent = `${hh}:${mm}:${ss}`;
+  document.getElementById('clockDate').textContent = `${yyyy}년 ${month}월 ${day}일 (${weekday})`;
+}
+
+function updateOverallStatus(warnings) {
+  const pill = document.getElementById('overallStatus');
+  const text = document.getElementById('overallStatusText');
+  const banner = document.getElementById('alertBanner');
+  const hasSevere = warnings.some(w => w.level === 'severe');
+  const hasWarning = warnings.some(w => w.level === 'warning');
+
+  if (hasSevere) {
+    pill.style.background = 'rgba(255,59,92,0.15)';
+    pill.style.borderColor = 'var(--danger)';
+    pill.style.color = 'var(--danger)';
+    pill.querySelector('.dot').style.background = 'var(--danger)';
+    text.textContent = '경계';
+    banner.style.display = 'flex';
+  } else if (hasWarning) {
+    pill.style.background = 'rgba(255,170,0,0.12)';
+    pill.style.borderColor = 'var(--warning)';
+    pill.style.color = 'var(--warning)';
+    pill.querySelector('.dot').style.background = 'var(--warning)';
+    text.textContent = '주의';
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function updateLastUpdateTime(updated) {
+  if (updated) {
+    // "2026-05-13 07:28:17" → "07:28"
+    const parts = updated.split(' ');
+    if (parts.length === 2) {
+      document.getElementById('lastUpdate').textContent = parts[1].substring(0, 5);
+      return;
+    }
+  }
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  document.getElementById('lastUpdate').textContent = `${hh}:${mm}`;
+}
+
+function renderAll(data) {
+  // 빈 필드는 샘플로 폴백 (운영 중 부분 실패 대비)
+  data = data || {};
+  if (!data.regions || data.regions.length === 0) data.regions = SAMPLE_DATA.regions;
+  if (!data.forecast || data.forecast.length === 0) data.forecast = SAMPLE_DATA.forecast;
+  data.warnings = data.warnings || [];
+  data.rivers = data.rivers || [];
+  data.messages = data.messages || [];
+  data.pm = data.pm || [];
+  data.fire = data.fire || [];
+
+  renderRegions(data.regions);
+  renderWarnings(data.warnings, 'warningList', 'warningBadge');
+  renderRivers(data.rivers);
+  renderMessages(data.messages, 'msgList', 'msgBadge');
+  renderForecast(data.forecast, 'forecastRow');
+  renderPm(data.pm);
+  renderFire(data.fire);
+  renderFocusMode(data);
+  updateOverallStatus(data.warnings);
+  updateLastUpdateTime(data.updated);
+}
+
+// === 테마 토글 ===
+const themeBtn = document.getElementById('themeBtn');
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  themeBtn.textContent = theme === 'light' ? '☀' : '🌙';
+  localStorage.setItem('dashboardTheme', theme);
+}
+themeBtn.addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  setTheme(cur === 'dark' ? 'light' : 'dark');
+});
+setTheme(localStorage.getItem('dashboardTheme') || 'dark');
+
+// === 시군 선택 모달 ===
+const REGION_LIST = ['의정부', '양주', '동두천', '포천', '연천', '가평', '남양주', '구리', '파주', '고양'];
+
+function openRegionPicker() {
+  const grid = document.getElementById('regionPickerGrid');
+  grid.innerHTML = REGION_LIST.map(name => `
+    <button class="region-pick-btn ${name === CURRENT_FOCUS_REGION ? 'current' : ''}" data-pick="${name}">
+      ${name}${name === CURRENT_FOCUS_REGION ? ' ✓' : ''}
+    </button>
+  `).join('');
+  document.getElementById('regionPickerOverlay').classList.add('open');
+}
+
+function closeRegionPicker() {
+  document.getElementById('regionPickerOverlay').classList.remove('open');
+}
+
+function selectFocusRegion(name) {
+  CURRENT_FOCUS_REGION = name;
+  localStorage.setItem('focusRegion', name);
+  document.getElementById('currentFocusRegionText').textContent = name;
+  // 중점 모드로 자동 전환 + 데이터 다시 그리기
+  setView('focus');
+  renderFocusMode(DATA);
+  closeRegionPicker();
+}
+
+document.getElementById('changeRegionBtn').addEventListener('click', openRegionPicker);
+document.getElementById('regionPickerClose').addEventListener('click', closeRegionPicker);
+document.getElementById('regionPickerOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'regionPickerOverlay') closeRegionPicker();
+});
+document.addEventListener('click', (e) => {
+  const pickBtn = e.target.closest('[data-pick]');
+  if (pickBtn) selectFocusRegion(pickBtn.dataset.pick);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeRegionPicker();
+});
+
+// === 뷰 모드 토글 ===
+function setView(view) {
+  document.body.setAttribute('data-view', view);
+  document.querySelectorAll('[data-view-btn]').forEach(b => {
+    b.classList.toggle('active', b.dataset.viewBtn === view);
+  });
+  // 중점 모드일 때만 시군 변경 버튼 표시
+  document.getElementById('changeRegionBtn').style.display = (view === 'focus') ? 'inline-flex' : 'none';
+  localStorage.setItem('dashboardView', view);
+}
+document.querySelectorAll('[data-view-btn]').forEach(b => {
+  b.addEventListener('click', () => {
+    const v = b.dataset.viewBtn;
+    setView(v);
+    // 중점 모드로 처음 진입하는데 시군 미지정이면 모달 자동 열기
+    if (v === 'focus' && !localStorage.getItem('focusRegion')) {
+      openRegionPicker();
+    }
+  });
+});
+
+// 초기 표시
+document.getElementById('currentFocusRegionText').textContent = CURRENT_FOCUS_REGION;
+setView(localStorage.getItem('dashboardView') || 'wide');
+
+// === 초기화 ===
+// data.js가 로드되어 있으면 실데이터, 없으면 샘플 데이터
+const DATA = (typeof window.DASHBOARD_DATA !== 'undefined' && window.DASHBOARD_DATA)
+  ? window.DASHBOARD_DATA
+  : SAMPLE_DATA;
+
+renderAll(DATA);
+updateClock();
+setInterval(updateClock, 1000);
+
+// 페이지를 5분마다 새로고침해서 최신 data.js를 다시 읽음
+setInterval(() => { location.reload(); }, 5 * 60 * 1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# 비밀 정보 — 절대 커밋 금지
+.env
+.env.local
+.env.*.local
+*.key
+credentials.json
+token.json
+
+# 임시 작업 공간 (단, 누적 강수 기록은 깃에 포함시켜 GitHub Actions에서도 누적 유지)
+.tmp/*
+!.tmp/rain_history.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# 에디터
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

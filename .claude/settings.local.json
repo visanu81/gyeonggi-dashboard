@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(py --version)",
+      "Bash(where python *)",
+      "Bash(python -m pip --version)",
+      "Bash(python -m pip install requests)",
+      "Bash(python tools/update_data.py)",
+      "Bash(python -c ' *)",
+      "WebSearch",
+      "WebFetch(domain:www.data.go.kr)",
+      "Bash(set PYTHONIOENCODING=utf-8)",
+      "Bash(python -X utf8 -c ' *)",
+      "Bash(cmd //c \"갱신.bat\")",
+      "Bash(schtasks //create //tn \"GyeonggiBukbu_Dashboard_AutoUpdate\" //tr \"wscript.exe \\\\\"C:\\\\Users\\\\USER\\\\Desktop\\\\AI업무처리\\\\기상,재난상황판\\\\자동갱신_백그라운드.vbs\\\\\"\" //sc minute //mo 5 //f)",
+      "Bash(schtasks //run //tn \"GyeonggiBukbu_Dashboard_AutoUpdate\")",
+      "WebFetch(domain:n.flood.go.kr)",
+      "WebFetch(domain:www.weather.go.kr)",
+      "WebFetch(domain:www.hrfco.go.kr)"
+    ]
+  }
+}
