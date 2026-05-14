@@ -1,7 +1,7 @@
 // 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.
-// 마지막 갱신: 2026-05-14 16:49:05
+// 마지막 갱신: 2026-05-14 16:54:01
 window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 16:48:02",
+  "updated": "2026-05-14 16:53:02",
   "regions": [
     {
       "name": "의정부",
@@ -1135,15 +1135,23 @@ window.DASHBOARD_DATA = {
       "tmin": null,
       "pop": 0,
       "detail": {
-        "observation": {},
-        "rain_cumul": {
-          "1h": 0,
-          "3h": 0,
-          "6h": 0,
-          "12h": 0
+        "observation": {
+          "pty": "0",
+          "reh": 27,
+          "rn1": 0.0,
+          "t1h": 29.9,
+          "vec": 189.0,
+          "wsd": 1.3,
+          "base_time": "16:00"
         },
-        "wind_dir_name": "동",
-        "feels_like": 27.7,
+        "rain_cumul": {
+          "1h": 0.0,
+          "3h": 0.0,
+          "6h": 0.0,
+          "12h": 0.0
+        },
+        "wind_dir_name": "남",
+        "feels_like": 29.9,
         "tmax": null,
         "tmin": null,
         "pop": 0,
