@@ -1,7 +1,7 @@
 // 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.
-// 마지막 갱신: 2026-05-14 11:14:15
+// 마지막 갱신: 2026-05-14 11:19:39
 window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 11:13:02",
+  "updated": "2026-05-14 11:18:02",
   "regions": [
     {
       "name": "의정부",
@@ -3849,15 +3849,11 @@ window.DASHBOARD_DATA = {
     {
       "name": "임진강 (군남댐)",
       "code": "1021701",
-      "value": 24.353,
+      "value": 24.371,
       "warning": 31.5,
       "danger": 35.0,
       "level": "safe",
       "history": [
-        {
-          "time": "2026051311",
-          "value": 24.31
-        },
         {
           "time": "2026051312",
           "value": 24.31
@@ -3949,10 +3945,14 @@ window.DASHBOARD_DATA = {
         {
           "time": "2026051410",
           "value": 24.353
+        },
+        {
+          "time": "2026051411",
+          "value": 24.371
         }
       ],
       "delta_1h": 0.02,
-      "delta_3h": 0.07,
+      "delta_3h": 0.06,
       "has_cctv": false,
       "api": "dam",
       "dam_info": {
@@ -4591,71 +4591,71 @@ window.DASHBOARD_DATA = {
   "pm": [
     {
       "region": "의정부",
-      "pm10": 35,
-      "pm25": 16,
-      "grade": "normal",
-      "gradeText": "보통"
+      "pm10": 27,
+      "pm25": 12,
+      "grade": "good",
+      "gradeText": "좋음"
     },
     {
       "region": "양주",
-      "pm10": 32,
-      "pm25": 19,
-      "grade": "normal",
-      "gradeText": "보통"
+      "pm10": 30,
+      "pm25": 13,
+      "grade": "good",
+      "gradeText": "좋음"
     },
     {
       "region": "동두천",
-      "pm10": 22,
-      "pm25": 4,
+      "pm10": 25,
+      "pm25": 8,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "포천",
-      "pm10": 39,
-      "pm25": 22,
+      "pm10": 37,
+      "pm25": 15,
       "grade": "normal",
       "gradeText": "보통"
     },
     {
       "region": "연천",
-      "pm10": 26,
-      "pm25": 16,
-      "grade": "normal",
-      "gradeText": "보통"
+      "pm10": 23,
+      "pm25": 14,
+      "grade": "good",
+      "gradeText": "좋음"
     },
     {
       "region": "가평",
-      "pm10": 29,
+      "pm10": 20,
       "pm25": 13,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "남양주",
-      "pm10": 17,
-      "pm25": 10,
-      "grade": "good",
-      "gradeText": "좋음"
+      "pm10": 20,
+      "pm25": 28,
+      "grade": "normal",
+      "gradeText": "보통"
     },
     {
       "region": "구리",
-      "pm10": 16,
-      "pm25": 6,
+      "pm10": 25,
+      "pm25": 7,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "파주",
-      "pm10": 21,
-      "pm25": 14,
-      "grade": "good",
-      "gradeText": "좋음"
+      "pm10": 20,
+      "pm25": 16,
+      "grade": "normal",
+      "gradeText": "보통"
     },
     {
       "region": "고양",
       "pm10": 37,
-      "pm25": 11,
+      "pm25": 9,
       "grade": "normal",
       "gradeText": "보통"
     }
