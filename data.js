@@ -1,7 +1,7 @@
 // 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.
-// 마지막 갱신: 2026-05-14 17:14:15
+// 마지막 갱신: 2026-05-14 17:19:22
 window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 17:13:01",
+  "updated": "2026-05-14 17:18:02",
   "regions": [
     {
       "name": "의정부",
@@ -4591,73 +4591,73 @@ window.DASHBOARD_DATA = {
   "pm": [
     {
       "region": "의정부",
-      "pm10": 25,
-      "pm25": 12,
+      "pm10": 20,
+      "pm25": 11,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "양주",
-      "pm10": 27,
-      "pm25": 7,
+      "pm10": 15,
+      "pm25": 8,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "동두천",
       "pm10": 17,
-      "pm25": 9,
-      "grade": "good",
-      "gradeText": "좋음"
-    },
-    {
-      "region": "포천",
-      "pm10": 42,
-      "pm25": 22,
-      "grade": "normal",
-      "gradeText": "보통"
-    },
-    {
-      "region": "연천",
-      "pm10": 22,
-      "pm25": 13,
-      "grade": "good",
-      "gradeText": "좋음"
-    },
-    {
-      "region": "가평",
-      "pm10": 18,
       "pm25": 7,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
+      "region": "포천",
+      "pm10": 43,
+      "pm25": 18,
+      "grade": "normal",
+      "gradeText": "보통"
+    },
+    {
+      "region": "연천",
+      "pm10": 18,
+      "pm25": 14,
+      "grade": "good",
+      "gradeText": "좋음"
+    },
+    {
+      "region": "가평",
+      "pm10": 14,
+      "pm25": 11,
+      "grade": "good",
+      "gradeText": "좋음"
+    },
+    {
       "region": "남양주",
-      "pm10": 22,
-      "pm25": 13,
+      "pm10": 21,
+      "pm25": 15,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "구리",
-      "pm10": 30,
+      "pm10": 35,
       "pm25": 4,
-      "grade": "good",
-      "gradeText": "좋음"
+      "grade": "normal",
+      "gradeText": "보통"
     },
     {
       "region": "파주",
       "pm10": 24,
-      "pm25": 13,
+      "pm25": 11,
       "grade": "good",
       "gradeText": "좋음"
     },
     {
       "region": "고양",
-      "pm10": 31,
-      "pm25": 17,
-      "grade": "normal",
-      "gradeText": "보통"
+      "pm10": 28,
+      "pm25": 15,
+      "grade": "good",
+      "gradeText": "좋음"
     }
   ],
   "fire": [
