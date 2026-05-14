@@ -1,7 +1,7 @@
 // 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.
-// 마지막 갱신: 2026-05-14 12:04:23
+// 마지막 갱신: 2026-05-14 12:09:20
 window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 12:03:04",
+  "updated": "2026-05-14 12:08:04",
   "regions": [
     {
       "name": "의정부",
@@ -3745,10 +3745,6 @@ window.DASHBOARD_DATA = {
       "level": "safe",
       "history": [
         {
-          "time": "2026051312",
-          "value": 1.29
-        },
-        {
           "time": "2026051313",
           "value": 1.28
         },
@@ -3838,6 +3834,10 @@ window.DASHBOARD_DATA = {
         },
         {
           "time": "2026051411",
+          "value": 1.28
+        },
+        {
+          "time": "2026051412",
           "value": 1.28
         }
       ],
@@ -3971,10 +3971,6 @@ window.DASHBOARD_DATA = {
       "level": "safe",
       "history": [
         {
-          "time": "2026051312",
-          "value": 0.89
-        },
-        {
           "time": "2026051313",
           "value": 0.89
         },
@@ -4065,6 +4061,10 @@ window.DASHBOARD_DATA = {
         {
           "time": "2026051411",
           "value": 0.87
+        },
+        {
+          "time": "2026051412",
+          "value": 0.87
         }
       ],
       "delta_1h": 0.0,
@@ -4080,10 +4080,6 @@ window.DASHBOARD_DATA = {
       "danger": 10.8,
       "level": "safe",
       "history": [
-        {
-          "time": "2026051312",
-          "value": 0.66
-        },
         {
           "time": "2026051313",
           "value": 0.67
@@ -4175,6 +4171,10 @@ window.DASHBOARD_DATA = {
         {
           "time": "2026051411",
           "value": 0.58
+        },
+        {
+          "time": "2026051412",
+          "value": 0.58
         }
       ],
       "delta_1h": 0.0,
@@ -4185,15 +4185,11 @@ window.DASHBOARD_DATA = {
     {
       "name": "한탄강 (포천 용담교)",
       "code": "1022640",
-      "value": 0.97,
+      "value": 0.96,
       "warning": 9.5,
       "danger": 18.0,
       "level": "safe",
       "history": [
-        {
-          "time": "2026051312",
-          "value": 1.0
-        },
         {
           "time": "2026051313",
           "value": 1.0
@@ -4285,9 +4281,13 @@ window.DASHBOARD_DATA = {
         {
           "time": "2026051411",
           "value": 0.97
+        },
+        {
+          "time": "2026051412",
+          "value": 0.96
         }
       ],
-      "delta_1h": 0.01,
+      "delta_1h": -0.01,
       "delta_3h": 0.0,
       "has_cctv": true,
       "api": "waterlevel"
@@ -4300,10 +4300,6 @@ window.DASHBOARD_DATA = {
       "danger": 8.0,
       "level": "safe",
       "history": [
-        {
-          "time": "2026051312",
-          "value": 1.0
-        },
         {
           "time": "2026051313",
           "value": 1.0
@@ -4394,6 +4390,10 @@ window.DASHBOARD_DATA = {
         },
         {
           "time": "2026051411",
+          "value": 0.99
+        },
+        {
+          "time": "2026051412",
           "value": 0.99
         }
       ],
@@ -4411,10 +4411,6 @@ window.DASHBOARD_DATA = {
       "level": "safe",
       "history": [
         {
-          "time": "2026051312",
-          "value": 0.4
-        },
-        {
           "time": "2026051313",
           "value": 0.4
         },
@@ -4504,6 +4500,10 @@ window.DASHBOARD_DATA = {
         },
         {
           "time": "2026051411",
+          "value": 0.39
+        },
+        {
+          "time": "2026051412",
           "value": 0.39
         }
       ],
