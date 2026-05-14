@@ -1,7 +1,7 @@
 // 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.
-// 마지막 갱신: 2026-05-14 19:08:56
+// 마지막 갱신: 2026-05-14 19:11:31
 window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 19:08:02",
+  "updated": "2026-05-14 19:10:44",
   "regions": [
     {
       "name": "의정부",
@@ -3849,15 +3849,11 @@ window.DASHBOARD_DATA = {
     {
       "name": "임진강 (군남댐)",
       "code": "1021701",
-      "value": 24.4,
+      "value": 24.387,
       "warning": 31.5,
       "danger": 35.0,
       "level": "safe",
       "history": [
-        {
-          "time": "2026051319",
-          "value": 24.249
-        },
         {
           "time": "2026051320",
           "value": 24.25
@@ -3949,10 +3945,14 @@ window.DASHBOARD_DATA = {
         {
           "time": "2026051418",
           "value": 24.4
+        },
+        {
+          "time": "2026051419",
+          "value": 24.387
         }
       ],
-      "delta_1h": 0.0,
-      "delta_3h": 0.0,
+      "delta_1h": -0.01,
+      "delta_3h": -0.01,
       "has_cctv": false,
       "api": "dam",
       "dam_info": {
@@ -4513,26 +4513,7 @@ window.DASHBOARD_DATA = {
       "api": "waterlevel"
     }
   ],
-  "messages": [
-    {
-      "sender": "파주시",
-      "time": "16:03",
-      "text": "금일 15:20경 조리읍 오산리 28-1 인근 차량화재 발생. 도로 양방향 통제중으로(약2~3시간)해당 구간 이용 차량은 인근도로로 우회하시기 바랍니다.[파주시]",
-      "region": "파주"
-    },
-    {
-      "sender": "광주시",
-      "time": "10:15",
-      "text": "금일 야외활동인구 증가 예상으로 산불위험 높음. ▲광주시 전지역 입산 금지 ▲산림 내 불법 야영·취사 금지. 현재 단속 중. 적발 시 과태료 부과.[광주시]",
-      "region": "광주"
-    },
-    {
-      "sender": "김포시",
-      "time": "08:20",
-      "text": "현재 고촌읍 향산리 1-44 한강시네폴리스 서울에서 김포방향 1차로 차량 연쇄 추돌사고로 정체 발생 중. 교통정보 확인 바랍니다. [김포시]",
-      "region": "김포"
-    }
-  ],
+  "messages": [],
   "forecast": [
     {
       "time": "20시",
@@ -4792,5 +4773,9 @@ window.DASHBOARD_DATA = {
         "seq": 42
       }
     ]
+  },
+  "fire_stats": {
+    "incidents_year": [],
+    "summary": null
   }
 };

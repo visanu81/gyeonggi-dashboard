@@ -624,6 +624,65 @@ def fetch_pm():
 # 5. 산불 위험도 (국립산림과학원)
 # ============================================================
 
+def fetch_fire_incidents():
+    """산림청 산불발생통계정보 — 올해 산불 발생 통계.
+    endpoint: https://apis.data.go.kr/1400000/forestStusService/getfirestatsservice
+    활용신청 직후엔 403 발생 가능 (1~2시간 활성화 대기)."""
+    url = 'https://apis.data.go.kr/1400000/forestStusService/getfirestatsservice'
+    year = datetime.now().strftime('%Y')
+    try:
+        # XML 응답이 기본 — _type=json 시도 후 안 되면 XML 파싱
+        r = requests.get(url, params={
+            'serviceKey': DATA_KEY,
+            'pageNo': 1, 'numOfRows': 100,
+            '_type': 'json',
+            'searchYr': year,
+        }, timeout=15)
+        if r.status_code != 200:
+            print(f'    산불발생: HTTP {r.status_code} (활성화 대기 중일 수 있음)')
+            return {'incidents_year': [], 'summary': None}
+
+        try:
+            data = r.json()
+        except ValueError:
+            # XML 응답 — 간단 파싱
+            import re as _re
+            items = []
+            for m in _re.finditer(r'<item>(.*?)</item>', r.text, _re.DOTALL):
+                block = m.group(1)
+                rec = {}
+                for tag in _re.findall(r'<([a-zA-Z]+)>([^<]*)</\1>', block):
+                    rec[tag[0]] = tag[1]
+                items.append(rec)
+            data = {'response': {'body': {'items': {'item': items}}}}
+
+        body = data.get('response', {}).get('body', {})
+        items = body.get('items', {})
+        if isinstance(items, dict):
+            items = items.get('item', [])
+        if isinstance(items, dict):
+            items = [items]
+
+        # 경기북부 시군 발생 건수 집계
+        north_sigun = {'의정부시', '양주시', '동두천시', '포천시', '연천군',
+                       '가평군', '남양주시', '구리시', '파주시', '고양시'}
+        north_incidents = []
+        for it in items:
+            sgg = str(it.get('occrSiggNm') or it.get('sgg_nm') or it.get('locsi') or '')
+            if any(s in sgg for s in north_sigun):
+                north_incidents.append(it)
+
+        summary = {
+            'total_year': len(items),
+            'north_year': len(north_incidents),
+            'latest_north': north_incidents[:5] if north_incidents else [],
+        }
+        return {'incidents_year': north_incidents, 'summary': summary}
+    except Exception as e:
+        print(f'    산불발생: {e}')
+        return {'incidents_year': [], 'summary': None}
+
+
 def fetch_fire():
     """국립산림과학원 산불위험예보 V2 — 시군구별 위험도.
     응답의 d1~d4 는 해당 시군 안에서 각 위험단계(낮음·보통·높음·매우높음) 면적 비율(%).
@@ -986,6 +1045,7 @@ def main():
         'regions': [], 'warnings': [], 'rivers': [],
         'messages': [], 'forecast': [], 'pm': [], 'fire': [],
         'bulletins': {'warnings_full': [], 'info_list': []},
+        'fire_stats': {'incidents_year': [], 'summary': None},
     }
 
     print('[시군별 현재 기상]')
@@ -1023,6 +1083,14 @@ def main():
     try:
         data['fire'] = fetch_fire()
         print(f'  ✓ {len(data["fire"])}개 권역')
+    except Exception as e:
+        print(f'  ✗ {e}')
+
+    print('[산불 발생 통계]')
+    try:
+        data['fire_stats'] = fetch_fire_incidents()
+        sm = data['fire_stats'].get('summary') or {}
+        print(f'  ✓ 올해 전국 {sm.get("total_year", 0)}건 / 경기북부 {sm.get("north_year", 0)}건')
     except Exception as e:
         print(f'  ✗ {e}')
 
