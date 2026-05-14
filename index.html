@@ -870,7 +870,7 @@
     border-bottom: 1px solid var(--border);
     padding-bottom: 10px;
   }
-  .wimg-tab {
+  .wimg-tab, .fire-tab {
     padding: 7px 14px;
     background: var(--bg-card-2);
     border: 1px solid var(--border);
@@ -882,8 +882,8 @@
     font-family: inherit;
     transition: all 0.15s;
   }
-  .wimg-tab:hover { color: var(--text); border-color: var(--accent); }
-  .wimg-tab.active {
+  .wimg-tab:hover, .fire-tab:hover { color: var(--text); border-color: var(--accent); }
+  .wimg-tab.active, .fire-tab.active {
     background: var(--accent);
     color: #fff;
     border-color: var(--accent);
@@ -1621,6 +1621,9 @@
     <button class="region-changer" id="weatherImgBtn" style="background:rgba(255,170,0,0.12);border-color:var(--warning);color:var(--warning);" title="기상 레이더·위성영상 보기">
       📡 기상영상
     </button>
+    <button class="region-changer" id="fireInfoBtn" style="background:rgba(255,59,92,0.12);border-color:var(--danger);color:var(--danger);" title="산림청 실시간 산불정보">
+      🔥 산불정보
+    </button>
     <button class="icon-btn" id="themeBtn" title="테마 전환">🌙</button>
     <div class="status-pill" id="overallStatus">
       <span class="dot"></span>
@@ -1807,6 +1810,33 @@
   </div>
   <div>
     <span>마지막 업데이트: <span id="lastUpdate">--:--</span></span>
+  </div>
+</div>
+
+<!-- 산림청 실시간 산불정보 모달 -->
+<div class="modal-overlay" id="fireInfoOverlay">
+  <div class="modal" style="max-width: 1100px;">
+    <div class="modal-header">
+      <div class="modal-title-block">
+        <div class="modal-title">🔥 실시간 산불정보</div>
+        <div class="modal-subtitle">산림청 산불상황 관제시스템 · 실시간 산불정보</div>
+      </div>
+      <button class="modal-close" id="fireInfoClose" title="닫기 (ESC)">×</button>
+    </div>
+    <div class="modal-body" style="display:block;padding:14px 18px 18px;">
+      <div class="weather-img-tabs">
+        <button class="fire-tab active" data-fire="sanbul">산불상황 관제</button>
+        <button class="fire-tab" data-fire="ffas">실시간 산불정보</button>
+        <button class="fire-tab" data-fire="nifos">산불위험예보</button>
+      </div>
+      <div class="weather-img-frame" id="fireInfoFrame" style="aspect-ratio: 16 / 11;">
+        <!-- iframe 동적 -->
+      </div>
+      <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-sub);">
+        <span>📡 산림청 실시간 시스템</span>
+        <a id="fireInfoExternal" href="https://sanbul.forest.go.kr/" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">↗ 산림청 사이트에서 보기</a>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2485,6 +2515,46 @@ document.addEventListener('click', (e) => {
   if (tab) {
     document.querySelectorAll('.wimg-tab').forEach(b => b.classList.toggle('active', b === tab));
     loadWeatherImg(tab.dataset.wimg);
+  }
+});
+
+// ============ 산림청 실시간 산불정보 모달 ============
+const FIRE_INFO_SOURCES = {
+  sanbul: { url: 'https://sanbul.forest.go.kr/',                       label: '산림청 산불상황 관제시스템' },
+  ffas:   { url: 'https://fd.forest.go.kr/ffas/pubConn/movePage/sub1.do', label: '산림청 실시간 산불정보' },
+  nifos:  { url: 'https://forestfire.nifos.go.kr/',                    label: '국가산불위험예보시스템' },
+};
+
+function loadFireInfo(kind) {
+  const src = FIRE_INFO_SOURCES[kind];
+  if (!src) return;
+  const frame = document.getElementById('fireInfoFrame');
+  const ext = document.getElementById('fireInfoExternal');
+  frame.innerHTML = `<iframe src="${src.url}" referrerpolicy="no-referrer" allow="fullscreen" style="width:100%;height:100%;border:0;"></iframe>`;
+  ext.href = src.url;
+  ext.textContent = `↗ ${src.label} 새 창에서 보기`;
+}
+
+function openFireInfoModal() {
+  document.getElementById('fireInfoOverlay').classList.add('open');
+  document.querySelectorAll('.fire-tab').forEach((b, i) => b.classList.toggle('active', i === 0));
+  loadFireInfo('sanbul');
+}
+function closeFireInfoModal() {
+  document.getElementById('fireInfoOverlay').classList.remove('open');
+  document.getElementById('fireInfoFrame').innerHTML = '';
+}
+
+document.getElementById('fireInfoBtn').addEventListener('click', openFireInfoModal);
+document.getElementById('fireInfoClose').addEventListener('click', closeFireInfoModal);
+document.getElementById('fireInfoOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'fireInfoOverlay') closeFireInfoModal();
+});
+document.addEventListener('click', (e) => {
+  const tab = e.target.closest('.fire-tab[data-fire]');
+  if (tab) {
+    document.querySelectorAll('.fire-tab').forEach(b => b.classList.toggle('active', b === tab));
+    loadFireInfo(tab.dataset.fire);
   }
 });
 
