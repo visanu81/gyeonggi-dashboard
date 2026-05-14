@@ -397,7 +397,7 @@
     .kpi-item { padding: 10px 14px 10px 18px; }
   }
 
-  /* ALERT BANNER — 절제된 발광 */
+  /* ALERT BANNER — 위급 펄스 애니메이션 */
   .alert-banner {
     margin: 12px 28px 0;
     padding: 14px 20px;
@@ -406,6 +406,17 @@
     border-left: 4px solid var(--danger);
     border-radius: 6px;
     display: flex; align-items: center; gap: 16px;
+    animation: alert-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes alert-pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.45);
+      border-color: var(--danger);
+    }
+    50% {
+      box-shadow: 0 0 0 12px rgba(220, 38, 38, 0);
+      border-color: rgba(220, 38, 38, 0.7);
+    }
   }
   .alert-icon {
     width: 38px; height: 38px;
@@ -416,7 +427,29 @@
     flex-shrink: 0;
     color: #fff;
     font-weight: 800;
+    animation: icon-pulse 1s ease-in-out infinite;
   }
+  @keyframes icon-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+  /* 헤더 배지 위급 펄스 */
+  @keyframes badge-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6); transform: scale(1); }
+    50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); transform: scale(1.03); }
+  }
+  .header-badge.danger { animation: badge-pulse 1.2s ease-in-out infinite; }
+  @keyframes badge-pulse-warn {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.5); }
+    50% { box-shadow: 0 0 0 6px rgba(234, 88, 12, 0); }
+  }
+  .header-badge.warning { animation: badge-pulse-warn 1.6s ease-in-out infinite; }
+  /* KPI 종합상태 위급 펄스 */
+  @keyframes kpi-pulse {
+    0%, 100% { box-shadow: inset 0 0 0 0 rgba(220, 38, 38, 0); }
+    50% { box-shadow: inset 0 0 20px 0 rgba(220, 38, 38, 0.15); }
+  }
+  .kpi-item.alert { animation: kpi-pulse 1.8s ease-in-out infinite; }
   .alert-content { flex: 1; min-width: 0; }
   .alert-title {
     font-size: 15px; font-weight: 800; color: var(--danger);
@@ -1798,6 +1831,7 @@
     <button class="region-changer" id="weatherImgBtn" title="기상 레이더·위성영상 보기">
       📡 기상영상
     </button>
+    <button class="icon-btn" id="muteBtn" title="알람 사운드 켜기/끄기">🔊</button>
     <button class="icon-btn" id="themeBtn" title="테마 전환">🌙</button>
     <div class="header-info-block">
       <span class="header-badge" id="overallStatus">
@@ -3370,6 +3404,7 @@ function renderAll(data) {
   data.fire = data.fire || [];
 
   renderKpiBar(data);  // 상단 KPI 대시보드
+  checkNewAlert(data.warnings);  // 새 특보 발효 시 사운드 알람
   renderRegions(data.regions);
   renderWarnings(data.warnings, 'warningList', 'warningBadge');
   renderRivers(data.rivers);
@@ -3436,6 +3471,108 @@ function renderKpiBar(data) {
     $('kpiDam').innerHTML = `--<span class="kpi-unit">%</span>`;
   }
 }
+
+// ============ 사운드 알람 ============
+// Web Audio API로 비프음 생성 (외부 파일 X)
+// 브라우저 자동재생 차단 정책으로 사용자가 한 번 클릭한 후에만 작동
+let audioCtx = null;
+let audioReady = false;
+let soundMuted = localStorage.getItem('alarmMuted') === '1';
+
+function ensureAudio() {
+  if (!audioCtx) {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) { return false; }
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  audioReady = true;
+  return true;
+}
+
+function beep(freq, duration, delay = 0, vol = 0.15) {
+  if (!audioCtx || soundMuted) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.frequency.value = freq;
+  osc.type = 'sine';
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  const t = audioCtx.currentTime + delay;
+  // 부드러운 envelope
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(vol, t + 0.02);
+  gain.gain.linearRampToValueAtTime(vol, t + duration - 0.05);
+  gain.gain.linearRampToValueAtTime(0, t + duration);
+  osc.start(t);
+  osc.stop(t + duration);
+}
+
+function playAlarm(level) {
+  if (!audioReady || soundMuted) return;
+  if (level === 'severe') {
+    // 빠른 3연속 고음 비프 (긴급 경계)
+    beep(1046, 0.18, 0,    0.2);
+    beep(1046, 0.18, 0.25, 0.2);
+    beep(1046, 0.18, 0.5,  0.2);
+  } else if (level === 'warning') {
+    // 2연속 중음 비프 (주의)
+    beep(784, 0.22, 0,    0.18);
+    beep(784, 0.22, 0.3,  0.18);
+  } else {
+    // 단일 저음 비프 (알림)
+    beep(659, 0.3, 0, 0.15);
+  }
+}
+
+// 첫 사용자 클릭으로 오디오 활성화 (브라우저 정책)
+document.addEventListener('click', () => {
+  if (!audioReady) ensureAudio();
+}, { once: false });
+
+// 새 특보 감지 (이전 발효 특보와 비교)
+let lastAlertSignature = null;
+function checkNewAlert(warnings) {
+  const sig = warnings.map(w => w.type + w.area).sort().join('|');
+  if (lastAlertSignature === null) {
+    // 첫 로드: 비교만, 알람 X
+    lastAlertSignature = sig;
+    return;
+  }
+  if (sig === lastAlertSignature) return;
+  // 변화 있음 — 알람
+  const newCount = warnings.length;
+  const prevWasEmpty = lastAlertSignature === '';
+  const hasSevere = warnings.some(w => w.level === 'severe');
+  const hasWarn = warnings.some(w => w.level === 'warning');
+  if (newCount > 0 && prevWasEmpty) {
+    // 0건 → 발효 (가장 중요한 알람)
+    playAlarm(hasSevere ? 'severe' : 'warning');
+  } else if (hasSevere && !lastAlertSignature.includes('경보')) {
+    // 주의 → 경보 격상
+    playAlarm('severe');
+  }
+  lastAlertSignature = sig;
+}
+
+// 음소거 토글 버튼
+const muteBtn = document.getElementById('muteBtn');
+function refreshMuteBtn() {
+  muteBtn.textContent = soundMuted ? '🔇' : '🔊';
+  muteBtn.title = soundMuted ? '알람 음소거 해제' : '알람 음소거';
+}
+muteBtn.addEventListener('click', () => {
+  soundMuted = !soundMuted;
+  localStorage.setItem('alarmMuted', soundMuted ? '1' : '0');
+  refreshMuteBtn();
+  if (!soundMuted) {
+    ensureAudio();
+    beep(880, 0.12, 0, 0.1);  // 활성화 확인음
+  }
+});
+refreshMuteBtn();
 
 // === 테마 토글 (라이트 = 기본, 다크는 야간 옵션) ===
 const themeBtn = document.getElementById('themeBtn');
