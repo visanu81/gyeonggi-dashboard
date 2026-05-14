@@ -625,62 +625,95 @@ def fetch_pm():
 # ============================================================
 
 def fetch_fire_incidents():
-    """산림청 산불발생통계정보 — 올해 산불 발생 통계.
-    endpoint: https://apis.data.go.kr/1400000/forestStusServiceAPI/getfirestatsservice
-    활용신청 직후엔 403/500 발생 가능 (1~2시간 활성화 대기)."""
-    url = 'https://apis.data.go.kr/1400000/forestStusServiceAPI/getfirestatsservice'
-    year = datetime.now().strftime('%Y')
+    """산림청 산불발생통계정보 — 최근 1년치 산불 발생 통계.
+    endpoint: https://apis.data.go.kr/1400000/forestStusService/getfirestatsservice
+    응답: XML. 필드 — damagearea, firecause, locsi(시도), locgungu(시군구),
+                       startyear/startmonth/startday/starttime."""
+    import re as _re
+    url = 'https://apis.data.go.kr/1400000/forestStusService/getfirestatsservice'
+    now = datetime.now()
+    # 최근 365일치 수집
+    sdt = (now - timedelta(days=365)).strftime('%Y%m%d')
+    edt = now.strftime('%Y%m%d')
+
     try:
-        # XML 응답이 기본 — _type=json 시도 후 안 되면 XML 파싱
         r = requests.get(url, params={
-            'serviceKey': DATA_KEY,
-            'pageNo': 1, 'numOfRows': 100,
-            '_type': 'json',
-            'searchYr': year,
-        }, timeout=15)
+            'ServiceKey': DATA_KEY,  # 활용가이드 표기대로 대문자 S
+            'searchStDt': sdt,
+            'searchEdDt': edt,
+            'numOfRows': 2000,  # 1년치 충분히
+            'pageNo': 1,
+        }, timeout=60)
         if r.status_code != 200:
-            print(f'    산불발생: HTTP {r.status_code} (활성화 대기 중일 수 있음)')
-            return {'incidents_year': [], 'summary': None}
+            print(f'    산불발생: HTTP {r.status_code}')
+            return {'incidents': [], 'summary': None}
 
-        try:
-            data = r.json()
-        except ValueError:
-            # XML 응답 — 간단 파싱
-            import re as _re
-            items = []
-            for m in _re.finditer(r'<item>(.*?)</item>', r.text, _re.DOTALL):
-                block = m.group(1)
-                rec = {}
-                for tag in _re.findall(r'<([a-zA-Z]+)>([^<]*)</\1>', block):
-                    rec[tag[0]] = tag[1]
-                items.append(rec)
-            data = {'response': {'body': {'items': {'item': items}}}}
+        # XML 파싱 (간단한 정규식)
+        items = []
+        for m in _re.finditer(r'<item>(.*?)</item>', r.text, _re.DOTALL):
+            block = m.group(1)
+            rec = {}
+            for tag in _re.findall(r'<([a-zA-Z]+)>([^<]*)</\1>', block):
+                rec[tag[0]] = tag[1]
+            items.append(rec)
 
-        body = data.get('response', {}).get('body', {})
-        items = body.get('items', {})
-        if isinstance(items, dict):
-            items = items.get('item', [])
-        if isinstance(items, dict):
-            items = [items]
+        if not items:
+            return {'incidents': [], 'summary': {
+                'total': 0, 'north': 0, 'gyeonggi': 0,
+                'this_year_total': 0, 'this_year_north': 0,
+                'latest_north': [], 'latest_all': [],
+            }}
 
-        # 경기북부 시군 발생 건수 집계
-        north_sigun = {'의정부시', '양주시', '동두천시', '포천시', '연천군',
-                       '가평군', '남양주시', '구리시', '파주시', '고양시'}
-        north_incidents = []
-        for it in items:
-            sgg = str(it.get('occrSiggNm') or it.get('sgg_nm') or it.get('locsi') or '')
-            if any(s in sgg for s in north_sigun):
-                north_incidents.append(it)
+        # 정규화: 시작일·발생일 텍스트, 지역 정리
+        north_sigun = {'의정부', '양주', '동두천', '포천', '연천', '가평',
+                       '남양주', '구리', '파주', '고양'}
+        cur_year = now.strftime('%Y')
+
+        def norm(it):
+            sigun = it.get('locgungu', '')
+            sido = it.get('locsi', '')
+            occr_dt = f"{it.get('startyear','')}-{it.get('startmonth','').zfill(2)}-{it.get('startday','').zfill(2)} {it.get('starttime','')}"
+            end_dt = f"{it.get('endyear','')}-{it.get('endmonth','').zfill(2)}-{it.get('endday','').zfill(2)} {it.get('endtime','')}"
+            try:
+                damage = float(it.get('damagearea', 0) or 0)
+            except ValueError:
+                damage = 0
+            return {
+                'sido': sido,
+                'sigungu': sigun,
+                'address': f"{sido} {sigun} {it.get('locmenu','')} {it.get('locdong','')} {it.get('locbunji','')}".strip(),
+                'cause': it.get('firecause', ''),
+                'occur_time': occr_dt.strip(' :-'),
+                'end_time': end_dt.strip(' :-'),
+                'damage_area': damage,
+                'year': it.get('startyear', ''),
+                'is_north': sigun in north_sigun,
+                'is_gyeonggi': '경기' in sido,
+                'is_this_year': it.get('startyear', '') == cur_year,
+            }
+
+        normalized = [norm(it) for it in items]
+        # 최신순 정렬 (occur_time desc)
+        normalized.sort(key=lambda x: x['occur_time'], reverse=True)
+
+        north_all = [x for x in normalized if x['is_north']]
+        gg_all    = [x for x in normalized if x['is_gyeonggi']]
+        this_yr_total = sum(1 for x in normalized if x['is_this_year'])
+        this_yr_north = sum(1 for x in normalized if x['is_this_year'] and x['is_north'])
 
         summary = {
-            'total_year': len(items),
-            'north_year': len(north_incidents),
-            'latest_north': north_incidents[:5] if north_incidents else [],
+            'total': len(normalized),            # 최근 1년 전국
+            'north': len(north_all),             # 최근 1년 경기북부
+            'gyeonggi': len(gg_all),             # 최근 1년 경기도 전체
+            'this_year_total': this_yr_total,    # 올해 전국
+            'this_year_north': this_yr_north,    # 올해 경기북부
+            'latest_north': north_all[:8],       # 최근 경기북부 산불 8건
+            'latest_all': normalized[:5],        # 최근 전국 5건
         }
-        return {'incidents_year': north_incidents, 'summary': summary}
+        return {'incidents': north_all, 'summary': summary}
     except Exception as e:
         print(f'    산불발생: {e}')
-        return {'incidents_year': [], 'summary': None}
+        return {'incidents': [], 'summary': None}
 
 
 def fetch_fire():

@@ -1,7 +1,7 @@
 // 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.
-// 마지막 갱신: 2026-05-14 19:19:03
+// 마지막 갱신: 2026-05-14 19:21:17
 window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 19:18:02",
+  "updated": "2026-05-14 19:19:57",
   "regions": [
     {
       "name": "의정부",
@@ -4513,7 +4513,26 @@ window.DASHBOARD_DATA = {
       "api": "waterlevel"
     }
   ],
-  "messages": [],
+  "messages": [
+    {
+      "sender": "파주시",
+      "time": "16:03",
+      "text": "금일 15:20경 조리읍 오산리 28-1 인근 차량화재 발생. 도로 양방향 통제중으로(약2~3시간)해당 구간 이용 차량은 인근도로로 우회하시기 바랍니다.[파주시]",
+      "region": "파주"
+    },
+    {
+      "sender": "광주시",
+      "time": "10:15",
+      "text": "금일 야외활동인구 증가 예상으로 산불위험 높음. ▲광주시 전지역 입산 금지 ▲산림 내 불법 야영·취사 금지. 현재 단속 중. 적발 시 과태료 부과.[광주시]",
+      "region": "광주"
+    },
+    {
+      "sender": "김포시",
+      "time": "08:20",
+      "text": "현재 고촌읍 향산리 1-44 한강시네폴리스 서울에서 김포방향 1차로 차량 연쇄 추돌사고로 정체 발생 중. 교통정보 확인 바랍니다. [김포시]",
+      "region": "김포"
+    }
+  ],
   "forecast": [
     {
       "time": "20시",
@@ -4782,7 +4801,291 @@ window.DASHBOARD_DATA = {
     ]
   },
   "fire_stats": {
-    "incidents_year": [],
-    "summary": null
+    "incidents": [
+      {
+        "sido": "경기",
+        "sigungu": "가평",
+        "address": "경기 가평 가평 경반 산127-1",
+        "cause": "기타",
+        "occur_time": "2025-11-21 19:53:00",
+        "end_time": "2025-11-21 21:00:00",
+        "damage_area": 0.18,
+        "year": "2025",
+        "is_north": true,
+        "is_gyeonggi": true,
+        "is_this_year": false
+      },
+      {
+        "sido": "경기",
+        "sigungu": "연천",
+        "address": "경기 연천 전곡 간파 산145",
+        "cause": "기타",
+        "occur_time": "2025-11-20 19:26:00",
+        "end_time": "2025-11-20 23:10:00",
+        "damage_area": 0.4,
+        "year": "2025",
+        "is_north": true,
+        "is_gyeonggi": true,
+        "is_this_year": false
+      },
+      {
+        "sido": "경기",
+        "sigungu": "연천",
+        "address": "경기 연천 전곡 양원 90.0",
+        "cause": "쓰레기소각",
+        "occur_time": "2025-11-16 17:55:00",
+        "end_time": "2025-11-16 23:00:00",
+        "damage_area": 1.5,
+        "year": "2025",
+        "is_north": true,
+        "is_gyeonggi": true,
+        "is_this_year": false
+      },
+      {
+        "sido": "경기",
+        "sigungu": "포천",
+        "address": "경기 포천 영북 산정 365-2",
+        "cause": "기타",
+        "occur_time": "2025-11-14 15:13:00",
+        "end_time": "2025-11-14 16:50:00",
+        "damage_area": 0.03,
+        "year": "2025",
+        "is_north": true,
+        "is_gyeonggi": true,
+        "is_this_year": false
+      },
+      {
+        "sido": "경기",
+        "sigungu": "가평",
+        "address": "경기 가평 북 적목 산24-3",
+        "cause": "기타",
+        "occur_time": "2025-11-10 08:44:00",
+        "end_time": "2025-11-10 10:03:00",
+        "damage_area": 0.15,
+        "year": "2025",
+        "is_north": true,
+        "is_gyeonggi": true,
+        "is_this_year": false
+      },
+      {
+        "sido": "경기",
+        "sigungu": "남양주",
+        "address": "경기 남양주 수동 내방 산18-1",
+        "cause": "쓰레기소각",
+        "occur_time": "2025-06-06 17:51:00",
+        "end_time": "2025-06-06 21:00:00",
+        "damage_area": 0.54,
+        "year": "2025",
+        "is_north": true,
+        "is_gyeonggi": true,
+        "is_this_year": false
+      },
+      {
+        "sido": "경기",
+        "sigungu": "포천",
+        "address": "경기 포천 소흘 이동교 산72-1",
+        "cause": "입산자실화",
+        "occur_time": "2025-06-06 15:32:00",
+        "end_time": "2025-06-06 17:51:00",
+        "damage_area": 0.07,
+        "year": "2025",
+        "is_north": true,
+        "is_gyeonggi": true,
+        "is_this_year": false
+      },
+      {
+        "sido": "경기",
+        "sigungu": "고양",
+        "address": "경기 고양 일산동 설문 산76",
+        "cause": "건축물화재비화",
+        "occur_time": "2025-06-04 13:04:00",
+        "end_time": "2025-06-04 16:00:00",
+        "damage_area": 0.15,
+        "year": "2025",
+        "is_north": true,
+        "is_gyeonggi": true,
+        "is_this_year": false
+      }
+    ],
+    "summary": {
+      "total": 111,
+      "north": 8,
+      "gyeonggi": 21,
+      "this_year_total": 0,
+      "this_year_north": 0,
+      "latest_north": [
+        {
+          "sido": "경기",
+          "sigungu": "가평",
+          "address": "경기 가평 가평 경반 산127-1",
+          "cause": "기타",
+          "occur_time": "2025-11-21 19:53:00",
+          "end_time": "2025-11-21 21:00:00",
+          "damage_area": 0.18,
+          "year": "2025",
+          "is_north": true,
+          "is_gyeonggi": true,
+          "is_this_year": false
+        },
+        {
+          "sido": "경기",
+          "sigungu": "연천",
+          "address": "경기 연천 전곡 간파 산145",
+          "cause": "기타",
+          "occur_time": "2025-11-20 19:26:00",
+          "end_time": "2025-11-20 23:10:00",
+          "damage_area": 0.4,
+          "year": "2025",
+          "is_north": true,
+          "is_gyeonggi": true,
+          "is_this_year": false
+        },
+        {
+          "sido": "경기",
+          "sigungu": "연천",
+          "address": "경기 연천 전곡 양원 90.0",
+          "cause": "쓰레기소각",
+          "occur_time": "2025-11-16 17:55:00",
+          "end_time": "2025-11-16 23:00:00",
+          "damage_area": 1.5,
+          "year": "2025",
+          "is_north": true,
+          "is_gyeonggi": true,
+          "is_this_year": false
+        },
+        {
+          "sido": "경기",
+          "sigungu": "포천",
+          "address": "경기 포천 영북 산정 365-2",
+          "cause": "기타",
+          "occur_time": "2025-11-14 15:13:00",
+          "end_time": "2025-11-14 16:50:00",
+          "damage_area": 0.03,
+          "year": "2025",
+          "is_north": true,
+          "is_gyeonggi": true,
+          "is_this_year": false
+        },
+        {
+          "sido": "경기",
+          "sigungu": "가평",
+          "address": "경기 가평 북 적목 산24-3",
+          "cause": "기타",
+          "occur_time": "2025-11-10 08:44:00",
+          "end_time": "2025-11-10 10:03:00",
+          "damage_area": 0.15,
+          "year": "2025",
+          "is_north": true,
+          "is_gyeonggi": true,
+          "is_this_year": false
+        },
+        {
+          "sido": "경기",
+          "sigungu": "남양주",
+          "address": "경기 남양주 수동 내방 산18-1",
+          "cause": "쓰레기소각",
+          "occur_time": "2025-06-06 17:51:00",
+          "end_time": "2025-06-06 21:00:00",
+          "damage_area": 0.54,
+          "year": "2025",
+          "is_north": true,
+          "is_gyeonggi": true,
+          "is_this_year": false
+        },
+        {
+          "sido": "경기",
+          "sigungu": "포천",
+          "address": "경기 포천 소흘 이동교 산72-1",
+          "cause": "입산자실화",
+          "occur_time": "2025-06-06 15:32:00",
+          "end_time": "2025-06-06 17:51:00",
+          "damage_area": 0.07,
+          "year": "2025",
+          "is_north": true,
+          "is_gyeonggi": true,
+          "is_this_year": false
+        },
+        {
+          "sido": "경기",
+          "sigungu": "고양",
+          "address": "경기 고양 일산동 설문 산76",
+          "cause": "건축물화재비화",
+          "occur_time": "2025-06-04 13:04:00",
+          "end_time": "2025-06-04 16:00:00",
+          "damage_area": 0.15,
+          "year": "2025",
+          "is_north": true,
+          "is_gyeonggi": true,
+          "is_this_year": false
+        }
+      ],
+      "latest_all": [
+        {
+          "sido": "경북",
+          "sigungu": "안동",
+          "address": "경북 안동 임동 대곡 산480",
+          "cause": "기타",
+          "occur_time": "2025-12-31 15:56:00",
+          "end_time": "2025-12-31 20:30:00",
+          "damage_area": 0.3,
+          "year": "2025",
+          "is_north": false,
+          "is_gyeonggi": false,
+          "is_this_year": false
+        },
+        {
+          "sido": "전남",
+          "sigungu": "장흥",
+          "address": "전남 장흥 용산 녹원 산189-2",
+          "cause": "기타",
+          "occur_time": "2025-12-30 11:03:00",
+          "end_time": "2025-12-30 12:40:00",
+          "damage_area": 0.15,
+          "year": "2025",
+          "is_north": false,
+          "is_gyeonggi": false,
+          "is_this_year": false
+        },
+        {
+          "sido": "대구",
+          "sigungu": "동",
+          "address": "대구 동  신용 산25임",
+          "cause": "기타",
+          "occur_time": "2025-12-30 05:00:00",
+          "end_time": "2025-12-30 05:47:00",
+          "damage_area": 0.02,
+          "year": "2025",
+          "is_north": false,
+          "is_gyeonggi": false,
+          "is_this_year": false
+        },
+        {
+          "sido": "강원",
+          "sigungu": "고성",
+          "address": "강원 고성 거진 화포 산64-3외",
+          "cause": "기타",
+          "occur_time": "2025-12-29 20:00:00",
+          "end_time": "2025-12-29 22:35:00",
+          "damage_area": 0.36,
+          "year": "2025",
+          "is_north": false,
+          "is_gyeonggi": false,
+          "is_this_year": false
+        },
+        {
+          "sido": "강원",
+          "sigungu": "강릉",
+          "address": "강원 강릉 연곡 신왕 산1임",
+          "cause": "입산자실화",
+          "occur_time": "2025-12-29 14:14:00",
+          "end_time": "2025-12-29 23:51:00",
+          "damage_area": 2.1,
+          "year": "2025",
+          "is_north": false,
+          "is_gyeonggi": false,
+          "is_this_year": false
+        }
+      ]
+    }
   }
 };
