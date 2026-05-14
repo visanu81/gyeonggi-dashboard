@@ -263,6 +263,7 @@
     display: grid;
     grid-template-columns: 1.5fr 1fr 1fr;
     grid-auto-rows: minmax(min-content, max-content);
+    grid-auto-flow: dense;
     gap: 12px;
     padding: 12px 24px 14px;
   }
@@ -1425,12 +1426,12 @@
       grid-template-columns: 1fr 1fr;
       grid-template-rows: auto auto auto auto;
     }
-    body[data-view="wide"] .panel-region    { grid-column: 1 / -1; grid-row: auto; min-height: 360px; }
-    body[data-view="wide"] .panel-warning   { grid-column: 1; grid-row: auto; min-height: 200px; }
-    body[data-view="wide"] .panel-msg       { grid-column: 2; grid-row: auto; min-height: 200px; }
-    body[data-view="wide"] .panel-river     { grid-column: 2; grid-row: auto; min-height: 200px; }
-    body[data-view="wide"] .panel-fire      { grid-column: 1; grid-row: auto; min-height: 180px; }
-    body[data-view="wide"] .panel-forecast  { grid-column: 1 / -1; grid-row: auto; min-height: 180px; }
+    body[data-view="wide"] .panel-region    { grid-column: 1 / -1; grid-row: 1; min-height: 360px; }
+    body[data-view="wide"] .panel-warning   { grid-column: 1; grid-row: 2; min-height: 200px; }
+    body[data-view="wide"] .panel-msg       { grid-column: 2; grid-row: 2; min-height: 200px; }
+    body[data-view="wide"] .panel-fire      { grid-column: 1; grid-row: 3; min-height: 180px; }
+    body[data-view="wide"] .panel-river     { grid-column: 2; grid-row: 3; min-height: 200px; }
+    body[data-view="wide"] .panel-forecast  { grid-column: 1 / -1; grid-row: 4; min-height: 180px; }
 
     body[data-view="focus"] .main-grid {
       grid-template-columns: 1fr 1fr;
@@ -1936,9 +1937,9 @@
 </div>
 
 <!-- 실데이터 (tools/update_data.py 가 자동 생성). 없으면 아래 SAMPLE_DATA 사용. -->
-<!-- 2026-05-14 19:44:28 스냅샷. 이 파일 하나로 작동. -->
+<!-- 2026-05-14 19:48:24 스냅샷. 이 파일 하나로 작동. -->
 <script>window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 19:43:02",
+  "updated": "2026-05-14 19:46:54",
   "regions": [
     {
       "name": "의정부",
@@ -1957,9 +1958,9 @@
           "pty": "0",
           "reh": 46,
           "rn1": 0.0,
-          "t1h": 26.1,
-          "vec": 265.0,
-          "wsd": 1.2,
+          "t1h": 25.8,
+          "vec": 274.0,
+          "wsd": 1.5,
           "base_time": "19:00"
         },
         "rain_cumul": {
@@ -1969,7 +1970,7 @@
           "12h": 0.0
         },
         "wind_dir_name": "서",
-        "feels_like": 26.1,
+        "feels_like": 25.8,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -2330,9 +2331,9 @@
           "pty": "0",
           "reh": 46,
           "rn1": 0.0,
-          "t1h": 26.1,
-          "vec": 265.0,
-          "wsd": 1.2,
+          "t1h": 25.8,
+          "vec": 274.0,
+          "wsd": 1.5,
           "base_time": "19:00"
         },
         "rain_cumul": {
@@ -2342,7 +2343,7 @@
           "12h": 0.0
         },
         "wind_dir_name": "서",
-        "feels_like": 26.1,
+        "feels_like": 25.8,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -2703,9 +2704,9 @@
           "pty": "0",
           "reh": 46,
           "rn1": 0.0,
-          "t1h": 25.6,
-          "vec": 18.0,
-          "wsd": 0.6,
+          "t1h": 25.3,
+          "vec": 45.0,
+          "wsd": 0.8,
           "base_time": "19:00"
         },
         "rain_cumul": {
@@ -2714,8 +2715,8 @@
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "북북동",
-        "feels_like": 25.6,
+        "wind_dir_name": "북동",
+        "feels_like": 25.3,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -3076,9 +3077,9 @@
           "pty": "0",
           "reh": 49,
           "rn1": 0.0,
-          "t1h": 23.5,
-          "vec": 63.0,
-          "wsd": 0.2,
+          "t1h": 23.3,
+          "vec": 14.0,
+          "wsd": 0.4,
           "base_time": "19:00"
         },
         "rain_cumul": {
@@ -3087,8 +3088,8 @@
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "동북동",
-        "feels_like": 23.5,
+        "wind_dir_name": "북북동",
+        "feels_like": 23.3,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -3447,11 +3448,11 @@
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 60,
+          "reh": 62,
           "rn1": 0.0,
-          "t1h": 23.4,
-          "vec": 156.0,
-          "wsd": 1.2,
+          "t1h": 23.2,
+          "vec": 173.0,
+          "wsd": 0.8,
           "base_time": "19:00"
         },
         "rain_cumul": {
@@ -3460,8 +3461,8 @@
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "남남동",
-        "feels_like": 23.4,
+        "wind_dir_name": "남",
+        "feels_like": 23.2,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -3818,23 +3819,15 @@
       "tmin": null,
       "pop": 0,
       "detail": {
-        "observation": {
-          "pty": "0",
-          "reh": 41,
-          "rn1": 0.0,
-          "t1h": 25.3,
-          "vec": 69.0,
-          "wsd": 1.9,
-          "base_time": "19:00"
-        },
+        "observation": {},
         "rain_cumul": {
-          "1h": 0.0,
-          "3h": 0.0,
-          "6h": 0.0,
-          "12h": 0.0
+          "1h": 0,
+          "3h": 0,
+          "6h": 0,
+          "12h": 0
         },
-        "wind_dir_name": "동북동",
-        "feels_like": 25.3,
+        "wind_dir_name": "북동",
+        "feels_like": 25.0,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -4193,11 +4186,11 @@
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 61,
+          "reh": 50,
           "rn1": 0.0,
-          "t1h": 25.2,
-          "vec": 261.0,
-          "wsd": 0.6,
+          "t1h": 25.3,
+          "vec": 315.0,
+          "wsd": 0.7,
           "base_time": "19:00"
         },
         "rain_cumul": {
@@ -4206,8 +4199,8 @@
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "서",
-        "feels_like": 25.2,
+        "wind_dir_name": "북서",
+        "feels_like": 25.3,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -4566,11 +4559,11 @@
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 43,
+          "reh": 44,
           "rn1": 0.0,
-          "t1h": 27.5,
-          "vec": 222.0,
-          "wsd": 1.4,
+          "t1h": 27.2,
+          "vec": 186.0,
+          "wsd": 0.9,
           "base_time": "19:00"
         },
         "rain_cumul": {
@@ -4579,8 +4572,8 @@
           "6h": 0.0,
           "12h": 0.0
         },
-        "wind_dir_name": "남서",
-        "feels_like": 27.7,
+        "wind_dir_name": "남",
+        "feels_like": 27.8,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -4939,10 +4932,10 @@
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 57,
+          "reh": 59,
           "rn1": 0.0,
-          "t1h": 24.5,
-          "vec": 278.0,
+          "t1h": 24.1,
+          "vec": 262.0,
           "wsd": 2.1,
           "base_time": "19:00"
         },
@@ -4953,7 +4946,7 @@
           "12h": 0.0
         },
         "wind_dir_name": "서",
-        "feels_like": 24.5,
+        "feels_like": 24.1,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -5312,11 +5305,11 @@
       "detail": {
         "observation": {
           "pty": "0",
-          "reh": 51,
+          "reh": 52,
           "rn1": 0.0,
-          "t1h": 25.8,
-          "vec": 280.0,
-          "wsd": 1.1,
+          "t1h": 25.4,
+          "vec": 270.0,
+          "wsd": 0.7,
           "base_time": "19:00"
         },
         "rain_cumul": {
@@ -5326,7 +5319,7 @@
           "12h": 0.0
         },
         "wind_dir_name": "서",
-        "feels_like": 25.8,
+        "feels_like": 25.4,
         "tmax": null,
         "tmin": null,
         "pop": 0,
@@ -8437,7 +8430,7 @@ updateClock();
 setInterval(updateClock, 1000);
 
 // 페이지를 5분마다 새로고침해서 최신 data.js를 다시 읽음
-// 단일 HTML 스냅샷 — 자동 새로고침 비활성 (생성 시각: 2026-05-14 19:44:28)
+// 단일 HTML 스냅샷 — 자동 새로고침 비활성 (생성 시각: 2026-05-14 19:48:24)
 </script>
 </body>
 </html>
