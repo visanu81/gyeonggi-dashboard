@@ -6,6 +6,7 @@
 실행: python tools/update_data.py
 """
 import json
+import subprocess
 import sys
 import time
 import traceback
@@ -901,6 +902,48 @@ def save_data(data):
         f.write(';\n')
 
 
+def git_push_data():
+    """수집한 데이터를 GitHub에 자동 푸시.
+    .git/config의 PAT가 박힌 remote URL을 사용하므로 인증 자동.
+    실패해도 다음 회차에 재시도되므로 가벼운 try/except로 묶음."""
+    try:
+        # 1. 모든 변경사항 stage (.gitignore가 .env·.tmp 등 자동 제외)
+        subprocess.run(
+            ['git', 'add', '-A'],
+            cwd=str(ROOT), check=False, capture_output=True
+        )
+        # 2. 변경사항 있는지 확인
+        diff = subprocess.run(
+            ['git', 'diff', '--staged', '--quiet'],
+            cwd=str(ROOT), capture_output=True
+        )
+        if diff.returncode == 0:
+            print('  · 변경사항 없음 — 푸시 생략')
+            return
+        # 3. commit
+        msg = f'데이터 갱신 {datetime.now().strftime("%Y-%m-%d %H:%M")}'
+        subprocess.run(
+            ['git', 'commit', '-m', msg],
+            cwd=str(ROOT), check=False, capture_output=True
+        )
+        # 4. push (PAT 자동 인증)
+        push = subprocess.run(
+            ['git', 'push'],
+            cwd=str(ROOT), capture_output=True, text=True, timeout=60
+        )
+        if push.returncode == 0:
+            print('  ✓ GitHub 푸시 완료')
+        else:
+            err = (push.stderr or push.stdout or '').strip()[:200]
+            print(f'  ✗ GitHub 푸시 실패: {err}')
+    except subprocess.TimeoutExpired:
+        print('  ✗ GitHub 푸시 타임아웃 (다음 회차 재시도)')
+    except FileNotFoundError:
+        print('  ! git 명령 못 찾음 — Git for Windows 설치 필요')
+    except Exception as e:
+        print(f'  ✗ GitHub 푸시 오류: {e}')
+
+
 def save_combined_html(data):
     """index.html에 data를 인라인으로 박은 자급자족 단일 HTML 생성.
     이 파일 하나만 들고 다녀도 모든 데이터+디자인이 들어있다."""
@@ -1000,6 +1043,10 @@ def main():
     save_data(data)
     save_combined_html(data)
     print(f'[{now_str()}] ✓ data.js + 상황판.html 저장 완료')
+
+    print('[GitHub 푸시]')
+    git_push_data()
+    print(f'[{now_str()}] 전체 작업 완료')
 
 
 if __name__ == '__main__':

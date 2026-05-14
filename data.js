@@ -1,7 +1,7 @@
 // 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.
-// 마지막 갱신: 2026-05-14 10:06:28
+// 마지막 갱신: 2026-05-14 10:08:12
 window.DASHBOARD_DATA = {
-  "updated": "2026-05-14 10:05:28",
+  "updated": "2026-05-14 10:07:15",
   "regions": [
     {
       "name": "의정부",
@@ -4513,7 +4513,14 @@ window.DASHBOARD_DATA = {
       "api": "waterlevel"
     }
   ],
-  "messages": [],
+  "messages": [
+    {
+      "sender": "김포시",
+      "time": "08:20",
+      "text": "현재 고촌읍 향산리 1-44 한강시네폴리스 서울에서 김포방향 1차로 차량 연쇄 추돌사고로 정체 발생 중. 교통정보 확인 바랍니다. [김포시]",
+      "region": "김포"
+    }
+  ],
   "forecast": [
     {
       "time": "11시",
