@@ -430,72 +430,25 @@
     flex-shrink: 0;
     color: #fff;
     font-weight: 800;
-    animation: icon-pulse 0.8s ease-in-out infinite;
   }
-  @keyframes icon-pulse {
-    0%, 100% {
-      transform: scale(1);
-      background: var(--danger);
-      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
-    }
-    50% {
-      transform: scale(1.12);
-      background: #ff5555;
-      box-shadow: 0 0 18px 4px rgba(239, 68, 68, 0.7);
-    }
+  /* 헤더 배지 — 펄스 없이 색만 (정적) */
+  .header-badge.danger {
+    background: var(--danger);
+    color: #fff;
   }
-  /* 헤더 배지 위급 펄스 — 색·발광 동시 */
-  @keyframes badge-pulse {
-    0%, 100% {
-      background: var(--danger);
-      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-      transform: scale(1);
-    }
-    50% {
-      background: #ff5555;
-      box-shadow: 0 0 16px 4px rgba(239, 68, 68, 0.8);
-      transform: scale(1.06);
-    }
+  .header-badge.warning {
+    background: var(--warning);
+    color: #fff;
   }
-  .header-badge.danger { animation: badge-pulse 1s ease-in-out infinite; }
-  @keyframes badge-pulse-warn {
-    0%, 100% {
-      background: var(--warning);
-      box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.6);
-    }
-    50% {
-      background: #ff8c2a;
-      box-shadow: 0 0 14px 3px rgba(234, 88, 12, 0.7);
-    }
+  /* KPI 위급 — 펄스 없이 배경 + 테두리 색만 변경 (정적) */
+  .kpi-item.alert {
+    background: var(--danger-bg);
+    border-color: var(--danger);
   }
-  .header-badge.warning { animation: badge-pulse-warn 1.4s ease-in-out infinite; }
-  /* KPI 위급 펄스 — 배경 + 테두리 색 깜빡 */
-  @keyframes kpi-pulse {
-    0%, 100% {
-      background: var(--danger-bg);
-      border-color: var(--border);
-      box-shadow: var(--shadow-sm);
-    }
-    50% {
-      background: rgba(239, 68, 68, 0.25);
-      border-color: var(--danger);
-      box-shadow: 0 0 20px 2px rgba(239, 68, 68, 0.4),
-                  inset 0 0 15px rgba(239, 68, 68, 0.1);
-    }
+  .kpi-item.warning {
+    background: var(--warning-bg);
+    border-color: var(--warning);
   }
-  .kpi-item.alert { animation: kpi-pulse 1.4s ease-in-out infinite; }
-  @keyframes kpi-pulse-warn {
-    0%, 100% {
-      background: var(--warning-bg);
-      border-color: var(--border);
-    }
-    50% {
-      background: rgba(234, 88, 12, 0.2);
-      border-color: var(--warning);
-      box-shadow: 0 0 18px 2px rgba(234, 88, 12, 0.3);
-    }
-  }
-  .kpi-item.warning { animation: kpi-pulse-warn 1.8s ease-in-out infinite; }
 
   /* 다크 모드용 — 더 진한 형광 톤 */
   [data-theme="dark"] @keyframes alert-pulse {
