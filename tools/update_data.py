@@ -986,11 +986,12 @@ def fetch_messages():
 # ============================================================
 
 def save_data(data):
+    """data.js 저장 — 공백·들여쓰기 제거하여 약 50% 압축."""
     with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
-        f.write('// 자동 생성 파일. tools/update_data.py 가 매번 덮어씁니다.\n')
-        f.write(f'// 마지막 갱신: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}\n')
+        f.write('// 자동 생성. ')
+        f.write(f'마지막 갱신: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}\n')
         f.write('window.DASHBOARD_DATA = ')
-        json.dump(data, f, ensure_ascii=False, indent=2)
+        json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
         f.write(';\n')
 
 
@@ -1044,8 +1045,8 @@ def save_combined_html(data):
     with open(TEMPLATE_PATH, encoding='utf-8') as f:
         html = f.read()
 
-    # <script src="data.js" ...> 부분을 인라인 데이터로 치환
-    data_json = json.dumps(data, ensure_ascii=False, indent=2)
+    # <script src="data.js" ...> 부분을 인라인 데이터로 치환 (minify)
+    data_json = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
     snapshot_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     inline_script = (
         f'<!-- {snapshot_time} 스냅샷. 이 파일 하나로 작동. -->\n'
