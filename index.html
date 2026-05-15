@@ -1826,17 +1826,50 @@
       width: 100%;
       flex-wrap: wrap;
       gap: 8px;
-      justify-content: space-between;
       align-items: center;
     }
-    .toggle-group { order: 1; flex: 1; }
-    .toggle-btn { padding: 6px 10px; font-size: 11px; flex: 1; }
-    #themeBtn { order: 2; }
-    .status-pill {
-      order: 4; width: 100%; justify-content: center;
-      padding: 6px 10px; font-size: 11px;
+    /* 1줄: 광역/내관서 중점 토글 + 시군변경(동두천▾) — 함께 한 줄 차지 */
+    .toggle-group {
+      order: 1;
+      flex: 1 1 0;
+      min-width: 60%;
+      display: flex;
     }
-    .clock-block { order: 3; text-align: right; }
+    .toggle-btn {
+      flex: 1;
+      padding: 9px 12px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    /* 시군변경 버튼(focus 모드에서만 표시)을 토글과 같은 줄에 */
+    #changeRegionBtn {
+      order: 1;
+      flex: 0 0 auto;
+      white-space: nowrap;
+    }
+    /* 2줄: 기상영상·TEST·아이콘 버튼들 (가로 정렬, 자유 wrap) */
+    .region-changer:not(#changeRegionBtn),
+    .test-mode-btn,
+    #alarmTestBtn,
+    #muteBtn,
+    #themeBtn { order: 2; }
+    /* 3줄: 실시간 운영 + 시계 (양 끝) */
+    .header-info-block {
+      order: 3;
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header-badge, .status-pill { font-size: 11px; padding: 5px 10px; }
+    .header-tagline { display: none; }
+    .clock-block {
+      order: 4;
+      flex: 0 0 auto;
+      text-align: right;
+      margin-left: auto;
+    }
     .clock-time { font-size: 18px; letter-spacing: 0.5px; }
     .clock-date { font-size: 10px; }
 
