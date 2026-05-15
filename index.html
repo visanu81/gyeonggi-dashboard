@@ -9,39 +9,45 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  /* === 라이트 테마 (기본) — 공공기관 PoC 톤 === */
+  /* === 라이트 테마 (기본) — 공공기관 PoC 톤 (세련 버전) === */
   :root {
-    --bg: #f4f0e6;                 /* 따뜻한 베이지 (PoC 메인) */
-    --bg-grad-from: #f8f4ea;
+    --bg: #f5f1e8;                 /* 따뜻한 베이지 (살짝 밝게) */
+    --bg-grad-from: #faf6ec;
     --bg-grad-to: #efeadb;
-    --bg-card: #ffffff;            /* 카드는 깔끔한 흰색 */
-    --bg-card-2: #f8f5ec;
-    --bg-header: #1e3a5f;          /* 진한 네이비 (정부기관 헤더) */
-    --bg-header-deep: #162d4a;
-    --border: #d6d0bf;             /* 베이지 톤 경계선 */
-    --border-strong: #b8b29d;
-    --text: #1a2b4a;               /* 진한 네이비 텍스트 */
-    --text-on-header: #ffffff;     /* 헤더 위 흰 텍스트 */
-    --text-dim: #6b7280;
-    --text-sub: #9ca3af;
-    --accent: #1e3a5f;             /* 메인 네이비 */
-    --accent-strong: #162d4a;
-    --accent-glow: rgba(30, 58, 95, 0.08);
-    --highlight: #f4c537;           /* 강조 노랑 (정부 보고서 톤) */
-    --highlight-bg: #fef3c7;
+    --bg-card: #ffffff;            /* 카드 화이트 */
+    --bg-card-2: #faf7ee;          /* 살짝 따뜻한 보조 배경 */
+    --bg-card-hover: #fdfbf4;
+    --bg-header: #1a3556;          /* 더 깊은 네이비 */
+    --bg-header-deep: #122742;
+    --border: #e5dfce;             /* 더 부드러운 경계선 */
+    --border-strong: #c4bca5;
+    --text: #15243d;               /* 더 진한 네이비 */
+    --text-on-header: #ffffff;
+    --text-dim: #5d6b80;
+    --text-sub: #9aa3b3;
+    --accent: #1a3556;             /* 메인 네이비 (헤더와 통일) */
+    --accent-strong: #122742;
+    --accent-glow: rgba(26, 53, 86, 0.1);
+    --highlight: #eab308;          /* 차분한 노랑 (덜 형광) */
+    --highlight-soft: #f4c537;
+    --highlight-bg: #fef9e7;
     --danger: #dc2626;
-    --danger-bg: #fee2e2;
+    --danger-bg: #fef2f2;
     --warning: #ea580c;
-    --warning-bg: #ffedd5;
-    --caution: #facc15;
+    --warning-bg: #fff5eb;
+    --caution: #f59e0b;
     --safe: #059669;
-    --safe-bg: #d1fae5;
+    --safe-bg: #ecfdf5;
     --pm-good: #3b82f6;
     --pm-normal: #10b981;
     --pm-bad: #f59e0b;
     --pm-vbad: #ef4444;
-    --shadow-sm: 0 1px 2px rgba(26, 43, 74, 0.06);
-    --shadow-md: 0 2px 8px rgba(26, 43, 74, 0.08);
+    --shadow-sm: 0 1px 2px rgba(20, 36, 61, 0.04), 0 1px 1px rgba(20, 36, 61, 0.03);
+    --shadow-md: 0 4px 12px -2px rgba(20, 36, 61, 0.08), 0 2px 4px -1px rgba(20, 36, 61, 0.04);
+    --shadow-lg: 0 10px 30px -6px rgba(20, 36, 61, 0.12), 0 4px 10px -2px rgba(20, 36, 61, 0.06);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
   }
 
   /* === 다크 테마 (옵션) — 관제실 야간 운영용 === */
@@ -491,11 +497,15 @@
   .panel {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
     display: flex; flex-direction: column;
     overflow: hidden;
     min-height: 0;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .panel:hover {
+    box-shadow: var(--shadow-md);
   }
 
   .panel-region    { grid-column: 1; grid-row: 1 / span 3; }
@@ -750,6 +760,8 @@
   .forecast-row {
     display: block;
     min-height: 130px;
+    max-width: 900px;
+    margin: 0 auto;
   }
   .forecast-col {
     flex: 1;
@@ -3127,9 +3139,9 @@ function renderForecast(data, targetId) {
     document.getElementById(targetId).innerHTML = '';
     return;
   }
-  // Bloomberg 스타일 라인 차트 (SVG)
+  // 세련된 라인 차트 (SVG, 비율 고정)
   const items = data.slice(0, 12);
-  const W = 800, H = 130, padTop = 26, padBottom = 38, padX = 24;
+  const W = 900, H = 150, padTop = 32, padBottom = 44, padX = 28;
   const innerW = W - padX * 2;
   const innerH = H - padTop - padBottom;
 
@@ -3137,52 +3149,69 @@ function renderForecast(data, targetId) {
   const minT = Math.min(...temps);
   const maxT = Math.max(...temps);
   const range = Math.max(maxT - minT, 4);
-  const yMin = minT - range * 0.2;
-  const yMax = maxT + range * 0.3;
+  const yMin = minT - range * 0.25;
+  const yMax = maxT + range * 0.35;
 
   const xAt = i => padX + (i / (items.length - 1 || 1)) * innerW;
   const yAt = t => padTop + (1 - (t - yMin) / (yMax - yMin)) * innerH;
 
-  // 기온 라인 + 영역
-  const linePts = items.map((f, i) => `${xAt(i).toFixed(1)},${yAt(f.temp).toFixed(1)}`).join(' ');
-  const areaPath = `M${xAt(0)},${padTop + innerH} ` +
-                   items.map((f, i) => `L${xAt(i).toFixed(1)},${yAt(f.temp).toFixed(1)}`).join(' ') +
-                   ` L${xAt(items.length - 1)},${padTop + innerH} Z`;
+  // 부드러운 베지어 곡선 라인
+  const pts = items.map((f, i) => [xAt(i), yAt(f.temp)]);
+  let linePath = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1];
+    const [x1, y1] = pts[i];
+    const cx = (x0 + x1) / 2;
+    linePath += ` C${cx.toFixed(1)},${y0.toFixed(1)} ${cx.toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
+  }
+  const areaPath = linePath + ` L${xAt(items.length - 1).toFixed(1)},${(padTop + innerH).toFixed(1)} L${xAt(0).toFixed(1)},${(padTop + innerH).toFixed(1)} Z`;
 
-  // 강수확률 막대 (하단)
+  // 강수확률 막대 (하단, 더 sleek하게)
   const rainBars = items.map((f, i) => {
     const pop = Number(f.rain ?? f.rain_pop ?? 0);
     if (pop <= 0) return '';
-    const barH = (pop / 100) * (innerH * 0.4);
-    const x = xAt(i) - 10;
-    return `<rect x="${x.toFixed(1)}" y="${(padTop + innerH - barH).toFixed(1)}" width="20" height="${barH.toFixed(1)}" fill="var(--accent)" fill-opacity="0.15" rx="2"/>`;
+    const barH = (pop / 100) * (innerH * 0.5);
+    const barW = 14;
+    const x = xAt(i) - barW / 2;
+    return `<rect x="${x.toFixed(1)}" y="${(padTop + innerH - barH).toFixed(1)}" width="${barW}" height="${barH.toFixed(1)}" fill="url(#rainGrad)" rx="3"/>`;
   }).join('');
 
-  // 각 시각의 점·기온·강수확률·아이콘
+  // 각 시각의 점·기온·아이콘·시간·강수확률
   const markers = items.map((f, i) => {
     const x = xAt(i);
     const y = yAt(f.temp);
     const pop = Number(f.rain ?? f.rain_pop ?? 0);
-    const popLabel = pop > 0 ? `<text x="${x.toFixed(1)}" y="${(padTop + innerH + 5).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--accent)" font-weight="700">${pop}%</text>` : '';
+    const popLabel = pop > 0 ? `<text x="${x.toFixed(1)}" y="${(padTop + innerH + 6).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--accent)" font-weight="700">${pop}%</text>` : '';
     return `
-      <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="2"/>
-      <text x="${x.toFixed(1)}" y="${(y - 10).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="800" fill="var(--text)">${f.temp}°</text>
-      <text x="${x.toFixed(1)}" y="${(H - 22).toFixed(1)}" text-anchor="middle" font-size="14">${f.icon}</text>
-      <text x="${x.toFixed(1)}" y="${(H - 5).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--text-dim)" font-weight="600">${f.hour || f.time}</text>
+      <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="2.2"/>
+      <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="var(--accent)"/>
+      <text x="${x.toFixed(1)}" y="${(y - 12).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="800" fill="var(--text)" letter-spacing="-0.3">${f.temp}°</text>
+      <text x="${x.toFixed(1)}" y="${(H - 24).toFixed(1)}" text-anchor="middle" font-size="15">${f.icon}</text>
+      <text x="${x.toFixed(1)}" y="${(H - 6).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--text-dim)" font-weight="600" letter-spacing="0.3">${f.hour || f.time}</text>
       ${popLabel}
     `;
   }).join('');
 
-  // 가로 그리드 라인 (기온 기준선)
+  // 가로 그리드 라인 (기온 기준선, 더 미묘하게)
   const midY = yAt((minT + maxT) / 2);
-  const grid = `<line x1="${padX}" y1="${midY.toFixed(1)}" x2="${(W - padX).toFixed(1)}" y2="${midY.toFixed(1)}" stroke="var(--border)" stroke-dasharray="3,3" stroke-width="1"/>`;
+  const grid = `<line x1="${padX}" y1="${midY.toFixed(1)}" x2="${(W - padX).toFixed(1)}" y2="${midY.toFixed(1)}" stroke="var(--border)" stroke-dasharray="2,4" stroke-width="1" opacity="0.6"/>`;
 
   const svg = `
-    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:130px;display:block;">
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto;max-height:170px;display:block;">
+      <defs>
+        <linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.22"/>
+          <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.02"/>
+        </linearGradient>
+        <linearGradient id="rainGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.1"/>
+        </linearGradient>
+      </defs>
       ${grid}
       ${rainBars}
-      <path d="${areaPath}" fill="var(--accent)" fill-opacity="0.08"/>
-      <polyline points="${linePts}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+      <path d="${areaPath}" fill="url(#tempGrad)"/>
+      <path d="${linePath}" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
       ${markers}
     </svg>
   `;
