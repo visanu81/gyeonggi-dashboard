@@ -3628,7 +3628,8 @@ function getTestModeWindow() {
     const saved = localStorage.getItem(TEST_MODE_KEY);
     if (saved) {
       const obj = JSON.parse(saved);
-      if (obj && obj.start && obj.end) return obj;
+      // 유효한 윈도우 + 아직 종료되지 않은 것만 사용
+      if (obj && obj.start && obj.end && obj.end > Date.now()) return obj;
     }
   } catch (e) {}
   const now = Date.now();
@@ -3820,18 +3821,33 @@ function playAlarm(level) {
   }
 }
 
+// === severe 반복 알람 (음소거 또는 severe 해제 시까지 지속) ===
+const SEVERE_REPEAT_MS = 7 * 1000;  // 7초 간격
+let severeAlarmTimer = null;
+function startSevereLoop() {
+  if (severeAlarmTimer) return;        // 이미 실행 중
+  if (!audioReady || soundMuted) return;
+  playAlarm('severe');
+  severeAlarmTimer = setInterval(() => {
+    if (soundMuted || !audioReady) { stopSevereLoop(); return; }
+    playAlarm('severe');
+  }, SEVERE_REPEAT_MS);
+}
+function stopSevereLoop() {
+  if (severeAlarmTimer) { clearInterval(severeAlarmTimer); severeAlarmTimer = null; }
+}
+
 // 첫 사용자 클릭으로 오디오 활성화 (브라우저 정책)
-// + 활성화 순간 발효 중 특보가 있으면 즉시 알람 (사장님이 시연 시 들리도록)
+// + 활성화 순간 발효 중 특보가 있으면 즉시 알람 (severe면 반복, warning이면 1회)
 document.addEventListener('click', () => {
   if (!audioReady) {
     ensureAudio();
-    // 200ms 후 현재 발효 중 특보 확인 후 알람
     setTimeout(() => {
+      if (soundMuted) return;
       const warnings = (typeof DATA !== 'undefined' && DATA.warnings) ? DATA.warnings : [];
-      if (warnings.length > 0 && !soundMuted) {
-        const hasSevere = warnings.some(w => w.level === 'severe');
-        playAlarm(hasSevere ? 'severe' : 'warning');
-      }
+      const hasSevere = warnings.some(w => w.level === 'severe');
+      if (hasSevere) startSevereLoop();
+      else if (warnings.length > 0) playAlarm('warning');
     }, 200);
   }
 }, { once: false });
@@ -3839,19 +3855,26 @@ document.addEventListener('click', () => {
 // 새 특보 감지 (이전 발효 특보와 비교)
 let lastAlertSignature = null;
 function checkNewAlert(warnings) {
-  const sig = warnings.map(w => w.type + w.area).sort().join('|');
+  const sig = warnings.map(w => (w.type || w.name || '') + (w.area || '')).sort().join('|');
+  const hasSevere = warnings.some(w => w.level === 'severe');
+  // severe 사라지면 반복 정지
+  if (!hasSevere) stopSevereLoop();
+
   if (lastAlertSignature === null) {
     lastAlertSignature = sig;
+    if (hasSevere) startSevereLoop();   // 첫 로드 시 severe 있으면 반복 시작
     return;
   }
-  if (sig === lastAlertSignature) return;
-  const newCount = warnings.length;
-  const prevWasEmpty = lastAlertSignature === '';
-  const hasSevere = warnings.some(w => w.level === 'severe');
-  if (newCount > 0 && prevWasEmpty) {
-    playAlarm(hasSevere ? 'severe' : 'warning');
-  } else if (hasSevere && !lastAlertSignature.includes('경보')) {
-    playAlarm('severe');
+  if (sig === lastAlertSignature) {
+    // 같은 시그니처지만 severe면 반복 유지 (음소거 해제 등 복구 시)
+    if (hasSevere && !severeAlarmTimer && audioReady && !soundMuted) startSevereLoop();
+    return;
+  }
+  // 시그니처 변경
+  if (hasSevere) {
+    startSevereLoop();
+  } else if (warnings.length > 0 && lastAlertSignature === '') {
+    playAlarm('warning');               // 주의는 1회만
   }
   lastAlertSignature = sig;
 }
@@ -3880,11 +3903,20 @@ muteBtn.addEventListener('click', () => {
   soundMuted = !soundMuted;
   localStorage.setItem('alarmMuted', soundMuted ? '1' : '0');
   refreshMuteBtn();
-  if (!soundMuted) {
+  if (soundMuted) {
+    // 음소거 시 반복 알람 즉시 정지
+    stopSevereLoop();
+  } else {
     ensureAudio();
     // 활성화 확인음: 짧은 2비프
     beep(880, 0.15, 0, 0.15);
     beep(1100, 0.15, 0.2, 0.15);
+    // 음소거 해제 후 현재 severe 있으면 반복 알람 재개
+    setTimeout(() => {
+      const warnings = (typeof DATA !== 'undefined' && DATA.warnings) ? DATA.warnings : [];
+      const hasSevere = warnings.some(w => w.level === 'severe');
+      if (hasSevere) startSevereLoop();
+    }, 500);
   }
 });
 refreshMuteBtn();
@@ -3977,19 +4009,50 @@ const DATA = (typeof window.DASHBOARD_DATA !== 'undefined' && window.DASHBOARD_D
   ? window.DASHBOARD_DATA
   : SAMPLE_DATA;
 
-renderAll(DATA);
+// DATA를 매번 deep clone해서 inject가 누적되지 않도록
+function cloneData(d) {
+  try { return structuredClone(d); }
+  catch (e) { return JSON.parse(JSON.stringify(d)); }
+}
+function renderFromOriginal() {
+  renderAll(cloneData(DATA));
+}
+
+renderFromOriginal();
 updateClock();
 setInterval(updateClock, 1000);
 
-// 테스트 모드 상태 매 30초마다 갱신 (시작/종료 시각 자동 전환)
+// 테스트 모드 상태 매 10초마다 갱신 (시작/종료 시각 자동 전환)
 updateTestWatermark();
 setInterval(() => {
   const wasActive = !!document.getElementById('testWatermark') && document.getElementById('testWatermark').style.display === 'block';
   updateTestWatermark();
   const isActive = !!document.getElementById('testWatermark') && document.getElementById('testWatermark').style.display === 'block';
-  // 상태가 바뀐 순간 데이터 다시 렌더 (가짜 특보 주입/제거)
-  if (wasActive !== isActive) renderAll(DATA);
-}, 30 * 1000);
+  // 상태가 바뀐 순간 다시 렌더 (가짜 특보 주입/제거)
+  if (wasActive !== isActive) renderFromOriginal();
+}, 10 * 1000);
+
+// 콘솔 헬퍼: 즉시 테스트 시작 / 정지 / 상태 확인 (사장님이 빠르게 토글하실 수 있도록)
+window.testNow = function() {
+  const now = Date.now();
+  localStorage.setItem(TEST_MODE_KEY, JSON.stringify({ start: now, end: now + TEST_MODE_DURATION_MS }));
+  renderFromOriginal();
+  updateTestWatermark();
+  console.log('[테스트 모드] 즉시 시작됨. 3시간 후 자동 종료. 종료 시각:', new Date(now + TEST_MODE_DURATION_MS).toLocaleString());
+};
+window.testStop = function() {
+  localStorage.removeItem(TEST_MODE_KEY);
+  stopSevereLoop();
+  renderFromOriginal();
+  updateTestWatermark();
+  console.log('[테스트 모드] 강제 종료. 다음 페이지 로드부터 다시 5분 후 자동 시작.');
+};
+window.testStatus = function() {
+  const w = getTestModeWindow();
+  const now = Date.now();
+  const fmt = t => new Date(t).toLocaleString();
+  console.log('현재:', fmt(now), '\n시작:', fmt(w.start), '\n종료:', fmt(w.end), '\n활성:', isTestModeActive(), '\n남은 시간(분):', Math.round((w.end - now)/60000));
+};
 
 // 페이지를 5분마다 새로고침해서 최신 data.js를 다시 읽음
 setInterval(() => { location.reload(); }, 5 * 60 * 1000);
