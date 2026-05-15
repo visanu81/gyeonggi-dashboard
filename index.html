@@ -501,9 +501,9 @@
   .panel-region    { grid-column: 1; grid-row: 1 / span 3; }
   .panel-warning   { grid-column: 2; grid-row: 1; }
   .panel-fire      { grid-column: 2; grid-row: 2; }
-  .panel-forecast  { grid-column: 2 / span 2; grid-row: 3; }
-  .panel-msg       { grid-column: 3; grid-row: 1; }
-  .panel-river     { grid-column: 3; grid-row: 2; }
+  .panel-msg       { grid-column: 2; grid-row: 3; }
+  .panel-river     { grid-column: 3; grid-row: 1 / span 3; }
+  .panel-forecast  { grid-column: 1 / span 3; grid-row: 4; }
 
   .panel-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -652,11 +652,11 @@
   }
 
   /* 하천 */
-  .river-item { margin-bottom: 10px; }
+  .river-item { margin-bottom: 6px; }
   .river-item:last-child { margin-bottom: 0; }
   .river-top {
     display: flex; justify-content: space-between; align-items: baseline;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
   .river-name { font-size: 12px; font-weight: 700; }
   .river-value {
@@ -667,7 +667,7 @@
   .river-value.warning { color: var(--warning); }
   .river-value.danger { color: var(--danger); }
   .river-bar-bg {
-    height: 6px; background: var(--border); border-radius: 3px;
+    height: 5px; background: var(--border); border-radius: 3px;
     overflow: hidden;
   }
   .river-bar-fill {
@@ -680,7 +680,7 @@
   .river-stats {
     display: flex; justify-content: space-between;
     font-size: 10px; color: var(--text-sub);
-    margin-top: 3px;
+    margin-top: 2px;
   }
 
   /* 미세먼지 */
@@ -1335,9 +1335,9 @@
   .river-stat-card .val.down { color: var(--safe); }
   .river-stat-card .val.flat { color: var(--text-dim); }
 
-  .river-item { cursor: pointer; transition: all 0.15s; padding: 10px 6px; border-radius: 5px; display:flex; flex-direction:column; gap:4px; }
+  .river-item { cursor: pointer; transition: all 0.15s; padding: 6px 6px; border-radius: 5px; display:flex; flex-direction:column; gap:2px; }
   .river-item:hover { background: var(--bg-card-2); }
-  .river-spark { margin: 2px 0; opacity: 0.85; }
+  .river-spark { margin: 0; opacity: 0.85; }
 
   /* === 시군 상세 모달 === */
   .modal-overlay {
@@ -2492,7 +2492,7 @@ function buildMiniSparkline(history, level) {
   const areaPath = `M${pad},${H} L` + pts.split(' ').join(' L') + ` L${W - pad},${H} Z`;
   const colorMap = {safe: 'var(--safe)', warning: 'var(--warning)', danger: 'var(--danger)'};
   const color = colorMap[level] || 'var(--text-dim)';
-  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:28px;display:block;">
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:20px;display:block;">
     <path d="${areaPath}" fill="${color}" fill-opacity="0.15"/>
     <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5"/>
   </svg>`;
