@@ -111,22 +111,23 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 28px;
-    background: var(--bg-header);
+    background: linear-gradient(135deg, var(--bg-header) 0%, var(--bg-header-deep) 100%);
     color: var(--text-on-header);
     flex-shrink: 0;
     position: relative;
-    box-shadow: 0 1px 0 rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   }
 
   .header-left { display: flex; align-items: center; gap: 16px; }
 
   .logo-mark {
-    width: 40px; height: 40px;
-    background: var(--highlight);
-    border-radius: 4px;
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--highlight-soft), var(--highlight));
+    border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
-    color: #dc2626;   /* 사이렌 빨강 (🚨 톤) */
+    color: #dc2626;
     flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(234, 179, 8, 0.3);
   }
   .logo-mark svg {
     width: 24px;
@@ -348,8 +349,8 @@
   }
   .kpi-item {
     background: var(--bg-card);
-    padding: 16px 18px;
-    border-radius: 6px;
+    padding: 16px 18px 16px 22px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--border);
     box-shadow: var(--shadow-sm);
     display: flex;
@@ -357,13 +358,19 @@
     gap: 8px;
     position: relative;
     overflow: hidden;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .kpi-item:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
   }
   .kpi-item::before {
     content: '';
     position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 4px;
-    background: var(--accent);
+    left: 0; top: 10px; bottom: 10px;
+    width: 3px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+    border-radius: 0 2px 2px 0;
   }
   .kpi-item.alert::before { background: var(--danger); }
   .kpi-item.warning::before { background: var(--warning); }
@@ -517,27 +524,27 @@
 
   .panel-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 11px 16px;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--border);
-    background: var(--bg-card-2);
+    background: linear-gradient(180deg, var(--bg-card-2) 0%, var(--bg-card) 100%);
     flex-shrink: 0;
   }
   .panel-title {
     font-size: 12px; font-weight: 700;
     color: var(--text);
-    display: flex; align-items: center; gap: 8px;
-    letter-spacing: 0.3px;
+    display: flex; align-items: center; gap: 9px;
+    letter-spacing: 0.2px;
   }
   .panel-title::before {
-    content: ''; width: 3px; height: 13px;
-    background: var(--accent);
-    border-radius: 1px;
+    content: ''; width: 3px; height: 14px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+    border-radius: 2px;
   }
   .panel-badge {
     font-size: 10px;
-    padding: 3px 8px;
-    border-radius: 3px;
-    background: var(--bg-card);
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--bg-card-2);
     border: 1px solid var(--border);
     color: var(--text-dim);
     font-weight: 600;
@@ -563,20 +570,22 @@
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-left: 4px solid var(--border);
-    border-radius: 6px;
+    border-radius: var(--radius-md);
     padding: 12px 14px;
     position: relative;
-    transition: border-color 0.15s, transform 0.15s;
+    transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
     display: flex; flex-direction: column;
     gap: 8px;
+    cursor: pointer;
   }
   .region-card:hover {
     border-color: var(--accent);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
   }
   .region-card.warning { border-left-color: var(--warning); background: var(--warning-bg); }
   .region-card.danger  { border-left-color: var(--danger);  background: var(--danger-bg); }
-  .region-card.dongducheon { border-left-color: var(--accent); border-left-width: 4px; }
+  .region-card.dongducheon { border-left-color: var(--highlight); border-left-width: 4px; }
 
   .region-name {
     font-size: 13px; font-weight: 700;
@@ -623,12 +632,15 @@
 
   /* 특보 */
   .warning-item {
-    padding: 9px 11px;
-    margin-bottom: 6px;
+    padding: 10px 12px;
+    margin-bottom: 7px;
     background: var(--bg-card-2);
+    border: 1px solid var(--border);
     border-left: 3px solid var(--warning);
-    border-radius: 5px;
+    border-radius: var(--radius-sm);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
+  .warning-item:hover { transform: translateX(2px); box-shadow: var(--shadow-sm); }
   .warning-item:last-child { margin-bottom: 0; }
   .warning-item.severe { border-left-color: var(--danger); }
   .warning-item.info { border-left-color: var(--accent); }
@@ -729,13 +741,15 @@
   .fire-card {
     background: var(--bg-card-2);
     border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 10px;
+    border-radius: var(--radius-sm);
+    padding: 11px 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
+    transition: border-color 0.2s ease, transform 0.2s ease;
   }
+  .fire-card:hover { transform: translateY(-1px); border-color: var(--accent); }
   .fire-card.level-2 { border-color: var(--caution); }
   .fire-card.level-3 { border-color: var(--warning); background: var(--warning-bg); }
   .fire-card.level-4 { border-color: var(--danger); background: var(--danger-bg); }
