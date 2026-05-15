@@ -3950,19 +3950,24 @@ refreshMuteBtn();
 // 알람 테스트 버튼
 document.getElementById('alarmTestBtn').addEventListener('click', testAlarm);
 
-// === 테마 토글 (라이트 = 기본, 다크는 야간 옵션) ===
+// === 테마 토글 (라이트 = 시작 기본, 다크는 야간 옵션) ===
+// sessionStorage 사용 → 새 탭/창 열면 항상 라이트로 시작.
+// 같은 탭 안에서는 토글한 다크 모드 유지 (5분 자동 새로고침 후에도).
 const themeBtn = document.getElementById('themeBtn');
 function setTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   themeBtn.textContent = theme === 'dark' ? '☀' : '🌙';
   themeBtn.title = theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환';
-  localStorage.setItem('dashboardTheme', theme);
+  try { sessionStorage.setItem('dashboardTheme', theme); } catch (e) {}
 }
 themeBtn.addEventListener('click', () => {
   const cur = document.documentElement.getAttribute('data-theme') || 'light';
   setTheme(cur === 'dark' ? 'light' : 'dark');
 });
-setTheme(localStorage.getItem('dashboardTheme') || 'light');
+setTheme(sessionStorage.getItem('dashboardTheme') || 'light');
+
+// 이전 버전에서 localStorage에 저장됐던 테마 청소 (한 번만)
+try { localStorage.removeItem('dashboardTheme'); } catch (e) {}
 
 // === 시군 선택 모달 ===
 const REGION_LIST = ['의정부', '양주', '동두천', '포천', '연천', '가평', '남양주', '구리', '파주', '고양'];
