@@ -1267,16 +1267,14 @@
   }
 
   /* === CCTV 프레임 (영상 부분만 정확히 보이도록) ===
-     홍수정보시스템 cctvView 페이지는 영상(4:3) + 헤더 + 컨트롤바 + 주소·지도보기 영역.
-     영상 본체가 페이지의 좌측·상단 일부만 차지하므로:
-     - iframe을 1.5배 확대해서 영상이 frame 전체에 차게 함
-     - translate로 위쪽 "지점명" 헤더를 끌어올려 가림
-     - frame을 16:13 비율로 잡아서 컨트롤바도 자연스럽게 노출되도록 */
+     홍수정보시스템 cctvView 페이지: 영상(4:3) + 헤더 + 컨트롤바.
+     iframe을 데스크탑 viewport로 강제 렌더링(width 150%) 후 scale로 영상 영역만 표시.
+     데스크탑·모바일 분리 처리해서 비율 차이 최소화. */
   .cctv-frame {
     position: relative;
     width: 100%;
-    aspect-ratio: 16 / 13;
-    border-radius: 8px;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius-md);
     overflow: hidden;
     background: #000;
     border: 1px solid var(--border);
@@ -1285,11 +1283,44 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    width: 150%;
+    height: 150%;
     border: 0;
     transform-origin: top left;
-    transform: scale(1.5) translateY(-46px);
+    transform: scale(0.95) translate(-5%, -8%);
+  }
+  /* 큰 데스크탑 */
+  @media (min-width: 1024px) {
+    .cctv-frame {
+      aspect-ratio: 4 / 3;
+    }
+    .cctv-frame iframe {
+      width: 140%;
+      height: 140%;
+      transform: scale(1.0) translate(-7%, -7%);
+    }
+  }
+  /* 태블릿 */
+  @media (max-width: 1023px) and (min-width: 768px) {
+    .cctv-frame {
+      aspect-ratio: 4 / 3;
+    }
+    .cctv-frame iframe {
+      width: 160%;
+      height: 160%;
+      transform: scale(0.85) translate(-6%, -10%);
+    }
+  }
+  /* 모바일 */
+  @media (max-width: 767px) {
+    .cctv-frame {
+      aspect-ratio: 4 / 3;
+    }
+    .cctv-frame iframe {
+      width: 200%;
+      height: 200%;
+      transform: scale(0.7) translate(-12%, -6%);
+    }
   }
 
   /* === 하천 수위 차트 (모달 안) === */
