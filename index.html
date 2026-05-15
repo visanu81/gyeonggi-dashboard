@@ -401,9 +401,13 @@
     font-weight: 600;
     margin-left: 3px;
   }
-  [data-theme="dark"] .kpi-bar { padding: 0; gap: 1px; background: var(--border); }
-  [data-theme="dark"] .kpi-item { border-radius: 0; border: none; box-shadow: none; padding: 14px 18px 14px 22px; }
-  [data-theme="dark"] .kpi-item::before { left: 0; top: 12px; bottom: 12px; }
+  /* 다크 모드 KPI는 라이트 모드와 동일한 카드 구조 유지 (균형감) */
+  [data-theme="dark"] .kpi-item {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
+  [data-theme="dark"] .kpi-item:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+  }
 
   /* 작은 화면 — KPI 3x2 */
   @media (max-width: 1199px) {
