@@ -220,6 +220,35 @@
   }
   [data-theme="dark"] .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
 
+  /* 테스트 모드 버튼 — 평소 점선 테두리, 활성 시 빨강 펄스 */
+  .test-mode-btn {
+    width: auto !important;
+    padding: 0 11px;
+    font-size: 11px !important;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    border-style: dashed !important;
+    border-color: rgba(234, 179, 8, 0.55) !important;
+    color: var(--highlight-soft, #f4c537) !important;
+    background: rgba(234, 179, 8, 0.08) !important;
+  }
+  .test-mode-btn:hover {
+    background: rgba(234, 179, 8, 0.2) !important;
+    border-color: var(--highlight-soft, #f4c537) !important;
+    color: #fff !important;
+  }
+  .test-mode-btn.active {
+    border-style: solid !important;
+    background: var(--danger) !important;
+    border-color: var(--danger) !important;
+    color: #fff !important;
+    animation: test-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes test-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    50%      { box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.35); }
+  }
+
   /* 시군 변경 버튼 (헤더 위 노란 강조) */
   .region-changer {
     display: inline-flex; align-items: center;
@@ -1955,6 +1984,7 @@
     <button class="region-changer" id="weatherImgBtn" title="기상 레이더·위성영상 보기">
       📡 기상영상
     </button>
+    <button class="icon-btn test-mode-btn" id="testModeBtn" title="테스트 모드 — 가짜 경보·워터마크 시작/정지">TEST</button>
     <button class="icon-btn" id="alarmTestBtn" title="알람 테스트 — 현재 위급도에 맞는 알람음 재생" style="font-size:14px;">🚨</button>
     <button class="icon-btn" id="muteBtn" title="알람 사운드 켜기/끄기">🔊</button>
     <button class="icon-btn" id="themeBtn" title="테마 전환">🌙</button>
@@ -4028,25 +4058,50 @@ setInterval(() => {
   const wasActive = !!document.getElementById('testWatermark') && document.getElementById('testWatermark').style.display === 'block';
   updateTestWatermark();
   const isActive = !!document.getElementById('testWatermark') && document.getElementById('testWatermark').style.display === 'block';
-  // 상태가 바뀐 순간 다시 렌더 (가짜 특보 주입/제거)
-  if (wasActive !== isActive) renderFromOriginal();
+  // 상태가 바뀐 순간 다시 렌더 + 버튼 동기화
+  if (wasActive !== isActive) {
+    renderFromOriginal();
+    if (typeof refreshTestModeBtn === 'function') refreshTestModeBtn();
+  }
 }, 10 * 1000);
 
-// 콘솔 헬퍼: 즉시 테스트 시작 / 정지 / 상태 확인 (사장님이 빠르게 토글하실 수 있도록)
-window.testNow = function() {
-  const now = Date.now();
-  localStorage.setItem(TEST_MODE_KEY, JSON.stringify({ start: now, end: now + TEST_MODE_DURATION_MS }));
-  renderFromOriginal();
-  updateTestWatermark();
-  console.log('[테스트 모드] 즉시 시작됨. 3시간 후 자동 종료. 종료 시각:', new Date(now + TEST_MODE_DURATION_MS).toLocaleString());
-};
-window.testStop = function() {
-  localStorage.removeItem(TEST_MODE_KEY);
-  stopSevereLoop();
-  renderFromOriginal();
-  updateTestWatermark();
-  console.log('[테스트 모드] 강제 종료. 다음 페이지 로드부터 다시 5분 후 자동 시작.');
-};
+// === 테스트 모드 헤더 버튼 ===
+const testModeBtn = document.getElementById('testModeBtn');
+function refreshTestModeBtn() {
+  if (!testModeBtn) return;
+  if (isTestModeActive()) {
+    testModeBtn.classList.add('active');
+    testModeBtn.textContent = 'TEST ON';
+    const w = getTestModeWindow();
+    const remainMin = Math.max(0, Math.round((w.end - Date.now()) / 60000));
+    testModeBtn.title = `테스트 진행 중 — ${remainMin}분 남음. 클릭하면 즉시 종료`;
+  } else {
+    testModeBtn.classList.remove('active');
+    testModeBtn.textContent = 'TEST';
+    testModeBtn.title = '테스트 모드 시작 (가짜 경보·워터마크 · 3시간)';
+  }
+}
+if (testModeBtn) {
+  testModeBtn.addEventListener('click', () => {
+    if (isTestModeActive()) {
+      localStorage.removeItem(TEST_MODE_KEY);
+      stopSevereLoop();
+    } else {
+      const now = Date.now();
+      localStorage.setItem(TEST_MODE_KEY, JSON.stringify({ start: now, end: now + TEST_MODE_DURATION_MS }));
+    }
+    renderFromOriginal();
+    updateTestWatermark();
+    refreshTestModeBtn();
+  });
+  refreshTestModeBtn();
+  // 1분마다 남은 시간 표시 갱신
+  setInterval(refreshTestModeBtn, 60 * 1000);
+}
+
+// 콘솔 헬퍼 (선택적 — F12 console에서도 토글 가능)
+window.testNow = function() { if (testModeBtn) testModeBtn.click(); };
+window.testStop = window.testNow;
 window.testStatus = function() {
   const w = getTestModeWindow();
   const now = Date.now();
