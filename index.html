@@ -1267,12 +1267,13 @@
   }
 
   /* === CCTV 프레임 (영상 부분만 정확히 보이도록) ===
-     홍수정보시스템 cctvView 페이지에서 영상이 페이지 좌측의 ~48%를 차지.
-     iframe을 크게 두고 scale로 영상이 컨테이너 100% 차지하게 한 뒤, 헤더 부분만 translate로 자름. */
+     홍수정보시스템 cctvView 페이지는 영상 + 헤더 + 컨트롤바 + 우측/하단 메뉴 영역.
+     iframe을 큰 viewport(200~280%)로 강제 → 페이지가 데스크탑 모드로 렌더링.
+     scale로 컨테이너에 영상 영역만 fit. translate로 위쪽 헤더 자름. */
   .cctv-frame {
     position: relative;
     width: 100%;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 16 / 10;
     border-radius: var(--radius-md);
     overflow: hidden;
     background: #000;
@@ -1282,26 +1283,26 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 150%;
-    height: 150%;
+    width: 200%;
+    height: 200%;
     border: 0;
     transform-origin: top left;
-    transform: scale(1.4) translateY(-10%);
+    transform: scale(1.0) translateY(-7%);
   }
   /* 태블릿 (1024px 이하) */
   @media (max-width: 1023px) and (min-width: 768px) {
     .cctv-frame iframe {
-      width: 170%;
-      height: 170%;
-      transform: scale(1.25) translateY(-9%);
+      width: 220%;
+      height: 220%;
+      transform: scale(0.95) translateY(-6%);
     }
   }
   /* 모바일 */
   @media (max-width: 767px) {
     .cctv-frame iframe {
-      width: 240%;
-      height: 240%;
-      transform: scale(0.95) translateY(-7%);
+      width: 300%;
+      height: 300%;
+      transform: scale(0.75) translateY(-5%);
     }
   }
 
