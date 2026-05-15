@@ -419,6 +419,43 @@
     .kpi-item { padding: 10px 14px 10px 18px; }
   }
 
+  /* === 테스트 모드 워터마크 === */
+  .watermark {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) rotate(-22deg);
+    pointer-events: none;
+    z-index: 9999;
+    user-select: none;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .watermark-main {
+    font-size: 220px;
+    font-weight: 900;
+    color: rgba(220, 38, 38, 0.13);
+    letter-spacing: 0.15em;
+    line-height: 1;
+    text-shadow: 0 4px 20px rgba(220, 38, 38, 0.08);
+  }
+  .watermark-sub {
+    font-size: 22px;
+    font-weight: 700;
+    color: rgba(220, 38, 38, 0.25);
+    letter-spacing: 0.4em;
+    margin-top: 18px;
+  }
+  [data-theme="dark"] .watermark-main { color: rgba(239, 68, 68, 0.18); }
+  [data-theme="dark"] .watermark-sub  { color: rgba(239, 68, 68, 0.4); }
+  @media (max-width: 1199px) {
+    .watermark-main { font-size: 160px; }
+    .watermark-sub  { font-size: 18px; }
+  }
+  @media (max-width: 767px) {
+    .watermark-main { font-size: 100px; }
+    .watermark-sub  { font-size: 13px; letter-spacing: 0.3em; }
+  }
+
   /* ALERT BANNER — 위급 펄스 (배경·테두리·글로우 동시 변화) */
   .alert-banner {
     margin: 12px 28px 0;
@@ -3579,6 +3616,72 @@ function updateLastUpdateTime(updated) {
   document.getElementById('lastUpdate').textContent = `${hh}:${mm}`;
 }
 
+// ============ 테스트 모드 ============
+// 페이지 첫 로드 시점에서 5분 후 시작, 3시간 지속.
+// localStorage에 시작/종료 시각 저장해서 새로고침해도 같은 윈도우 유지.
+const TEST_MODE_DELAY_MS    = 5 * 60 * 1000;        // 5분 후 시작
+const TEST_MODE_DURATION_MS = 3 * 60 * 60 * 1000;   // 3시간 지속
+const TEST_MODE_KEY         = 'gyeonggi_test_mode_window';
+
+function getTestModeWindow() {
+  try {
+    const saved = localStorage.getItem(TEST_MODE_KEY);
+    if (saved) {
+      const obj = JSON.parse(saved);
+      if (obj && obj.start && obj.end) return obj;
+    }
+  } catch (e) {}
+  const now = Date.now();
+  const win = { start: now + TEST_MODE_DELAY_MS, end: now + TEST_MODE_DELAY_MS + TEST_MODE_DURATION_MS };
+  try { localStorage.setItem(TEST_MODE_KEY, JSON.stringify(win)); } catch (e) {}
+  return win;
+}
+
+function isTestModeActive() {
+  const { start, end } = getTestModeWindow();
+  const now = Date.now();
+  return now >= start && now <= end;
+}
+
+function updateTestWatermark() {
+  const el = document.getElementById('testWatermark');
+  if (!el) return;
+  el.style.display = isTestModeActive() ? 'block' : 'none';
+}
+
+function injectTestData(data) {
+  if (!isTestModeActive()) return data;
+  // 가짜 호우경보 + 강풍주의보 발효 (앞에 추가)
+  data.warnings = [
+    {
+      name: '호우경보',
+      area: '경기북부 (동두천·연천·포천·양주·의정부·가평·남양주·구리·파주·고양)',
+      level: 'severe',
+      issued: '[TEST]',
+      time: '[TEST]'
+    },
+    {
+      name: '강풍주의보',
+      area: '경기북부 산지',
+      level: 'warning',
+      issued: '[TEST]',
+      time: '[TEST]'
+    },
+    ...(data.warnings || [])
+  ];
+  // 가짜 재난문자
+  data.messages = [
+    {
+      sender: '[TEST] 경기북부',
+      time: '[TEST]',
+      text: '※ 시스템 점검 테스트 ※ 호우경보 발효 — 알람 동작 확인용. 실제 상황 아님.',
+      region: '경기북부'
+    },
+    ...(data.messages || [])
+  ];
+  return data;
+}
+
 function renderAll(data) {
   // 빈 필드는 샘플로 폴백 (운영 중 부분 실패 대비)
   data = data || {};
@@ -3589,6 +3692,9 @@ function renderAll(data) {
   data.messages = data.messages || [];
   data.pm = data.pm || [];
   data.fire = data.fire || [];
+
+  // 테스트 모드면 가짜 특보·재난문자 주입
+  data = injectTestData(data);
 
   renderKpiBar(data);  // 상단 KPI 대시보드
   checkNewAlert(data.warnings);  // 새 특보 발효 시 사운드 알람
@@ -3875,8 +3981,24 @@ renderAll(DATA);
 updateClock();
 setInterval(updateClock, 1000);
 
+// 테스트 모드 상태 매 30초마다 갱신 (시작/종료 시각 자동 전환)
+updateTestWatermark();
+setInterval(() => {
+  const wasActive = !!document.getElementById('testWatermark') && document.getElementById('testWatermark').style.display === 'block';
+  updateTestWatermark();
+  const isActive = !!document.getElementById('testWatermark') && document.getElementById('testWatermark').style.display === 'block';
+  // 상태가 바뀐 순간 데이터 다시 렌더 (가짜 특보 주입/제거)
+  if (wasActive !== isActive) renderAll(DATA);
+}, 30 * 1000);
+
 // 페이지를 5분마다 새로고침해서 최신 data.js를 다시 읽음
 setInterval(() => { location.reload(); }, 5 * 60 * 1000);
 </script>
+
+<!-- 테스트 모드 워터마크 -->
+<div id="testWatermark" class="watermark" style="display:none;">
+  <div class="watermark-main">테스트</div>
+  <div class="watermark-sub">SYSTEM TEST · 실제 발효 특보 아님</div>
+</div>
 </body>
 </html>
