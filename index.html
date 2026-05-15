@@ -3647,9 +3647,8 @@ function updateLastUpdateTime(updated) {
 }
 
 // ============ 테스트 모드 ============
-// 페이지 첫 로드 시점에서 5분 후 시작, 3시간 지속.
-// localStorage에 시작/종료 시각 저장해서 새로고침해도 같은 윈도우 유지.
-const TEST_MODE_DELAY_MS    = 5 * 60 * 1000;        // 5분 후 시작
+// 헤더 TEST 버튼 클릭으로만 시작. 자동 시작 없음.
+// 시작 시 localStorage에 윈도우 저장 → 새로고침해도 유지, 3시간 후 자동 종료.
 const TEST_MODE_DURATION_MS = 3 * 60 * 60 * 1000;   // 3시간 지속
 const TEST_MODE_KEY         = 'gyeonggi_test_mode_window';
 
@@ -3658,20 +3657,17 @@ function getTestModeWindow() {
     const saved = localStorage.getItem(TEST_MODE_KEY);
     if (saved) {
       const obj = JSON.parse(saved);
-      // 유효한 윈도우 + 아직 종료되지 않은 것만 사용
       if (obj && obj.start && obj.end && obj.end > Date.now()) return obj;
     }
   } catch (e) {}
-  const now = Date.now();
-  const win = { start: now + TEST_MODE_DELAY_MS, end: now + TEST_MODE_DELAY_MS + TEST_MODE_DURATION_MS };
-  try { localStorage.setItem(TEST_MODE_KEY, JSON.stringify(win)); } catch (e) {}
-  return win;
+  return null;  // 저장된 윈도우 없거나 만료 → 비활성
 }
 
 function isTestModeActive() {
-  const { start, end } = getTestModeWindow();
+  const win = getTestModeWindow();
+  if (!win) return false;
   const now = Date.now();
-  return now >= start && now <= end;
+  return now >= win.start && now <= win.end;
 }
 
 function updateTestWatermark() {
