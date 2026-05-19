@@ -525,8 +525,62 @@ def fetch_warning_bulletins():
     return bulletins
 
 
+def parse_prelim_warnings(t7_text, tmFc=''):
+    """t7 필드(예비특보)의 텍스트를 구조화된 객체로 파싱.
+
+    t7 예시:
+      "(1) 강풍 예비특보\r\n
+       o 05월 20일 오후(12시~18시) : 서해5도\r\n
+       o 05월 20일 밤(18시~24시) : 제주도(제주도산지, ...)\r\n
+       (2) 풍랑 예비특보\r\n
+       o 05월 20일 오후(12시~18시) : 서해중부안쪽먼바다, ..."
+
+    리턴: [{type, items:[{time, area, north_match:bool}]}]
+    """
+    import re as _re
+    if not t7_text or t7_text.strip() in ('o 없음', '없음', ''):
+        return []
+
+    # 줄 단위 분리 (CRLF·LF 모두)
+    lines = [ln.strip() for ln in _re.split(r'[\r\n]+', t7_text) if ln.strip()]
+
+    groups = []
+    cur = None
+    for ln in lines:
+        # 그룹 헤더: "(1) 강풍 예비특보"
+        m = _re.match(r'\(\d+\)\s*(.+?예비특보)', ln)
+        if m:
+            cur = {'type': m.group(1).strip(), 'items': []}
+            groups.append(cur)
+            continue
+        # 항목: "o 05월 20일 오후(12시~18시) : 서해5도"
+        m = _re.match(r'^[o○\-•]\s*(.+?)\s*:\s*(.+)$', ln)
+        if m and cur is not None:
+            time_str = m.group(1).strip()
+            area = m.group(2).strip()
+            north_match = any(k in area for k in NORTH_GG_KEYWORDS)
+            cur['items'].append({'time': time_str, 'area': area, 'north_match': north_match})
+
+    # 발표 시각 형식 변환
+    tmFc_str = ''
+    if len(tmFc) >= 12:
+        tmFc_str = f'{tmFc[4:6]}/{tmFc[6:8]} {tmFc[8:10]}:{tmFc[10:12]}'
+
+    # 각 그룹에 발표 시각 부여 + 빈 그룹 제거
+    result = []
+    for g in groups:
+        if not g['items']:
+            continue
+        north_count = sum(1 for it in g['items'] if it['north_match'])
+        g['tmFc'] = tmFc_str
+        g['north_count'] = north_count   # 경기북부 매칭 항목 수
+        g['total_count'] = len(g['items'])
+        result.append(g)
+    return result
+
+
 def fetch_warnings():
-    """현재 발효 중인 기상특보 — 경기북부 시군에 해당하는 것만."""
+    """현재 발효 중인 기상특보(t6) + 예비특보(t7) — 경기북부 시군 매칭."""
     url = 'https://apis.data.go.kr/1360000/WthrWrnInfoService/getPwnStatus'
     params = {
         'serviceKey': DATA_KEY,
@@ -540,38 +594,46 @@ def fetch_warnings():
     body = r.json()['response']['body']
     items_obj = body.get('items', {})
     if not items_obj:
-        return []
+        return {'active': [], 'prelim': []}
     items = items_obj.get('item', []) if isinstance(items_obj, dict) else items_obj
     if isinstance(items, dict):
         items = [items]
 
-    result = []
+    active = []
+    prelim_all = []
     seen = set()
     for it in items:
-        # t6 = "호우주의보 : 서울특별시, 동두천시, ..." 형태
-        for field in ('t6', 't7'):
-            t = it.get(field, '') or ''
-            if ':' not in t:
+        tmFc = str(it.get('tmFc', ''))
+        time_str = f'{tmFc[8:10]}:{tmFc[10:12]}' if len(tmFc) >= 12 else ''
+
+        # t6 = 발효 중 특보 (예: "호우주의보 : 동두천시, 양주시, ...")
+        # 여러 줄 가능, 각 줄이 하나의 특보
+        t6 = it.get('t6', '') or ''
+        for line in t6.split('\n'):
+            line = line.strip().lstrip('o○').strip()
+            if ':' not in line:
                 continue
-            head, body_text = t.split(':', 1)
+            head, body_text = line.split(':', 1)
             head, body_text = head.strip(), body_text.strip()
             wrn_type = next((w for w in WRN_TYPES if w in head), None)
             if not wrn_type:
                 continue
-            # 경기북부 키워드 매칭
             matched = [k for k in NORTH_GG_KEYWORDS if k in body_text]
             if not matched:
                 continue
             area_text = ', '.join(matched)
-            tmFc = str(it.get('tmFc', ''))
-            time_str = f'{tmFc[8:10]}:{tmFc[10:12]}' if len(tmFc) >= 12 else ''
             key = (wrn_type, area_text)
             if key in seen:
                 continue
             seen.add(key)
             level = 'severe' if '경보' in wrn_type else 'warning'
-            result.append({'type': wrn_type, 'area': area_text, 'time': time_str, 'level': level})
-    return result[:8]
+            active.append({'type': wrn_type, 'area': area_text, 'time': time_str, 'level': level})
+
+        # t7 = 예비특보 (별도 구조라 별도 파서 사용)
+        t7 = it.get('t7', '') or ''
+        prelim_all.extend(parse_prelim_warnings(t7, tmFc))
+
+    return {'active': active[:8], 'prelim': prelim_all}
 
 
 # ============================================================
@@ -1099,10 +1161,16 @@ def main():
 
     print('[기상특보]')
     try:
-        data['warnings'] = fetch_warnings()
-        print(f'  ✓ {len(data["warnings"])}건')
+        w_result = fetch_warnings()
+        # 하위호환을 위해 data['warnings']는 발효 특보 배열(기존 형식) 유지
+        data['warnings'] = w_result['active']
+        # 예비특보는 별도 키로 저장
+        data['prelim_warnings'] = w_result['prelim']
+        print(f'  ✓ 발효 {len(data["warnings"])}건 / 예비 {len(data["prelim_warnings"])}그룹')
     except Exception as e:
         print(f'  ✗ {e}'); traceback.print_exc()
+        data['warnings'] = []
+        data['prelim_warnings'] = []
 
     print('[기상청 통보문·기상정보]')
     try:
