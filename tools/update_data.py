@@ -30,14 +30,19 @@ COMBINED_OUTPUT_PATH = ROOT / '상황판.html'
 
 def load_env(path=ENV_PATH):
     env = {}
-    with open(path, encoding='utf-8') as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            if '=' in line:
-                k, v = line.split('=', 1)
-                env[k.strip()] = v.strip()
+    if path.exists():
+        with open(path, encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if '=' in line:
+                    k, v = line.split('=', 1)
+                    env[k.strip()] = v.strip()
+    # GitHub Actions 등 .env 없는 환경에서는 OS 환경변수로 fallback
+    import os
+    for key in ('DATA_GO_KR_KEY', 'HRFCO_KEY', 'SAFETY_DATA_KEY'):
+        env.setdefault(key, os.environ.get(key, ''))
     return env
 
 
