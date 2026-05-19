@@ -853,6 +853,7 @@ def fetch_fire():
 RIVER_STATIONS = [
     {'code': '1022668', 'name': '신천 (동두천 송천교)',   'warning': 3.4,  'danger': 5.0,  'has_cctv': True,  'api': 'waterlevel'},
     {'code': '1021701', 'name': '임진강 (군남댐)',        'warning': 31.5, 'danger': 35.0, 'has_cctv': False, 'api': 'dam'},
+    {'code': '1021650', 'name': '임진강 (연천 필승교)',   'warning': 1.0,  'danger': 7.5,  'has_cctv': True,  'api': 'waterlevel'},
     {'code': '1022670', 'name': '신천 (연천)',           'warning': 3.5,  'danger': 5.5,  'has_cctv': True,  'api': 'waterlevel'},
     {'code': '1021680', 'name': '임진강 (연천 임진교)',   'warning': 5.9,  'danger': 10.8, 'has_cctv': True,  'api': 'waterlevel'},
     {'code': '1022640', 'name': '한탄강 (포천 용담교)',   'warning': 9.5,  'danger': 18.0, 'has_cctv': True,  'api': 'waterlevel'},
