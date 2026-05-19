@@ -3818,7 +3818,7 @@ function renderFocusMode(data) {
     delete riverPanel.dataset.riverName;
     riverPanel.removeAttribute('title');
   } else {
-    riverBody.innerHTML = '<div class="focus-empty">하천 데이터 없음</div>';
+    riverBody.innerHTML = floodAlertFocus + '<div class="focus-empty">하천 데이터 없음</div>';
     riverPanel.style.cursor = '';
     delete riverPanel.dataset.riverName;
     riverPanel.removeAttribute('title');
@@ -4072,10 +4072,12 @@ function renderAll(data) {
   if (!data.regions || data.regions.length === 0) data.regions = SAMPLE_DATA.regions;
   if (!data.forecast || data.forecast.length === 0) data.forecast = SAMPLE_DATA.forecast;
   data.warnings = data.warnings || [];
+  data.prelim_warnings = data.prelim_warnings || [];
   data.rivers = data.rivers || [];
   data.messages = data.messages || [];
   data.pm = data.pm || [];
   data.fire = data.fire || [];
+  data.flood_forecast = data.flood_forecast || [];
 
   // 테스트 모드면 가짜 특보·재난문자 주입
   data = injectTestData(data);
