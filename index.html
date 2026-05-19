@@ -786,6 +786,87 @@
     text-align: center;
   }
   .prelim-summary-line strong { color: var(--caution); font-weight: 700; }
+
+  /* === 홍수예보 — 발령 시 강조 === */
+  .flood-alert-bar {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border: 1px solid var(--danger);
+    border-left: 4px solid var(--danger);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+  .flood-alert-bar:hover { transform: translateX(2px); }
+  .flood-alert-bar.warning {
+    background: linear-gradient(135deg, var(--warning-bg) 0%, #fed7aa 100%);
+    border-color: var(--warning);
+    border-left-color: var(--warning);
+  }
+  .flood-alert-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--danger);
+    letter-spacing: 0.3px;
+    margin-bottom: 3px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .flood-alert-bar.warning .flood-alert-title { color: var(--warning); }
+  .flood-alert-summary {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  [data-theme="dark"] .flood-alert-bar {
+    background: rgba(220, 38, 38, 0.18);
+    border-color: var(--danger);
+  }
+  [data-theme="dark"] .flood-alert-bar.warning {
+    background: rgba(234, 88, 12, 0.16);
+    border-color: var(--warning);
+  }
+
+  .flood-item {
+    padding: 9px 11px;
+    margin-bottom: 6px;
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warning);
+    border-radius: var(--radius-sm);
+  }
+  .flood-item:last-child { margin-bottom: 0; }
+  .flood-item.severe { border-left-color: var(--danger); }
+  .flood-item.north-match { background: var(--warning-bg); }
+  .flood-item.severe.north-match { background: var(--danger-bg); }
+  .flood-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .flood-kind {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .flood-kind.severe { color: var(--danger); }
+  .flood-kind.warning { color: var(--warning); }
+  .flood-no {
+    font-size: 10px;
+    color: var(--text-sub);
+    font-weight: 600;
+  }
+  .flood-where {
+    font-size: 11px;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .flood-meta {
+    font-size: 10px;
+    color: var(--text-dim);
+    display: flex; gap: 10px; flex-wrap: wrap;
+  }
+  .flood-meta span { white-space: nowrap; }
   .warning-top {
     display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 3px;
@@ -2788,10 +2869,74 @@ function buildMiniSparkline(history, level) {
   </svg>`;
 }
 
-function renderRivers(data) {
+// ============ 홍수예보 (한강홍수통제소 fldfct) ============
+function renderFloodItem(f) {
+  const cls = `${f.level || ''}${f.north_match ? ' north-match' : ''}`;
+  const where = [f.river, f.station].filter(Boolean).join(' · ');
+  const meta = [];
+  if (f.announce_time) meta.push(`발표 ${f.announce_time}`);
+  if (f.forecast_time) meta.push(`도달예상 ${f.forecast_time}`);
+  if (f.current_level)  meta.push(`현재 ${f.current_level}m`);
+  if (f.announcer)      meta.push(`${f.announcer}`);
+  return `
+    <div class="flood-item ${cls}">
+      <div class="flood-top">
+        <span class="flood-kind ${f.level || ''}">${f.kind || '홍수예보'}</span>
+        <span class="flood-no">제${f.no || '-'}호</span>
+      </div>
+      <div class="flood-where">${where}${f.area ? ` <span style="color:var(--text-sub);">(${f.area})</span>` : ''}</div>
+      ${meta.length ? `<div class="flood-meta">${meta.map(m => `<span>${m}</span>`).join('')}</div>` : ''}
+    </div>`;
+}
+
+// 광역/내관서 카드 상단에 들어가는 클릭 가능한 알람 띠
+function buildFloodAlertHtml(floodForecast, opts = {}) {
+  if (!floodForecast || floodForecast.length === 0) return '';
+  const items = opts.northOnly ? floodForecast.filter(f => f.north_match) : floodForecast;
+  if (items.length === 0) return '';
+
+  const hasSevere = items.some(f => f.level === 'severe');
+  const cls = hasSevere ? '' : 'warning';
+  const title = hasSevere ? '🚨 홍수경보 발령' : '⚠ 홍수주의보 발령';
+  const top = items.slice(0, 2).map(f => `${f.river || ''} ${f.station || ''}`.trim()).filter(Boolean).join(', ');
+  const moreText = items.length > 2 ? ` 외 ${items.length - 2}건` : '';
+  const scope = opts.northOnly ? '경기북부' : '전국';
+  return `
+    <div class="flood-alert-bar ${cls}" onclick="openFloodModal()" title="클릭하면 상세 보기">
+      <div class="flood-alert-title">${title} · ${scope} ${items.length}건</div>
+      <div class="flood-alert-summary">${top}${moreText}</div>
+    </div>`;
+}
+
+// 홍수예보 상세 모달
+function openFloodModal() {
+  const floods = (typeof DATA !== 'undefined' && DATA.flood_forecast) || [];
+  if (floods.length === 0) {
+    openGenericModal('🌊 홍수예보', '발령 정보', '<div style="text-align:center;color:var(--safe);padding:20px;">✓ 현재 발령 중인 홍수예보 없음</div>', 640);
+    return;
+  }
+  // 북부 매칭 우선 → 단계(severe>warning) → 발표시각 역순(원본 순서 유지)
+  const sorted = [...floods].sort((a, b) => {
+    if (a.north_match !== b.north_match) return b.north_match - a.north_match;
+    const order = { severe: 0, warning: 1, info: 2 };
+    return (order[a.level] || 9) - (order[b.level] || 9);
+  });
+  const northN = floods.filter(f => f.north_match).length;
+  const html = `
+    ${northN > 0 ? `<div style="background:var(--danger-bg);border:1px solid var(--danger);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--danger);font-weight:700;">⚠ 경기북부 매칭 발령 ${northN}건 — 노란 점 표시</div>` : ''}
+    ${sorted.map(renderFloodItem).join('')}
+    <div style="margin-top:14px;font-size:11px;color:var(--text-sub);text-align:right;">📡 한강홍수통제소 OpenAPI · fldfct</div>`;
+  openGenericModal('🌊 홍수예보 발령', `전국 ${floods.length}건 (경기북부 ${northN}건)`, html, 760);
+}
+
+function renderRivers(data, floodForecast) {
+  const target = document.getElementById('riverList');
+  if (!target) return;
+  // 광역 모드: 홍수예보 발령 시 카드 본문 최상단에 알람 띠 (전국 카운트)
+  const floodAlert = buildFloodAlertHtml(floodForecast || [], { northOnly: false });
+
   if (!data || data.length === 0) {
-    document.getElementById('riverList').innerHTML =
-      '<div style="text-align:center;color:var(--text-sub);padding:18px;font-size:11px;">하천수위 데이터 없음</div>';
+    target.innerHTML = floodAlert + '<div style="text-align:center;color:var(--text-sub);padding:18px;font-size:11px;">하천수위 데이터 없음</div>';
     return;
   }
   const html = data.map((r, i) => {
@@ -2808,7 +2953,7 @@ function renderRivers(data) {
         <div class="river-stats"><span>주의 ${r.warning}m</span><span>위험 ${r.danger}m</span></div>
       </div>`;
   }).join('');
-  document.getElementById('riverList').innerHTML = html;
+  target.innerHTML = floodAlert + html;
 }
 
 // ============ 하천 수위 상세 모달 ============
@@ -3641,8 +3786,10 @@ function renderFocusMode(data) {
   // ===== 2. 인근 수위 카드 — 여러 관측소 동시 표시, 각각 클릭 시 모달 =====
   const riverPanel = document.querySelector('.focus-panel-river');
   const riverBody = document.getElementById('focusRiverBody');
+  // 내관서 모드: 경기북부 매칭 홍수예보만 강조 알람 띠
+  const floodAlertFocus = buildFloodAlertHtml(data.flood_forecast || [], { northOnly: true });
   if (selRiversArr.length > 0) {
-    riverBody.innerHTML = selRiversArr.map(r => {
+    riverBody.innerHTML = floodAlertFocus + selRiversArr.map(r => {
       const pct = Math.min(100, (r.value / r.danger) * 100);
       const shortName = r.name.replace(/\s*\(([가-힣]+)\s*[가-힣]+(?:교|댐|대교|보|리|동)\)/, ' ($1)');
       const isDam = r.api === 'dam';
@@ -3938,7 +4085,7 @@ function renderAll(data) {
   renderRegions(data.regions);
   // 광역 모드: 발효는 본문, 예비는 한 줄 안내 (상세는 내관서중점)
   renderActiveAndPrelim(data.warnings, data.prelim_warnings, 'warningList', 'warningBadge', { summaryOnly: true });
-  renderRivers(data.rivers);
+  renderRivers(data.rivers, data.flood_forecast);
   renderMessages(data.messages, 'msgList', 'msgBadge');
   renderForecast(data.forecast, 'forecastRow');
   renderFire(data.fire);

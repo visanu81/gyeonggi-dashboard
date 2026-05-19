@@ -968,6 +968,85 @@ def fetch_rivers():
 # 7. 재난문자 (행안부 — 키 발급 시 활성화)
 # ============================================================
 
+def fetch_flood_forecast():
+    """한강홍수통제소 홍수예보 발령 정보.
+    endpoint: http://api.hrfco.go.kr/{KEY}/fldfct/list.json
+    응답: 최근 24시간 전체 관측소 발령 정보 (관측소 코드 미명시 시 전체).
+    평상시는 code=990(자료없음)으로 빈 응답.
+
+    응답 필드: ANCDT(발표일시), ANCNM(발표자), FCTDT(수위도달예상),
+              KIND(주의보/경보), NO(번호), OBSNM(지점), RVRNM(강명),
+              STTCURDT(현재일시), STTCURHGT(현재수위표수위), STTCURSEALVL(현재해발수위),
+              STTNM(관측소코드), WRNARANM(주의지역).
+    """
+    if not HRFCO_KEY:
+        return []
+    url = f'http://api.hrfco.go.kr/{HRFCO_KEY}/fldfct/list.json'
+    try:
+        r = requests.get(url, timeout=15, headers={
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'application/json',
+        })
+        r.raise_for_status()
+        data = r.json()
+    except Exception as e:
+        print(f'    홍수예보: {e}')
+        return []
+
+    code = str(data.get('code', ''))
+    if code != '200':
+        # 990 = 자료 없음 (평상시 정상), 그 외 코드는 오류
+        return []
+    items = data.get('links', []) or []
+
+    # 경기북부 관련 키워드: 시군명 + 북부 흐르는 주요 강·하천
+    north_keywords = {'의정부', '양주', '동두천', '포천', '연천', '가평',
+                      '남양주', '구리', '파주', '고양',
+                      '임진강', '한탄강', '신천', '왕숙천', '중랑천',
+                      '경기북부', '경기'}
+
+    result = []
+    for it in items:
+        wrn_area = str(it.get('WRNARANM', ''))
+        rvr = str(it.get('RVRNM', ''))
+        obs = str(it.get('OBSNM', ''))
+        kind = str(it.get('KIND', ''))
+
+        # 종류 → 단계
+        if '경보' in kind:    level = 'severe'
+        elif '주의보' in kind: level = 'warning'
+        else:                 level = 'info'
+
+        # 경기북부 매칭
+        search_text = f'{wrn_area} {rvr} {obs}'
+        north_match = any(k in search_text for k in north_keywords)
+
+        # 시간 포맷 (yyyymmddhhmm → mm/dd hh:mm)
+        def fmt_dt(s):
+            s = str(s or '')
+            if len(s) >= 12:
+                return f'{s[4:6]}/{s[6:8]} {s[8:10]}:{s[10:12]}'
+            return s
+
+        result.append({
+            'kind': kind,
+            'no': str(it.get('NO', '')),
+            'announce_time': fmt_dt(it.get('ANCDT', '')),
+            'forecast_time': fmt_dt(it.get('FCTDT', '')),
+            'announcer': str(it.get('ANCNM', '')),
+            'river': rvr,
+            'station': obs,
+            'station_code': str(it.get('STTNM', '')),
+            'area': wrn_area,
+            'current_level': str(it.get('STTCURHGT', '')),
+            'sea_level': str(it.get('STTCURSEALVL', '')),
+            'level': level,
+            'north_match': north_match,
+        })
+    # 최신순(발표일시 내림차순) — fmt_dt 변환 전 ANCDT 기준 정렬은 어렵지만 API가 일반적으로 최신순 제공
+    return result
+
+
 def fetch_messages():
     """행안부 긴급재난문자 (safetydata.go.kr DSSP-IF-00247).
     경기도 전역 메시지를 받고, region 필드에 정확한 시군명을 부여.
@@ -1207,6 +1286,15 @@ def main():
         print(f'  ✓ {len(data["rivers"])}개 관측소')
     except Exception as e:
         print(f'  ✗ {e}')
+
+    print('[홍수예보]')
+    try:
+        data['flood_forecast'] = fetch_flood_forecast()
+        north_n = sum(1 for f in data['flood_forecast'] if f.get('north_match'))
+        print(f'  ✓ 전국 {len(data["flood_forecast"])}건 (북부 매칭 {north_n}건)')
+    except Exception as e:
+        print(f'  ✗ {e}')
+        data['flood_forecast'] = []
 
     print('[재난문자]')
     try:
