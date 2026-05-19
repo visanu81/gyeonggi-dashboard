@@ -2159,7 +2159,7 @@
 
   <div class="panel panel-warning">
     <div class="panel-header">
-      <div class="panel-title">발효중 기상특보</div>
+      <div class="panel-title">기상특보 (발효 · 예비)</div>
       <div class="panel-badge" id="warningBadge">0건</div>
     </div>
     <div class="panel-body" id="warningList"></div>
@@ -2258,7 +2258,7 @@
 
   <div class="panel focus-panel-warning">
     <div class="panel-header">
-      <div class="panel-title">동두천 발효 특보</div>
+      <div class="panel-title" id="focusWarnTitle">동두천 특보 (발효+예비)</div>
       <div class="panel-badge" id="focusWarnBadge">없음</div>
     </div>
     <div class="panel-body focus-warn-body" id="focusWarnBody"></div>
@@ -2275,7 +2275,7 @@
 
   <div class="panel focus-panel-broad">
     <div class="panel-header">
-      <div class="panel-title">광역 발효 특보</div>
+      <div class="panel-title">광역 특보 (발효 + 예비)</div>
       <div class="panel-badge" id="focusWarningBadge">0건</div>
     </div>
     <div class="panel-body" id="focusWarningList"></div>
@@ -2677,6 +2677,80 @@ document.addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeRegionModal();
 });
+
+// 예비특보 그룹 렌더 (북부 매칭 항목 강조)
+function renderPrelimGroup(group) {
+  const items = (group.items || []).map(it => `
+    <div class="prelim-item${it.north_match ? ' north-match' : ''}">
+      <span class="prelim-time">${it.time}</span> · ${it.area}
+    </div>`).join('');
+  return `
+    <div class="prelim-group">
+      <div class="prelim-group-head">
+        <span class="prelim-group-title">${group.type}</span>
+        ${group.north_count > 0 ? `<span class="prelim-group-count">북부 ${group.north_count}건</span>` : ''}
+      </div>
+      ${items}
+    </div>`;
+}
+
+// 발효 + 예비 통합 렌더
+// opts.summaryOnly: 광역 모드용 — 예비는 본문에 펼치지 않고 한 줄 안내만 (상세는 내관서 모드)
+// opts.northOnly: 북부 매칭 그룹만 표시
+function renderActiveAndPrelim(active, prelim, targetId, badgeId, opts = {}) {
+  const $ = id => document.getElementById(id);
+  const target = $(targetId);
+  const badge = badgeId ? $(badgeId) : null;
+  if (!target) return;
+
+  const activeHtml = (active && active.length > 0)
+    ? active.map(w => `
+        <div class="warning-item ${w.level}">
+          <div class="warning-top">
+            <span class="warning-name">${w.type}</span>
+            <span class="warning-time">${w.time || ''}</span>
+          </div>
+          <div class="warning-area">${w.area}</div>
+        </div>`).join('')
+    : '<div style="text-align:center;color:var(--text-sub);padding:14px;font-size:11px;">현재 발효 중인 특보 없음</div>';
+
+  // 예비특보 필터링 (북부만)
+  let prelimGroups = prelim || [];
+  if (opts.northOnly) {
+    prelimGroups = prelimGroups.map(g => ({
+      ...g,
+      items: (g.items || []).filter(it => it.north_match)
+    })).filter(g => g.items.length > 0);
+  }
+
+  let prelimHtml = '';
+  if (prelimGroups.length > 0) {
+    if (opts.summaryOnly) {
+      // 광역 모드: 한 줄 안내만, 상세는 내관서중점에서
+      const totalItems = prelimGroups.reduce((s, g) => s + g.items.length, 0);
+      prelimHtml = `<div class="prelim-summary-line">예비특보 <strong>${prelimGroups.length}종 ${totalItems}건</strong> · 내관서 중점 모드에서 상세 확인</div>`;
+    } else {
+      // 내관서 모드: 본문에 예비 상세
+      prelimHtml = `<div class="prelim-divider">예비 특보 (발효 예정)</div>` +
+                   prelimGroups.map(renderPrelimGroup).join('');
+    }
+  }
+
+  target.innerHTML = activeHtml + prelimHtml;
+
+  // 배지: "발효 N · 예비 M"
+  if (badge) {
+    const aN = (active && active.length) || 0;
+    const pN = prelimGroups.length;
+    if (aN === 0 && pN === 0) {
+      badge.textContent = '없음';
+      badge.style.color = 'var(--safe)';
+    } else {
+      badge.textContent = `발효 ${aN} · 예비 ${pN}`;
+      badge.style.color = aN > 0 ? 'var(--danger)' : 'var(--caution)';
+    }
+  }
+}
 
 function renderWarnings(data, targetId, badgeId) {
   const html = data.map(w => `
@@ -3623,13 +3697,24 @@ function renderFocusMode(data) {
     fireBody.innerHTML = '<div class="focus-empty">산불 데이터 없음</div>';
   }
 
-  // ===== 6. 동두천 발효 특보 카드 =====
+  // ===== 6. 동두천 발효 특보 + 예비 카드 =====
+  const warnTitle = document.getElementById('focusWarnTitle');
+  if (warnTitle) warnTitle.textContent = `${region} 특보 (발효+예비)`;
   const warnBody = document.getElementById('focusWarnBody');
   const warnBadge = document.getElementById('focusWarnBadge');
+  // 현재 선택된 시군의 키워드로 예비특보 필터링
+  const focusRegionKeyword = region;  // 동두천 등
+  const matchedPrelim = (data.prelim_warnings || [])
+    .map(g => ({
+      ...g,
+      items: (g.items || []).filter(it => it.area && it.area.includes(focusRegionKeyword))
+    }))
+    .filter(g => g.items.length > 0);
+
+  // 발효 특보 본문
+  let warnHtml = '';
   if (ddcWarnings.length > 0) {
-    warnBadge.textContent = `${ddcWarnings.length}건`;
-    warnBadge.style.color = ddcSevere ? 'var(--danger)' : 'var(--warning)';
-    warnBody.innerHTML = ddcWarnings.map(w => `
+    warnHtml = ddcWarnings.map(w => `
       <div class="warning-item ${w.level}">
         <div class="warning-top">
           <span class="warning-name">${w.type}</span>
@@ -3637,21 +3722,41 @@ function renderFocusMode(data) {
         </div>
         <div class="warning-area">${w.area}</div>
       </div>`).join('');
-  } else {
-    warnBadge.textContent = '없음';
-    warnBadge.style.color = 'var(--safe)';
-    warnBody.innerHTML = `
+  } else if (matchedPrelim.length === 0) {
+    warnHtml = `
       <div class="focus-warn-empty">
         <span class="icon">✓</span>
         <span>현재 발효 중인 특보 없음</span>
       </div>`;
   }
 
+  // 예비특보 본문 (시군 매칭)
+  if (matchedPrelim.length > 0) {
+    warnHtml += `<div class="prelim-divider">${region} 예비 특보</div>` +
+                matchedPrelim.map(renderPrelimGroup).join('');
+  }
+  warnBody.innerHTML = warnHtml;
+
+  // 배지
+  if (ddcWarnings.length === 0 && matchedPrelim.length === 0) {
+    warnBadge.textContent = '없음';
+    warnBadge.style.color = 'var(--safe)';
+  } else if (ddcWarnings.length > 0 && matchedPrelim.length > 0) {
+    warnBadge.textContent = `발효 ${ddcWarnings.length} · 예비 ${matchedPrelim.length}`;
+    warnBadge.style.color = ddcSevere ? 'var(--danger)' : 'var(--warning)';
+  } else if (ddcWarnings.length > 0) {
+    warnBadge.textContent = `${ddcWarnings.length}건`;
+    warnBadge.style.color = ddcSevere ? 'var(--danger)' : 'var(--warning)';
+  } else {
+    warnBadge.textContent = `예비 ${matchedPrelim.length}`;
+    warnBadge.style.color = 'var(--caution)';
+  }
+
   // ===== 7. 재난문자 카드 (우선순위 로직 적용) =====
   renderMessages(data.messages || [], 'focusMsgList', 'focusMsgBadge');
 
-  // ===== 8. 광역 발효 특보 카드 =====
-  renderWarnings(data.warnings, 'focusWarningList', 'focusWarningBadge');
+  // ===== 8. 광역 특보 카드 (발효 + 예비 상세) =====
+  renderActiveAndPrelim(data.warnings, data.prelim_warnings, 'focusWarningList', 'focusWarningBadge');
 
   // ===== 9. 24시간 상세 시간대별 예보 표 =====
   renderHourlyDetail(sel.detail && sel.detail.hourly || []);
@@ -3831,7 +3936,8 @@ function renderAll(data) {
   renderKpiBar(data);  // 상단 KPI 대시보드
   checkNewAlert(data.warnings);  // 새 특보 발효 시 사운드 알람
   renderRegions(data.regions);
-  renderWarnings(data.warnings, 'warningList', 'warningBadge');
+  // 광역 모드: 발효는 본문, 예비는 한 줄 안내 (상세는 내관서중점)
+  renderActiveAndPrelim(data.warnings, data.prelim_warnings, 'warningList', 'warningBadge', { summaryOnly: true });
   renderRivers(data.rivers);
   renderMessages(data.messages, 'msgList', 'msgBadge');
   renderForecast(data.forecast, 'forecastRow');
