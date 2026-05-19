@@ -787,6 +787,30 @@
   }
   .prelim-summary-line strong { color: var(--caution); font-weight: 700; }
 
+  /* 기상청 날씨누리 외부 링크 — 공공 API 한계 보완 */
+  .kma-warning-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 12px;
+    padding: 7px 11px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    letter-spacing: 0.2px;
+  }
+  .kma-warning-link:hover {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+
   /* === 홍수예보 — 발령 시 강조 === */
   .flood-alert-bar {
     background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
@@ -2170,6 +2194,9 @@
     <button class="region-changer" id="weatherImgBtn" title="기상 레이더·위성영상 보기">
       📡 기상영상
     </button>
+    <a class="region-changer" href="https://www.weather.go.kr/w/weather/warning/status.do" target="_blank" rel="noopener" title="기상청 날씨누리 특보 현황 — API에 안 들어온 호우·태풍 예비특보까지 확인" style="text-decoration:none;">
+      🌐 날씨누리
+    </a>
     <button class="icon-btn test-mode-btn" id="testModeBtn" title="테스트 모드 — 가짜 경보·워터마크 시작/정지">TEST</button>
     <button class="icon-btn" id="alarmTestBtn" title="알람 테스트 — 현재 위급도에 맞는 알람음 재생" style="font-size:14px;">🚨</button>
     <button class="icon-btn" id="muteBtn" title="알람 사운드 켜기/끄기">🔊</button>
@@ -2775,6 +2802,12 @@ function renderPrelimGroup(group) {
     </div>`;
 }
 
+// 기상청 날씨누리 특보 페이지 외부 링크 (API에 안 풀린 정보 보완)
+const KMA_WARNING_URL = 'https://www.weather.go.kr/w/weather/warning/status.do';
+function renderKmaWarningLink() {
+  return `<a href="${KMA_WARNING_URL}" target="_blank" rel="noopener" class="kma-warning-link" title="기상청 날씨누리 — 공공 API에 안 들어온 호우·태풍 예비특보까지 확인">📡 날씨누리에서 더 보기 ↗</a>`;
+}
+
 // 발효 + 예비 통합 렌더
 // opts.summaryOnly: 광역 모드용 — 예비는 본문에 펼치지 않고 한 줄 안내만 (상세는 내관서 모드)
 // opts.northOnly: 북부 매칭 그룹만 표시
@@ -2817,7 +2850,7 @@ function renderActiveAndPrelim(active, prelim, targetId, badgeId, opts = {}) {
     }
   }
 
-  target.innerHTML = activeHtml + prelimHtml;
+  target.innerHTML = activeHtml + prelimHtml + renderKmaWarningLink();
 
   // 배지: "발효 N · 예비 M"
   if (badge) {
