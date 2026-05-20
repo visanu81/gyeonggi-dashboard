@@ -545,6 +545,62 @@ def fetch_warning_bulletins():
     return bulletins
 
 
+def download_kma_images():
+    """기상청 API 허브에서 특보 발효 이미지·초단기 강수예측 이미지를 받아 images/ 폴더에 저장.
+
+    - nph-wrn7: 전국 특보 발효 현황 컬러맵 (tm 필요)
+    - nph-qpf_ana_img: 초단기 강수예측 분석 이미지
+
+    Returns: {wrn: {ok, ts, path}, qpf: {ok, ts, path}}
+    키가 URL에 포함되므로 사용자 브라우저에 노출되지 않도록 — 사장님 PC만 호출,
+    이미지 파일만 git push되어 사이트에 노출.
+    """
+    import os
+    if not KMA_APIHUB_KEY:
+        return {'wrn': {'ok': False}, 'qpf': {'ok': False}}
+
+    # 프로젝트 루트의 images/ 폴더
+    proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    img_dir = os.path.join(proj_root, 'images')
+    os.makedirs(img_dir, exist_ok=True)
+
+    now = datetime.now()
+    tm = now.strftime('%Y%m%d%H%M')
+    ts = now.strftime('%Y-%m-%d %H:%M')
+
+    result = {}
+
+    # 1) nph-wrn7 (전국 특보 발효 현황)
+    try:
+        url = f'https://apihub.kma.go.kr/api/typ03/cgi/wrn/nph-wrn7?tm={tm}&authKey={KMA_APIHUB_KEY}'
+        r = requests.get(url, timeout=15)
+        if r.status_code == 200 and r.headers.get('Content-Type', '').startswith('image/'):
+            path = os.path.join(img_dir, 'kma_warn.png')
+            with open(path, 'wb') as f:
+                f.write(r.content)
+            result['wrn'] = {'ok': True, 'ts': ts, 'bytes': len(r.content)}
+        else:
+            result['wrn'] = {'ok': False, 'err': f'HTTP {r.status_code}'}
+    except Exception as e:
+        result['wrn'] = {'ok': False, 'err': str(e)}
+
+    # 2) nph-qpf_ana_img (초단기 강수예측 분석)
+    try:
+        url = f'https://apihub.kma.go.kr/api/typ03/cgi/dfs/nph-qpf_ana_img?authKey={KMA_APIHUB_KEY}'
+        r = requests.get(url, timeout=15)
+        if r.status_code == 200 and r.headers.get('Content-Type', '').startswith('image/'):
+            path = os.path.join(img_dir, 'kma_qpf.png')
+            with open(path, 'wb') as f:
+                f.write(r.content)
+            result['qpf'] = {'ok': True, 'ts': ts, 'bytes': len(r.content)}
+        else:
+            result['qpf'] = {'ok': False, 'err': f'HTTP {r.status_code}'}
+    except Exception as e:
+        result['qpf'] = {'ok': False, 'err': str(e)}
+
+    return result
+
+
 def fetch_apihub_warnings():
     """기상청 API 허브 wrn_now_data_new.php — 현재 발효 중인 특보·예비특보 종합.
 
@@ -1367,6 +1423,16 @@ def main():
     except Exception as e:
         print(f'  ✗ {e}')
         data['apihub_warnings'] = []
+
+    print('[기상청 이미지 (특보 발효도·강수예측)]')
+    try:
+        data['kma_images'] = download_kma_images()
+        wrn_ok = data['kma_images'].get('wrn', {}).get('ok')
+        qpf_ok = data['kma_images'].get('qpf', {}).get('ok')
+        print(f'  특보발효도: {"✓" if wrn_ok else "✗"} · 강수예측: {"✓" if qpf_ok else "✗"}')
+    except Exception as e:
+        print(f'  ✗ {e}')
+        data['kma_images'] = {}
 
     print('[기상청 통보문·기상정보]')
     try:

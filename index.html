@@ -1401,12 +1401,18 @@
   }
   .weather-img-frame {
     width: 100%;
-    aspect-ratio: 4 / 3;
-    background: #000;
+    min-height: 300px;
+    background: var(--bg-card);
     border-radius: 8px;
     border: 1px solid var(--border);
     overflow: hidden;
     position: relative;
+    padding: 10px;
+  }
+  .weather-img-frame:has(iframe) {
+    aspect-ratio: 4 / 3;
+    padding: 0;
+    background: #000;
   }
   .weather-img-frame iframe {
     position: absolute;
@@ -1414,6 +1420,13 @@
     width: 100%;
     height: 100%;
     border: 0;
+  }
+  .weather-img-frame img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    border-radius: 4px;
   }
   .weather-img-frame .fallback {
     position: absolute; inset: 0;
@@ -2432,7 +2445,9 @@
     </div>
     <div class="modal-body" style="display:block;padding:14px 18px 18px;">
       <div class="weather-img-tabs">
-        <button class="wimg-tab active" data-wimg="radar">레이더</button>
+        <button class="wimg-tab active" data-wimg="warn-img">🚨 특보 발효도</button>
+        <button class="wimg-tab" data-wimg="qpf-img">💧 강수 예측</button>
+        <button class="wimg-tab" data-wimg="radar">레이더</button>
         <button class="wimg-tab" data-wimg="satellite">위성 (적외)</button>
         <button class="wimg-tab" data-wimg="satellite-vis">위성 (가시)</button>
         <button class="wimg-tab" data-wimg="synthesis">종합영상</button>
@@ -3203,11 +3218,15 @@ function closeGenericModal() {
 
 // ============ 기상영상 모달 ============
 const WEATHER_IMG_SOURCES = {
-  radar:         { url: 'https://www.weather.go.kr/w/image/radar.do',                  label: '레이더 합성영상' },
-  satellite:     { url: 'https://www.weather.go.kr/w/image/satellite/sat-ir.do',       label: '위성 적외영상' },
-  'satellite-vis': { url: 'https://www.weather.go.kr/w/image/satellite/sat-vis.do',    label: '위성 가시영상' },
-  synthesis:     { url: 'https://www.weather.go.kr/w/image/synthesis.do',              label: '종합영상' },
-  lightning:     { url: 'https://www.weather.go.kr/w/image/lightning.do',              label: '낙뢰' },
+  // 로컬 이미지 (apihub에서 사장님 PC가 다운로드 → git push → 사이트 표시. 키 노출 X)
+  'warn-img':    { type: 'image', src: 'images/kma_warn.png', label: '전국 특보 발효 현황', meta: 'wrn' },
+  'qpf-img':     { type: 'image', src: 'images/kma_qpf.png',  label: '초단기 강수 예측 분석', meta: 'qpf' },
+  // 기존 iframe (날씨누리)
+  radar:         { type: 'iframe', url: 'https://www.weather.go.kr/w/image/radar.do',                  label: '레이더 합성영상' },
+  satellite:     { type: 'iframe', url: 'https://www.weather.go.kr/w/image/satellite/sat-ir.do',       label: '위성 적외영상' },
+  'satellite-vis': { type: 'iframe', url: 'https://www.weather.go.kr/w/image/satellite/sat-vis.do',    label: '위성 가시영상' },
+  synthesis:     { type: 'iframe', url: 'https://www.weather.go.kr/w/image/synthesis.do',              label: '종합영상' },
+  lightning:     { type: 'iframe', url: 'https://www.weather.go.kr/w/image/lightning.do',              label: '낙뢰' },
 };
 
 function loadWeatherImg(kind) {
@@ -3215,36 +3234,41 @@ function loadWeatherImg(kind) {
   if (!src) return;
   const frame = document.getElementById('weatherImgFrame');
 
-  // 1차: iframe 시도. iframe load 이벤트로 차단 감지 (X-Frame-Options/CSP 등)
-  const fallback = `
-    <div class="fallback">
-      <div style="font-size:32px;">📡</div>
-      <div><strong>${src.label}</strong>은 페이지 내 표시가 차단되어 있어요.</div>
-      <div>아래 버튼을 누르면 기상청 사이트의 영상이 새 창에서 열립니다.</div>
-      <a href="${src.url}" target="_blank" rel="noopener">${src.label} 새 창에서 보기 ↗</a>
-    </div>`;
+  if (src.type === 'image') {
+    // 로컬 이미지 표시. cache-bust로 최신 받기
+    const meta = (DATA.kma_images || {})[src.meta] || {};
+    const cb = encodeURIComponent(meta.ts || Date.now());
+    const ts = meta.ts ? `<div style="font-size:11px;color:var(--text-sub);text-align:right;margin-top:6px;">갱신 ${meta.ts}</div>` : '';
+    const note = src.meta === 'wrn'
+      ? '<div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">📡 기상청 본청 — 시·도 단위 발효 특보·예비특보 종합 컬러맵</div>'
+      : '<div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">📡 기상청 본청 — 초단기 강수 예측 (3시간 이내 강수 분포)</div>';
+    if (meta.ok) {
+      frame.innerHTML = `
+        ${note}
+        <img src="${src.src}?t=${cb}" alt="${src.label}" style="width:100%;height:auto;display:block;border-radius:6px;background:#fff;" />
+        ${ts}`;
+    } else {
+      frame.innerHTML = `
+        <div class="fallback">
+          <div style="font-size:32px;">📡</div>
+          <div><strong>${src.label}</strong> 이미지 아직 수집 안 됨.</div>
+          <div style="font-size:11px;color:var(--text-sub);margin-top:8px;">사장님 PC의 update_data.py가 한 번 더 돌면 자동 표시됩니다.</div>
+        </div>`;
+    }
+    return;
+  }
 
+  // iframe 타입
   frame.innerHTML = `<iframe src="${src.url}" referrerpolicy="no-referrer" allow="fullscreen"></iframe>`;
-  // iframe이 차단되면 about:blank로 로드되거나 빈 화면. 1.5초 후 검사.
-  const iframe = frame.querySelector('iframe');
-  let loaded = false;
-  iframe.addEventListener('load', () => { loaded = true; });
-  setTimeout(() => {
-    try {
-      // 같은 출처가 아니라 contentDocument 접근은 보안 오류. 정상.
-      // 다만 iframe.contentWindow.length 같은 비교적 안전한 속성으로 차단 여부 추론은 불완전.
-      // 그래서 단순히 iframe 보여주고, 사장님이 차단된 화면을 보면 fallback 링크 사용하도록 안내.
-    } catch (e) {}
-  }, 1500);
 }
 
 function openWeatherImgModal() {
   document.getElementById('weatherImgOverlay').classList.add('open');
-  // 탭 초기화: 첫 번째(레이더)
+  // 탭 초기화: 첫 번째(특보 발효도)
   document.querySelectorAll('.wimg-tab').forEach((b, i) => {
     b.classList.toggle('active', i === 0);
   });
-  loadWeatherImg('radar');
+  loadWeatherImg('warn-img');
 }
 
 function closeWeatherImgModal() {
@@ -4112,6 +4136,7 @@ function renderAll(data) {
   data.fire = data.fire || [];
   data.flood_forecast = data.flood_forecast || [];
   data.apihub_warnings = data.apihub_warnings || [];
+  data.kma_images = data.kma_images || {};
 
   // apihub wrn_now_data_new 데이터를 prelim_warnings·warnings 구조로 변환
   // 더 정확함 — 사장님이 보신 호우 예비특보가 직접 들어옴 (REG_KO 한글 이름 그대로)
