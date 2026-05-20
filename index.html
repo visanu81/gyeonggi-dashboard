@@ -2339,10 +2339,10 @@
   <div class="panel panel-forecast">
     <div class="panel-header">
       <div class="panel-title">시간대별 예보 (동두천)</div>
-      <div class="panel-badge">12시간</div>
+      <div class="panel-badge">24시간</div>
     </div>
-    <div class="panel-body" style="padding: 10px;">
-      <div class="forecast-row" id="forecastRow"></div>
+    <div class="panel-body" style="padding:10px;overflow-x:auto;">
+      <table class="hourly-table" id="forecastTable"></table>
     </div>
   </div>
 
@@ -4044,8 +4044,8 @@ function renderFocusMode(data) {
 }
 
 // 24시간 상세 표
-function renderHourlyDetail(hourly) {
-  const tbl = document.getElementById('focusHourlyTable');
+function renderHourlyDetail(hourly, targetId = 'focusHourlyTable') {
+  const tbl = document.getElementById(targetId);
   if (!tbl) return;
   if (!hourly || hourly.length === 0) {
     tbl.innerHTML = '<tr><td colspan="25" style="text-align:center;color:var(--text-sub);padding:20px;">시간대별 예보 데이터 없음</td></tr>';
@@ -4269,7 +4269,12 @@ function renderAll(data) {
   renderActiveAndPrelim(data.warnings, data.prelim_warnings, 'warningList', 'warningBadge', { summaryOnly: true });
   renderRivers(data.rivers, data.flood_forecast);
   renderMessages(data.messages, 'msgList', 'msgBadge');
-  renderForecast(data.forecast, 'forecastRow');
+  // 광역 모드: 24시간 표 형식 (가로 스크롤). 내관서중점과 동일한 hourly-table 사용.
+  // 동두천 데이터의 _hourly가 있으면 그것 사용, 없으면 data.forecast 폴백
+  const ddcRegion = (data.regions || []).find(r => r.name === '동두천');
+  const ddcHourly = (ddcRegion && ddcRegion.detail && ddcRegion.detail.hourly)
+                    || data.forecast || [];
+  renderHourlyDetail(ddcHourly, 'forecastTable');
   renderFire(data.fire);
   renderFocusMode(data);
   updateOverallStatus(data.warnings);
