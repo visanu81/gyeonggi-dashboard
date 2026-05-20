@@ -787,7 +787,7 @@
   }
   .prelim-summary-line strong { color: var(--caution); font-weight: 700; }
 
-  /* 광역 모드 예비특보 그룹별 카운트 행 */
+  /* 광역 모드 예비특보 그룹별 카운트 행 — 클릭하면 panel-warning 모달 (상세) */
   .prelim-summary-row {
     display: flex; align-items: center; justify-content: space-between;
     padding: 8px 11px;
@@ -796,6 +796,12 @@
     border: 1px solid var(--border);
     border-left: 3px solid var(--caution);
     border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .prelim-summary-row:hover {
+    transform: translateX(3px);
+    box-shadow: var(--shadow-sm);
   }
   .prelim-summary-row:last-of-type { margin-bottom: 0; }
   .prelim-summary-name {
@@ -3483,6 +3489,7 @@ function buildBulletinsModalBody(data) {
   const warningsFull = bulletins.warnings_full || [];
   const infoList = bulletins.info_list || [];
   const active = data.warnings || [];
+  const prelim = data.prelim_warnings || [];
 
   let html = '';
 
@@ -3503,6 +3510,16 @@ function buildBulletinsModalBody(data) {
     html += `<div class="modal-section" style="margin-bottom:14px;">
       <div class="focus-warn-empty"><span class="icon">✓</span><span>현재 발효 중인 특보 없음</span></div>
     </div>`;
+  }
+
+  // 1.5 예비특보 그룹별 상세 (apihub에서 변환된 데이터, 북부 매칭 강조)
+  if (prelim.length > 0) {
+    const totalItems = prelim.reduce((s, g) => s + (g.total_count || g.items.length), 0);
+    const totalNorth = prelim.reduce((s, g) => s + (g.north_count || 0), 0);
+    html += '<div class="modal-section" style="margin-bottom:14px;">';
+    html += `<div class="modal-section-title">예비 특보 (발효 예정 · ${totalItems}건${totalNorth > 0 ? ` · 북부 ${totalNorth}건` : ''})</div>`;
+    html += prelim.map(g => renderPrelimGroup(g)).join('');
+    html += '</div>';
   }
 
   // 2. 특보 통보문 전문 (최근 3일)
