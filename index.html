@@ -4111,6 +4111,32 @@ function renderAll(data) {
   data.pm = data.pm || [];
   data.fire = data.fire || [];
   data.flood_forecast = data.flood_forecast || [];
+  data.apihub_warnings = data.apihub_warnings || [];
+
+  // apihub 예비특보(LVL=1)를 prelim_warnings 구조로 변환해서 우선 사용
+  // (공공 API의 t7 파싱보다 정확 — 호우·태풍 등 누락 보완)
+  if (data.apihub_warnings.length > 0) {
+    const byWrn = {};
+    data.apihub_warnings.filter(w => w.is_prelim && w.cmd_code !== '3' && w.cmd_code !== '4' && w.cmd_code !== '7').forEach(w => {
+      const groupName = (w.wrn_name || '특보') + ' 예비특보';
+      if (!byWrn[groupName]) byWrn[groupName] = { type: groupName, items: [] };
+      const timeLabel = w.tm_ef_disp ? `${w.tm_ef_disp} 발효` : (w.tm_fc_disp || '');
+      const areaLabel = `${w.stn_name || w.stn}${w.reg_id ? ' / ' + w.reg_id : ''}`;
+      byWrn[groupName].items.push({
+        time: timeLabel,
+        area: areaLabel,
+        north_match: !!w.is_gyeonggi,   // 수원기상청 발표(경기) 우선 강조
+      });
+    });
+    const apihubGroups = Object.values(byWrn).map(g => ({
+      ...g,
+      north_count: g.items.filter(it => it.north_match).length,
+      total_count: g.items.length,
+    }));
+    if (apihubGroups.length > 0) {
+      data.prelim_warnings = apihubGroups;   // apihub로 교체 (더 신뢰)
+    }
+  }
 
   // 테스트 모드면 가짜 특보·재난문자 주입
   data = injectTestData(data);
