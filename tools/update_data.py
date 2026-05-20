@@ -456,6 +456,25 @@ WRN_TYPES = ['호우경보', '호우주의보', '강풍경보', '강풍주의보
 NORTH_GG_KEYWORDS = ['경기북부', '경기도', '수도권', '동두천', '양주', '의정부', '포천', '연천',
                      '가평', '남양주', '구리', '파주', '고양']
 
+# 기상청 API허브 wrn_reg.php 기반 REG_ID → 시군명 정적 매핑
+# 경기북부 10개 시군 + 경기도 전체 광역 코드
+NORTH_GG_REG_MAP = {
+    'L1011100': '동두천', 'L1011200': '연천',  'L1011300': '포천',
+    'L1011400': '가평',  'L1011500': '고양',  'L1011600': '양주',
+    'L1011700': '의정부', 'L1011800': '파주',  'L1012200': '구리',
+    'L1012300': '남양주',
+    'L1010000': '경기도(전체)',  # 광역 발표
+}
+# 경기 남부 시군 (참고용, 광역특보 표시는 하지만 북부 매칭은 X)
+GG_SOUTH_REG_MAP = {
+    'L1010200': '광명', 'L1010300': '과천', 'L1010400': '안산', 'L1010500': '시흥',
+    'L1010600': '부천', 'L1010700': '김포', 'L1011900': '수원', 'L1012000': '성남',
+    'L1012100': '안양', 'L1012400': '오산', 'L1012500': '평택', 'L1012600': '군포',
+    'L1012700': '의왕', 'L1012800': '하남', 'L1012900': '용인', 'L1013000': '이천',
+    'L1013100': '안성', 'L1013200': '화성', 'L1013300': '여주', 'L1013400': '광주',
+    'L1013500': '양평',
+}
+
 
 def fetch_warning_bulletins():
     """기상청 통보문·기상정보 목록 + 본문 일괄 수집.
@@ -594,14 +613,21 @@ def fetch_apihub_warnings():
             continue
         if not wrn or not lvl:
             continue
+        # REG_ID → 시군명 매핑 (경기북부·남부)
+        region_name = NORTH_GG_REG_MAP.get(reg_id) or GG_SOUTH_REG_MAP.get(reg_id) or ''
+        is_north_gg = reg_id in NORTH_GG_REG_MAP
+        is_gyeonggi = is_north_gg or (reg_id in GG_SOUTH_REG_MAP)
+
         rows.append({
             'tm_fc': tm_fc, 'tm_ef': tm_ef, 'tm_in': tm_in,
             'stn': stn, 'reg_id': reg_id,
+            'region_name': region_name,         # 매핑된 시군명 (없으면 빈 문자열)
             'wrn_code': wrn, 'wrn_name': WRN_MAP.get(wrn, wrn),
             'lvl_code': lvl, 'lvl_name': LVL_MAP.get(lvl, lvl),
             'cmd_code': cmd, 'cmd_name': CMD_MAP.get(cmd, cmd),
             'stn_name': STN_MAP.get(stn, stn),
-            'is_gyeonggi': stn == '119',  # 수원 = 경기
+            'is_north_gg': is_north_gg,         # 경기북부 10개 시군 매칭
+            'is_gyeonggi': is_gyeonggi,         # 경기도 전체 (북부 + 남부)
             'is_prelim':  lvl == '1',
         })
 
@@ -630,10 +656,10 @@ def fetch_apihub_warnings():
             pass
         active.append(row)
 
-    # 3차: 정렬 — 경기(STN 119) > 예비특보 > TM_FC 최신순
+    # 3차: 정렬 — 북부 시군 > 경기 전체 > 예비특보 > TM_FC 최신순
     def sort_key(r):
         return (
-            0 if r['is_gyeonggi'] else 1,
+            0 if r['is_north_gg'] else (1 if r['is_gyeonggi'] else 2),
             0 if r['is_prelim'] else 1,
             -int(r['tm_fc']) if r['tm_fc'].isdigit() else 0,
         )
@@ -1384,8 +1410,9 @@ def main():
     try:
         data['apihub_warnings'] = fetch_apihub_warnings()
         gg_n = sum(1 for w in data['apihub_warnings'] if w.get('is_gyeonggi'))
+        north_n = sum(1 for w in data['apihub_warnings'] if w.get('is_north_gg'))
         prelim_n = sum(1 for w in data['apihub_warnings'] if w.get('is_prelim'))
-        print(f'  ✓ 전체 {len(data["apihub_warnings"])}건 (경기 {gg_n}건 · 예비 {prelim_n}건)')
+        print(f'  ✓ 전체 {len(data["apihub_warnings"])}건 (경기 {gg_n}건 · 북부 {north_n}건 · 예비 {prelim_n}건)')
     except Exception as e:
         print(f'  ✗ {e}')
         data['apihub_warnings'] = []
