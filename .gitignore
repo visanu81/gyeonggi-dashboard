@@ -29,3 +29,9 @@ Thumbs.db
 
 # Claude Code 작업 공간 (worktree, 세션 데이터)
 .claude/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
