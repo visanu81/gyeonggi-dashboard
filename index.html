@@ -2831,6 +2831,53 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeRegionModal();
 });
 
+// apihub_warnings → warnings·prelim_warnings 정규화 (renderAll과 모달에서 공용)
+// 한 번 호출하면 data에 직접 적용. 멱등(idempotent)하게 동작 — 여러 번 호출해도 누적 X.
+function normalizeWarningsFromApihub(data) {
+  if (!data || !data.apihub_warnings || !data.apihub_warnings.length) return;
+
+  // 예비특보 그룹화
+  const prelimByWrn = {};
+  data.apihub_warnings.filter(w => w.is_prelim).forEach(w => {
+    const groupName = (w.wrn_name || '특보') + ' 예비특보';
+    if (!prelimByWrn[groupName]) prelimByWrn[groupName] = { type: groupName, items: [] };
+    const timeLabel = w.tm_ef_disp ? `${w.tm_ef_disp} 발효` : (w.tm_fc_disp || '');
+    const areaLabel = w.region_name && w.region_name !== w.broader_region
+      ? `${w.region_name} (${w.broader_region})`
+      : (w.region_name || w.broader_region || w.reg_id);
+    prelimByWrn[groupName].items.push({
+      time: timeLabel,
+      area: areaLabel,
+      north_match: !!w.is_north_gg,
+    });
+  });
+  const apihubGroups = Object.values(prelimByWrn).map(g => ({
+    ...g,
+    north_count: g.items.filter(it => it.north_match).length,
+    total_count: g.items.length,
+  }));
+  if (apihubGroups.length > 0) {
+    data.prelim_warnings = apihubGroups;
+  }
+
+  // 발효 특보(주의보·경보)도 wrn_name+lvl_name+region_name로 통합 (북부 우선 + dedup)
+  // — 모달에서 전국 발효 정보 풍부하게 보기 위해, 일단 north_gg만 warnings에 dedup 추가
+  const existingKeys = new Set((data.warnings || []).map(w => `${w.type}|${w.area}`));
+  const apihubActive = data.apihub_warnings
+    .filter(w => !w.is_prelim && w.is_north_gg)
+    .map(w => ({
+      type: `${w.wrn_name}${w.lvl_name === '경보' ? '경보' : '주의보'}`,
+      area: w.region_name || w.reg_ko,
+      time: w.tm_fc_disp || '',
+      level: w.lvl_name === '경보' ? 'severe' : 'warning',
+    }))
+    .filter(w => !existingKeys.has(`${w.type}|${w.area}`));
+  if (apihubActive.length > 0) {
+    // 멱등: 기존 warnings에 같은 항목 이미 있으면 안 들어감
+    data.warnings = [...(data.warnings || []), ...apihubActive];
+  }
+}
+
 // 예비특보 그룹 렌더 (북부 매칭 항목 강조)
 function renderPrelimGroup(group) {
   const items = (group.items || []).map(it => `
@@ -3485,11 +3532,18 @@ function buildMsgModalBody(msg) {
 
 // ----- 기상청 통보문·기상정보 상세 -----
 function buildBulletinsModalBody(data) {
+  // 모달이 원본 DATA를 받아도 apihub 변환 적용되도록 (멱등 함수라 안전)
+  normalizeWarningsFromApihub(data);
+
   const bulletins = data.bulletins || {};
   const warningsFull = bulletins.warnings_full || [];
   const infoList = bulletins.info_list || [];
   const active = data.warnings || [];
   const prelim = data.prelim_warnings || [];
+
+  // apihub의 발효 특보(주의보·경보) 중 북부 외 — 모달에 별도 표시
+  const otherActive = (data.apihub_warnings || [])
+    .filter(w => !w.is_prelim && !w.is_north_gg);
 
   let html = '';
 
@@ -3519,6 +3573,31 @@ function buildBulletinsModalBody(data) {
     html += '<div class="modal-section" style="margin-bottom:14px;">';
     html += `<div class="modal-section-title">예비 특보 (발효 예정 · ${totalItems}건${totalNorth > 0 ? ` · 북부 ${totalNorth}건` : ''})</div>`;
     html += prelim.map(g => renderPrelimGroup(g)).join('');
+    html += '</div>';
+  }
+
+  // 1.7 다른 지역 발효 특보 (전국 참고용) — 사장님 스크린샷의 기상청 발효현황 정보
+  if (otherActive.length > 0) {
+    // 종류별 그룹화
+    const byKind = {};
+    otherActive.forEach(w => {
+      const key = `${w.wrn_name}${w.lvl_name === '경보' ? '경보' : '주의보'}`;
+      if (!byKind[key]) byKind[key] = [];
+      const where = w.region_name && w.region_name !== w.broader_region
+        ? `${w.broader_region}(${w.region_name})`
+        : (w.broader_region || w.region_name);
+      byKind[key].push(where);
+    });
+    html += '<div class="modal-section" style="margin-bottom:14px;">';
+    html += `<div class="modal-section-title">다른 지역 발효 (참고 · ${otherActive.length}건)</div>`;
+    html += Object.entries(byKind).map(([kind, areas]) => `
+      <div class="warning-item ${kind.includes('경보') ? 'severe' : ''}" style="margin-bottom:6px;">
+        <div class="warning-top">
+          <span class="warning-name">${kind}</span>
+          <span class="warning-time">${areas.length}건</span>
+        </div>
+        <div class="warning-area" style="font-size:11px;">${areas.join(', ')}</div>
+      </div>`).join('');
     html += '</div>';
   }
 
@@ -4232,49 +4311,9 @@ function renderAll(data) {
   data.apihub_warnings = data.apihub_warnings || [];
   data.kma_images = data.kma_images || {};
 
-  // apihub wrn_now_data_new 데이터를 prelim_warnings·warnings 구조로 변환
-  // 더 정확함 — 사장님이 보신 호우 예비특보가 직접 들어옴 (REG_KO 한글 이름 그대로)
-  if (data.apihub_warnings.length > 0) {
-    // 예비특보 그룹화
-    const prelimByWrn = {};
-    data.apihub_warnings.filter(w => w.is_prelim).forEach(w => {
-      const groupName = (w.wrn_name || '특보') + ' 예비특보';
-      if (!prelimByWrn[groupName]) prelimByWrn[groupName] = { type: groupName, items: [] };
-      const timeLabel = w.tm_ef_disp ? `${w.tm_ef_disp} 발효` : (w.tm_fc_disp || '');
-      const areaLabel = w.region_name && w.region_name !== w.broader_region
-        ? `${w.region_name} (${w.broader_region})`
-        : (w.region_name || w.broader_region || w.reg_id);
-      prelimByWrn[groupName].items.push({
-        time: timeLabel,
-        area: areaLabel,
-        north_match: !!w.is_north_gg,
-      });
-    });
-    const apihubGroups = Object.values(prelimByWrn).map(g => ({
-      ...g,
-      north_count: g.items.filter(it => it.north_match).length,
-      total_count: g.items.length,
-    }));
-    if (apihubGroups.length > 0) {
-      data.prelim_warnings = apihubGroups;
-    }
-
-    // 발효 특보(주의보·경보) 중 경기북부 매칭은 data.warnings에 보강 추가
-    // (공공 API에서 이미 있는 것과 중복 안 되도록 type+area 키로 dedup)
-    const existingKeys = new Set((data.warnings || []).map(w => `${w.type}|${w.area}`));
-    const apihubActive = data.apihub_warnings
-      .filter(w => !w.is_prelim && w.is_north_gg)
-      .map(w => ({
-        type: `${w.wrn_name}${w.lvl_name === '경보' ? '경보' : '주의보'}`,
-        area: w.region_name || w.reg_ko,
-        time: w.tm_fc_disp || '',
-        level: w.lvl_name === '경보' ? 'severe' : 'warning',
-      }))
-      .filter(w => !existingKeys.has(`${w.type}|${w.area}`));
-    if (apihubActive.length > 0) {
-      data.warnings = [...(data.warnings || []), ...apihubActive];
-    }
-  }
+  // apihub wrn_now_data_new 데이터로 warnings·prelim_warnings 보강
+  // (renderAll과 buildBulletinsModalBody 양쪽에서 동일하게 호출 — DATA에 직접 적용)
+  normalizeWarningsFromApihub(data);
 
   // 테스트 모드면 가짜 특보·재난문자 주입
   data = injectTestData(data);
