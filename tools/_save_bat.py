@@ -1,7 +1,7 @@
 """갱신.bat을 CP949(ANSI Korean)로 저장 — Windows cmd 호환용 일회성 스크립트."""
 
 content = r"""@echo off
-chcp 949 > nul
+chcp 65001 > nul
 title 경기북부 기상재난 상황판 - 데이터 갱신
 cd /d "%~dp0"
 echo.
@@ -32,7 +32,9 @@ echo    아무 키나 누르면 창이 닫힙니다.
 pause > nul
 """
 
+# UTF-8 with BOM — cmd가 BOM 보고 UTF-8로 해석. chcp 65001과 짝.
 with open(r'갱신.bat', 'wb') as f:
-    f.write(content.encode('cp949'))
+    f.write(b'\xef\xbb\xbf')  # UTF-8 BOM
+    f.write(content.encode('utf-8'))
 
-print('갱신.bat -> CP949 저장 OK')
+print('갱신.bat -> UTF-8 BOM 저장 OK')
