@@ -787,6 +787,30 @@
   }
   .prelim-summary-line strong { color: var(--caution); font-weight: 700; }
 
+  /* 광역 모드 예비특보 그룹별 카운트 행 */
+  .prelim-summary-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 11px;
+    margin-bottom: 5px;
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--caution);
+    border-radius: var(--radius-sm);
+  }
+  .prelim-summary-row:last-of-type { margin-bottom: 0; }
+  .prelim-summary-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .prelim-summary-count {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    display: inline-flex;
+    align-items: center;
+  }
+
   /* 기상청 날씨누리 외부 링크 — 공공 API 한계 보완 */
   .kma-warning-link {
     display: inline-flex;
@@ -2855,9 +2879,22 @@ function renderActiveAndPrelim(active, prelim, targetId, badgeId, opts = {}) {
   let prelimHtml = '';
   if (prelimGroups.length > 0) {
     if (opts.summaryOnly) {
-      // 광역 모드: 한 줄 안내만, 상세는 내관서중점에서
+      // 광역 모드: 그룹별 카운트 + 상세는 내관서중점 안내
       const totalItems = prelimGroups.reduce((s, g) => s + g.items.length, 0);
-      prelimHtml = `<div class="prelim-summary-line">예비특보 <strong>${prelimGroups.length}종 ${totalItems}건</strong> · 내관서 중점 모드에서 상세 확인</div>`;
+      const totalNorth = prelimGroups.reduce((s, g) => s + (g.north_count || 0), 0);
+      const groupRows = prelimGroups.map(g => {
+        const northTag = g.north_count > 0
+          ? `<span style="background:var(--caution);color:#1f2937;font-weight:700;padding:1px 6px;border-radius:999px;font-size:9px;margin-left:6px;">북부 ${g.north_count}</span>`
+          : '';
+        return `<div class="prelim-summary-row">
+                  <span class="prelim-summary-name">${g.type}</span>
+                  <span class="prelim-summary-count">${g.total_count}건${northTag}</span>
+                </div>`;
+      }).join('');
+      prelimHtml = `
+        <div class="prelim-divider">예비 특보 (발효 예정 · ${totalItems}건${totalNorth > 0 ? ` · 북부 ${totalNorth}건` : ''})</div>
+        ${groupRows}
+        <div class="prelim-summary-line">📋 시군별 상세는 <strong>내관서 중점 모드</strong>에서 확인</div>`;
     } else {
       // 내관서 모드: 본문에 예비 상세
       prelimHtml = `<div class="prelim-divider">예비 특보 (발효 예정)</div>` +
