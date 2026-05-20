@@ -3959,8 +3959,48 @@ function renderFocusMode(data) {
   // ===== 7. 재난문자 카드 (우선순위 로직 적용) =====
   renderMessages(data.messages || [], 'focusMsgList', 'focusMsgBadge');
 
-  // ===== 8. 광역 특보 카드 (발효 + 예비 상세) =====
-  renderActiveAndPrelim(data.warnings, data.prelim_warnings, 'focusWarningList', 'focusWarningBadge');
+  // ===== 8. 광역 특보 카드 (발효 + 예비 상세) — 경기·서울 인근만 표시 =====
+  // 내관서 중점에서는 사장님 관할 인근만 보이도록 필터 (전국은 광역 모드에서)
+  // "북부"는 강원북부·경북북부도 매칭되니까 제외, "경기북부"는 "경기"가 잡음
+  const LOCAL_REGION_PATTERN = /경기|서울|인천|수도권/;
+  const isLocalText = (txt) => LOCAL_REGION_PATTERN.test(String(txt || ''));
+
+  // 발효 특보: area 필드로 필터
+  const localActive = (data.warnings || []).filter(w => isLocalText(w.area));
+
+  // 예비특보: apihub 원본을 다시 필터링해서 그룹 재구성
+  const localApihub = (data.apihub_warnings || []).filter(w =>
+    w.is_prelim && (isLocalText(w.broader_region) || isLocalText(w.region_name))
+  );
+  const localPrelimByWrn = {};
+  localApihub.forEach(w => {
+    const groupName = (w.wrn_name || '특보') + ' 예비특보';
+    if (!localPrelimByWrn[groupName]) localPrelimByWrn[groupName] = { type: groupName, items: [] };
+    const timeLabel = w.tm_ef_disp ? `${w.tm_ef_disp} 발효` : (w.tm_fc_disp || '');
+    const areaLabel = w.region_name && w.region_name !== w.broader_region
+      ? `${w.region_name} (${w.broader_region})`
+      : (w.region_name || w.broader_region || w.reg_id);
+    localPrelimByWrn[groupName].items.push({
+      time: timeLabel,
+      area: areaLabel,
+      north_match: !!w.is_north_gg,
+    });
+  });
+  const localPrelim = Object.values(localPrelimByWrn).map(g => ({
+    ...g,
+    north_count: g.items.filter(it => it.north_match).length,
+    total_count: g.items.length,
+  }));
+
+  // apihub 없을 때 폴백: 기존 prelim_warnings에서도 텍스트 매칭으로 필터
+  const prelimToUse = localPrelim.length > 0
+    ? localPrelim
+    : (data.prelim_warnings || []).map(g => ({
+        ...g,
+        items: (g.items || []).filter(it => isLocalText(it.area) || it.north_match),
+      })).filter(g => g.items.length > 0);
+
+  renderActiveAndPrelim(localActive, prelimToUse, 'focusWarningList', 'focusWarningBadge');
 
   // ===== 9. 24시간 상세 시간대별 예보 표 =====
   renderHourlyDetail(sel.detail && sel.detail.hourly || []);
