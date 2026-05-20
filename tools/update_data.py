@@ -546,137 +546,88 @@ def fetch_warning_bulletins():
 
 
 def fetch_apihub_warnings():
-    """기상청 API 허브 (apihub.kma.go.kr) — 본청 신 특보자료 wrn_met_data.
+    """기상청 API 허브 wrn_now_data_new.php — 현재 발효 중인 특보·예비특보 종합.
 
-    공공데이터포털 getPwnStatus의 누락(호우 예비특보 등)을 보완.
-    응답: 텍스트 CSV. 발표일시별·구역별·종류별로 한 줄씩.
-    필드: TM_FC, TM_EF, TM_IN, STN, REG_ID, WRN, LVL, CMD, GRD, CNT, RPT
-      - STN: 발표관서 (109=서울, 119=수원/경기, 105=강릉/강원, 133=대전/충청, 143=대구/경북, 156=광주/전라, 159=부산/경남, 184=제주, 108=본청)
-      - WRN: R=호우, O=강풍, V=풍랑, S=대설, C=한파, H=폭염, Y=황사, D=건조, T=태풍, W=폭풍해일
-      - LVL: 1=예비특보, 2=주의보, 3=경보
-      - CMD: 1=발표, 2=대치, 3=해제, 4=대치해제(자동), 5=연장, 6=변경, 7=변경해제
+    공공데이터포털 getPwnStatus가 t6/t7 텍스트로만 주는 것을 구조화된 행 데이터로 받음.
+    응답: EUC-KR 텍스트, 헤더 #로 시작.
+    필드: REG_UP, REG_UP_KO, REG_ID, REG_KO, TM_FC, TM_EF, WRN, LVL, CMD, ED_TM
+      - WRN/LVL/CMD: 한글 그대로 ('호우','예비','발표' 등)
+      - LVL='예비' → 예비특보, '주의'→주의보, '경보'→경보
+      - 이미 '현재 살아있는' 발표만 들어옴 (해제·만료 자동 제외됨)
 
-    REG_ID(L1010400 같은 구역코드)는 별도 wrn_reg.php에서 시군명 매핑.
-    현재 wrn_reg.php는 활용신청 대기 → STN으로 광역 식별만 (경기북부 = STN 119).
+    이 endpoint는 wrn_met_data.php(이력)보다 정확. 사장님이 본 호우 예비특보가 직접 들어옴.
     """
     if not KMA_APIHUB_KEY:
         return []
 
-    # 시간 범위: 최근 12시간 ~ 향후 24시간 (예비특보는 미래 발효)
-    now = datetime.now()
-    tmfc1 = (now - timedelta(hours=12)).strftime('%Y%m%d%H%M')
-    tmfc2 = (now + timedelta(hours=24)).strftime('%Y%m%d%H%M')
-
-    url = 'https://apihub.kma.go.kr/api/typ01/url/wrn_met_data.php'
+    url = 'https://apihub.kma.go.kr/api/typ01/url/wrn_now_data_new.php'
     try:
-        r = requests.get(url, params={
-            'reg': '0', 'wrn': 'A',
-            'tmfc1': tmfc1, 'tmfc2': tmfc2,
-            'disp': '0', 'authKey': KMA_APIHUB_KEY,
-        }, timeout=15)
+        r = requests.get(url, params={'authKey': KMA_APIHUB_KEY}, timeout=15)
         r.raise_for_status()
-        text = r.text
+        # 응답은 EUC-KR 인코딩
+        text = r.content.decode('euc-kr', errors='replace')
     except Exception as e:
-        print(f'    [apihub] 특보자료: {e}')
+        print(f'    [apihub] 특보현황: {e}')
         return []
 
-    WRN_MAP = {
-        'R': '호우', 'O': '강풍', 'V': '풍랑', 'S': '대설',
-        'C': '한파', 'H': '폭염', 'Y': '황사', 'D': '건조',
-        'T': '태풍', 'W': '폭풍해일',
-    }
-    STN_MAP = {
-        '108': '본청', '109': '서울', '119': '수원(경기)',
-        '105': '강릉(강원)', '133': '대전(충청)', '143': '대구(경북)',
-        '156': '광주(전라)', '159': '부산(경남)', '184': '제주',
-    }
-    CMD_MAP = {
-        '1': '발표', '2': '대치', '3': '해제',
-        '4': '대치해제', '5': '연장', '6': '변경', '7': '변경해제',
-    }
-    LVL_MAP = {'1': '예비특보', '2': '주의보', '3': '경보'}
+    north = {'의정부','동두천','양주','포천','연천','가평','남양주','구리','파주','고양'}
 
-    # 1차: 모든 행 파싱
-    rows = []
+    items = []
     for line in text.split('\n'):
         line = line.strip()
         if not line or line.startswith('#'):
             continue
-        # 끝의 '=' 제거
+        # 줄 끝 '=' 제거 후 쉼표 분리
         line = line.rstrip(' =').rstrip(',').rstrip()
         parts = [p.strip() for p in line.split(',')]
-        if len(parts) < 8:
+        if len(parts) < 10:
             continue
-        try:
-            tm_fc, tm_ef, tm_in, stn, reg_id, wrn, lvl, cmd = parts[:8]
-        except ValueError:
-            continue
-        if not wrn or not lvl:
-            continue
-        # REG_ID → 시군명 매핑 (경기북부·남부)
-        region_name = NORTH_GG_REG_MAP.get(reg_id) or GG_SOUTH_REG_MAP.get(reg_id) or ''
-        is_north_gg = reg_id in NORTH_GG_REG_MAP
-        is_gyeonggi = is_north_gg or (reg_id in GG_SOUTH_REG_MAP)
+        reg_up, reg_up_ko, reg_id, reg_ko, tm_fc, tm_ef, wrn, lvl, cmd, ed_tm = parts[:10]
 
-        rows.append({
-            'tm_fc': tm_fc, 'tm_ef': tm_ef, 'tm_in': tm_in,
-            'stn': stn, 'reg_id': reg_id,
-            'region_name': region_name,         # 매핑된 시군명 (없으면 빈 문자열)
-            'wrn_code': wrn, 'wrn_name': WRN_MAP.get(wrn, wrn),
-            'lvl_code': lvl, 'lvl_name': LVL_MAP.get(lvl, lvl),
-            'cmd_code': cmd, 'cmd_name': CMD_MAP.get(cmd, cmd),
-            'stn_name': STN_MAP.get(stn, stn),
-            'is_north_gg': is_north_gg,         # 경기북부 10개 시군 매칭
-            'is_gyeonggi': is_gyeonggi,         # 경기도 전체 (북부 + 남부)
-            'is_prelim':  lvl == '1',
+        # 해제 또는 변경해제는 제외 (현재 살아있는 것만)
+        if cmd in ('해제', '대치해제', '변경해제'):
+            continue
+
+        # 지역 매칭
+        full_text = f'{reg_up_ko} {reg_ko}'
+        is_north_gg = any(k in full_text for k in north)
+        # 경기북부 + 경기 전체(시군 또는 경기도 광역)
+        is_gyeonggi = is_north_gg or '경기' in full_text
+
+        # 시간 포맷
+        def fmt(s):
+            s = str(s or '')
+            if len(s) >= 12:
+                return f'{s[4:6]}/{s[6:8]} {s[8:10]}:{s[10:12]}'
+            return s
+
+        items.append({
+            'reg_up': reg_up,
+            'reg_up_ko': reg_up_ko,
+            'reg_id': reg_id,
+            'reg_ko': reg_ko,
+            'region_name': reg_ko,            # 표시용 (지역명)
+            'broader_region': reg_up_ko,      # 상위 광역
+            'tm_fc': tm_fc, 'tm_ef': tm_ef,
+            'tm_fc_disp': fmt(tm_fc),
+            'tm_ef_disp': fmt(tm_ef),
+            'wrn_name': wrn,                  # 한글 그대로 ('호우','강풍','풍랑'...)
+            'lvl_name': lvl,                  # '예비'/'주의'/'경보'
+            'cmd_name': cmd,                  # '발표'/'대치'/'연장'/'변경'
+            'ed_tm': ed_tm,                   # 해제 예고 시각 텍스트
+            'is_north_gg': is_north_gg,
+            'is_gyeonggi': is_gyeonggi,
+            'is_prelim': lvl == '예비',
         })
 
-    # 2차: 같은 (STN, REG_ID, WRN, LVL) 조합에서 가장 최신 TM_FC만 살리고,
-    # 그게 해제(CMD=3,4,7) 상태면 제외 → 현재 살아있는 발표만 추출
-    by_key = {}
-    for row in rows:
-        key = (row['stn'], row['reg_id'], row['wrn_code'], row['lvl_code'])
-        # tm_fc 큰 게 최신
-        cur = by_key.get(key)
-        if cur is None or row['tm_fc'] > cur['tm_fc']:
-            by_key[key] = row
-
-    active = []
-    for row in by_key.values():
-        if row['cmd_code'] in ('3', '4', '7'):  # 해제 상태
-            continue
-        # 발효시각이 이미 끝났는지 — TM_EF가 과거이면 만료
-        try:
-            tm_ef_dt = datetime.strptime(row['tm_ef'], '%Y%m%d%H%M')
-            if tm_ef_dt < now and row['lvl_code'] != '1':
-                # 예비특보(1)는 발효 시점 의미라 미래·과거 둘 다 의미 있음
-                # 발효 특보(2,3)는 TM_EF 이후면 만료
-                continue
-        except ValueError:
-            pass
-        active.append(row)
-
-    # 3차: 정렬 — 북부 시군 > 경기 전체 > 예비특보 > TM_FC 최신순
-    def sort_key(r):
+    # 정렬: 북부 > 경기 > 그 외, 예비/주의/경보 순서는 LVL 한글이라 별도 정렬 안 함
+    def sort_key(it):
         return (
-            0 if r['is_north_gg'] else (1 if r['is_gyeonggi'] else 2),
-            0 if r['is_prelim'] else 1,
-            -int(r['tm_fc']) if r['tm_fc'].isdigit() else 0,
+            0 if it['is_north_gg'] else (1 if it['is_gyeonggi'] else 2),
+            0 if it['lvl_name'] == '경보' else (1 if it['lvl_name'] == '주의' else 2),
         )
-    active.sort(key=sort_key)
-
-    # 발표시각 사람 친화적 포맷 + 부가 정보
-    def fmt(s):
-        s = str(s or '')
-        if len(s) >= 12:
-            return f'{s[4:6]}/{s[6:8]} {s[8:10]}:{s[10:12]}'
-        return s
-
-    for row in active:
-        row['tm_fc_disp'] = fmt(row['tm_fc'])
-        row['tm_ef_disp'] = fmt(row['tm_ef'])
-
-    return active
+    items.sort(key=sort_key)
+    return items
 
 
 def parse_prelim_warnings(t7_text, tmFc=''):

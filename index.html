@@ -4113,28 +4113,47 @@ function renderAll(data) {
   data.flood_forecast = data.flood_forecast || [];
   data.apihub_warnings = data.apihub_warnings || [];
 
-  // apihub 예비특보(LVL=1)를 prelim_warnings 구조로 변환해서 우선 사용
-  // (공공 API의 t7 파싱보다 정확 — 호우·태풍 등 누락 보완)
+  // apihub wrn_now_data_new 데이터를 prelim_warnings·warnings 구조로 변환
+  // 더 정확함 — 사장님이 보신 호우 예비특보가 직접 들어옴 (REG_KO 한글 이름 그대로)
   if (data.apihub_warnings.length > 0) {
-    const byWrn = {};
-    data.apihub_warnings.filter(w => w.is_prelim && w.cmd_code !== '3' && w.cmd_code !== '4' && w.cmd_code !== '7').forEach(w => {
+    // 예비특보 그룹화
+    const prelimByWrn = {};
+    data.apihub_warnings.filter(w => w.is_prelim).forEach(w => {
       const groupName = (w.wrn_name || '특보') + ' 예비특보';
-      if (!byWrn[groupName]) byWrn[groupName] = { type: groupName, items: [] };
+      if (!prelimByWrn[groupName]) prelimByWrn[groupName] = { type: groupName, items: [] };
       const timeLabel = w.tm_ef_disp ? `${w.tm_ef_disp} 발효` : (w.tm_fc_disp || '');
-      const areaLabel = `${w.stn_name || w.stn}${w.reg_id ? ' / ' + w.reg_id : ''}`;
-      byWrn[groupName].items.push({
+      const areaLabel = w.region_name && w.region_name !== w.broader_region
+        ? `${w.region_name} (${w.broader_region})`
+        : (w.region_name || w.broader_region || w.reg_id);
+      prelimByWrn[groupName].items.push({
         time: timeLabel,
         area: areaLabel,
-        north_match: !!w.is_gyeonggi,   // 수원기상청 발표(경기) 우선 강조
+        north_match: !!w.is_north_gg,
       });
     });
-    const apihubGroups = Object.values(byWrn).map(g => ({
+    const apihubGroups = Object.values(prelimByWrn).map(g => ({
       ...g,
       north_count: g.items.filter(it => it.north_match).length,
       total_count: g.items.length,
     }));
     if (apihubGroups.length > 0) {
-      data.prelim_warnings = apihubGroups;   // apihub로 교체 (더 신뢰)
+      data.prelim_warnings = apihubGroups;
+    }
+
+    // 발효 특보(주의보·경보) 중 경기북부 매칭은 data.warnings에 보강 추가
+    // (공공 API에서 이미 있는 것과 중복 안 되도록 type+area 키로 dedup)
+    const existingKeys = new Set((data.warnings || []).map(w => `${w.type}|${w.area}`));
+    const apihubActive = data.apihub_warnings
+      .filter(w => !w.is_prelim && w.is_north_gg)
+      .map(w => ({
+        type: `${w.wrn_name}${w.lvl_name === '경보' ? '경보' : '주의보'}`,
+        area: w.region_name || w.reg_ko,
+        time: w.tm_fc_disp || '',
+        level: w.lvl_name === '경보' ? 'severe' : 'warning',
+      }))
+      .filter(w => !existingKeys.has(`${w.type}|${w.area}`));
+    if (apihubActive.length > 0) {
+      data.warnings = [...(data.warnings || []), ...apihubActive];
     }
   }
 
