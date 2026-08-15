@@ -1,0 +1,43 @@
+# 비밀 정보 — 절대 커밋 금지
+.env
+.env.local
+.env.*.local
+*.key
+credentials.json
+token.json
+
+# 임시 작업 공간 (단, 누적 강수 기록은 깃에 포함시켜 GitHub Actions에서도 누적 유지)
+.tmp/*
+!.tmp/rain_history.json
+# 지역별 상태폴더 — 남부도 강수 누적기록만 깃에 포함
+!.tmp/south/
+.tmp/south/*
+!.tmp/south/rain_history.json
+
+# 로그 — API 키가 평문으로 남을 수 있어 절대 커밋 금지
+cron.log
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# 상황실 빌드 원본 — 디자인 단독실행본(4MB). 폰트 추출용 원천이라 로컬에만 둔다.
+# (update_data.py의 자동 푸시가 'git add -A'라, 빼두지 않으면 5분마다 4MB가 딸려 올라간다)
+tools/wall-build/original_bundle.html
+
+# 에디터
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code 작업 공간 (worktree, 세션 데이터)
+.claude/
