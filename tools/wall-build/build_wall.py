@@ -134,26 +134,22 @@ patch('feels, effHum, wet, fireRisk, windDeg: Math.round(r3*360),',
       'st() → hourly + 풍향 실값')
 
 # (f) hours 생성: 합성 → 실제 예보 우선 (정규식으로 블록 교체)
-HOURS_NEW = '''// hourly — 실제 예보(있으면) 우선, 없으면 합성 곡선(14시 최고·새벽 최저)
-    let hours;
+HOURS_NEW = '''// hourly — 실제 예보만 쓴다. 없으면 빈 배열(→ 화면에 '예보 없음').
+    // ⚠ 원본 디자인은 예보가 없으면 12시간치를 rnd()로 지어냈다(기온·강수확률·강수량 전부).
+    //   비가 오는 상태(s.wet)면 강수확률을 85%에서 시작해 5%씩 낮추고 시간당 최대 2.5mm를
+    //   난수로 채웠다 — 상황실 벽면에 '앞으로 12시간 강수 전망'으로 그대로 떴다.
+    //   2026-08-15 가짜 재난문자, 08-17 난수 풍향과 같은 부류라 분기째 들어냈다.
+    let hours = [];
     if (s.hourly && s.hourly.length){
-      hours = s.hourly.map(function(o,k){ var t=(o.t!=null?Math.round(o.t):s.temp);
-        return { h:0, t:t, feels:(o.feels!=null?Math.round(o.feels):t), rain:(o.rain!=null?o.rain:0),
-          pop:(o.pop!=null?Math.round(o.pop):0), label:(o.label||(k===0?'지금':'')), icon:(o.icon||'☁️'), wx:(o.wx||null) }; });
-    } else {
-      hours = [];
-      for (let k=0;k<12;k++){
-        const d = new Date(now.getTime() + k*3600000); const hh = d.getHours();
-        const base = s.temp - Math.cos((now.getHours()-14)/24*Math.PI*2)*4.6;
-        const t = Math.round(base + Math.cos((hh-14)/24*Math.PI*2)*4.6);
-        const pop = s.wet ? Math.max(20, Math.round(85 - k*5 + rnd(k+s.i)*10)) : Math.round(rnd(k+s.i)*18);
-        const night = hh<6 || hh>=19;
-        hours.push({ h:hh, t:t, feels:t+(s.wet?1:4), rain:(s.wet?+(rnd(k+s.i)*2.5).toFixed(1):0), pop:pop,
-          label:(k===0?'지금':hh+'시'), icon:(pop>=60?'🌧️':(night?'🌙':(pop>=30?'⛅':'☀️'))),
-          wx:(pop>=60?'rain':(night?'moon':(pop>=30?'cloudsun':'sun'))) });
-      }
+      hours = s.hourly.map(function(o,k){ var t=(o.t!=null?Math.round(o.t):null);
+        return { t:t, feels:(o.feels!=null?Math.round(o.feels):null), rain:(o.rain!=null?o.rain:0),
+          pop:(o.pop!=null?Math.round(o.pop):null), label:(o.label||(k===0?'지금':'')),
+          icon:(o.icon||'☁️'), wx:(o.wx||null),
+          wind:(o.wind!=null?o.wind:null), deg:(o.deg!=null?o.deg:null),
+          dir:(o.dir||''), humid:(o.humid!=null?Math.round(o.humid):null) }; });
     }
-    const tv = hours.map(function(x){return x.t;}), tMin = Math.min.apply(null,tv), tMax = Math.max.apply(null,tv);
+    const tv = hours.map(function(x){return x.t;}).filter(function(v){return v!=null;});
+    const tMin = tv.length?Math.min.apply(null,tv):0, tMax = tv.length?Math.max.apply(null,tv):1;
     const hourList = hours.map(function(x,k){
       return { label: x.label, labelColor: k===0 ? 'var(--acc,#ff7a2f)' : 'var(--dim,#8e9bb0)',
         icon: x.icon, wx: x.wx, temp: x.t, feels: x.feels, rain: x.rain,
@@ -163,104 +159,128 @@ _n = re.subn(r'// hourly — 일교차.*?\'var\(--dim,#8e9bb0\)\' \};\n    \}\);
 assert _n[1] == 1, 'hours 블록 교체 실패(%d)' % _n[1]
 h = _n[0]; print('패치: hours → 실제예보')
 
-# (g) meteoEl 메서드 주입 (React SVG: 기온선+체감점선+강수막대, 값 오버레이)
-METEO = '''meteoEl(hours, tMin, tMax){
-    const R = window.React.createElement, N = hours.length||1;
-    const VW=1200, VH=240, pT=66, pB=22;
-    const tvv=hours.map(h=>(h.t!=null&&!isNaN(h.t))?h.t:tMin);
-    const fvv=hours.map((h,i)=>(h.feels!=null&&!isNaN(h.feels))?h.feels:tvv[i]);
-    /* 그래프 개선안 on/off — region.js의 meteoV2. 지금은 경기남부에서만 켜 두고
-       괜찮으면 region.js(북부)에도 meteoV2:true 한 줄만 넣으면 된다. */
-    const V2=!!((typeof window!=='undefined'&&window.REGION_CONF)||{}).meteoV2;
-    let lo=Math.min.apply(null,tvv.concat(fvv)), hi=Math.max.apply(null,tvv.concat(fvv));  /* 축=기온+체감 모두 포함(체감이 위로 안 튀게) */
-    if(!(hi-lo>=3)) hi=lo+3; lo-=1; hi+=1;
-    const yOf=t=>pT+(1-((t-lo)/(hi-lo)))*(VH-pT-pB), xOf=i=>(i+0.5)*(VW/N);
-    /* 부드러운 곡선(클램프 카트멀롬→베지어) — 정수 기온의 계단 꺾임 제거. 평평 구간 출렁임 방지용 y클램프 */
-    const sm=pts=>{ if(pts.length<2) return ''; let d='M'+pts[0][0].toFixed(1)+','+pts[0][1].toFixed(1);
-      for(let i=0;i<pts.length-1;i++){ const p0=pts[Math.max(0,i-1)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(pts.length-1,i+2)];
-        let c1y=p1[1]+(p2[1]-p0[1])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
-        const yl=Math.min(p1[1],p2[1]), yh=Math.max(p1[1],p2[1]);
-        c1y=Math.max(yl,Math.min(yh,c1y)); c2y=Math.max(yl,Math.min(yh,c2y));
-        d+='C'+(p1[0]+(p2[0]-p0[0])/6).toFixed(1)+','+c1y.toFixed(1)+' '+(p2[0]-(p3[0]-p1[0])/6).toFixed(1)+','+c2y.toFixed(1)+' '+p2[0].toFixed(1)+','+p2[1].toFixed(1); }
-      return d; };
-    const tp=hours.map((h,i)=>[xOf(i),yOf(tvv[i])]), fp=hours.map((h,i)=>[xOf(i),yOf(fvv[i])]);
-    const tempPath=sm(tp), feelsPath=sm(fp);
-    const areaPath=tempPath+' L'+xOf(N-1).toFixed(1)+','+VH+' L'+xOf(0).toFixed(1)+','+VH+' Z';
-    const rmax=Math.max.apply(null,[1].concat(hours.map(h=>h.rain||0)));
-    /* 색·선은 style로 지정(테마 변수 var()가 attribute에선 무효, style에선 유효) */
-    const kids=[
-      R('defs',{key:'d'},R('linearGradient',{id:'mtgA',x1:0,y1:0,x2:0,y2:1},R('stop',{offset:0,style:{stopColor:'#ff9a3c',stopOpacity:0.18}}),R('stop',{offset:1,style:{stopColor:'#ff9a3c',stopOpacity:0.01}}))),
-      /* '지금' 칸 표시. 기존(v1)은 위아래 꽉 찬 회색 판이라 첫 칸에 막대가 없을 때
-         빈 상자처럼 보였다. v2는 그래프가 그려지는 영역에만 아주 옅게 깔고
-         왼쪽에 세로선을 그어 '현재 시각'임이 드러나게 한다. */
-      V2 ? R('g',{key:'nb'},
-             R('rect',{x:0,y:pT-10,width:VW/N,height:VH-pT-pB+10,fill:'currentColor',opacity:0.045}),
-             R('line',{x1:0.5,y1:pT-10,x2:0.5,y2:VH-pB,style:{stroke:'var(--acc,#ff7a2f)',strokeWidth:3,opacity:0.55}}))
-         : R('rect',{key:'nb',x:0,y:0,width:VW/N,height:VH,fill:'currentColor',opacity:0.07}),
-      R('path',{key:'ar',d:areaPath,fill:'url(#mtgA)',stroke:'none'}),
-      R('path',{key:'fl',d:feelsPath,style:{fill:'none',stroke:'#ff5a5a',strokeWidth:2.5,strokeDasharray:'7 8',strokeLinecap:'round',strokeLinejoin:'round',opacity:0.8,vectorEffect:'non-scaling-stroke'}}),
-      R('path',{key:'tl',d:tempPath,style:{fill:'none',stroke:'#ff9a3c',strokeWidth:4,strokeLinecap:'round',strokeLinejoin:'round',vectorEffect:'non-scaling-stroke'}})
-    ];
-    /* 강수 막대. 막대 꼭대기 y를 따로 남겨 두었다가 그 위에 mm를 적는다 —
-       예전엔 mm를 맨 아래 확률과 같은 칸에 붙여 써서 '4mm 60%3mm 60%'처럼
-       옆 칸과 이어져 읽혔다. 값은 막대 옆에 있어야 무엇의 양인지 바로 안다. */
-    const rainTop=[];
-    hours.forEach((h,i)=>{ if(h.rain>0){ const bh=Math.max(4,(h.rain/rmax)*(VH-pT-pB)*0.5), bw=VW/N*0.44;
-      rainTop[i]=VH-pB-bh;
-      kids.push(R('rect',{key:'rb'+i,x:xOf(i)-bw/2,y:VH-pB-bh,width:bw,height:bh,rx:3,style:{fill:'#54aaff',opacity:0.5}})); } });
-    /* ── 통일 SVG 날씨 아이콘(같은 계열: 해=앰버·달=남색·구름=회청·비/눈=파랑·번개=앰버) ── */
+# (g) 시간대별 표 주입 — 대시보드(지도.html hourlyTableBody)와 같은 형태
+# 사장님 요청(2026-08-17): 벽면의 메테오그램(그래프)을 대시보드의 '시간대별 날씨' 표로.
+# 두 화면을 같은 방식으로 읽게 하고, 그래프로는 안 보이던 바람·습도까지 보이게 한다.
+#
+# 왜 12시간인가 — 벽면은 손으로 넘길 수 없어 가로 스크롤을 못 쓴다. 카드 폭이
+# 무대 기준 1224px이라 24시간을 넣으면 한 칸이 51px, 벽면에서 숫자가 안 읽힌다.
+# 12시간이면 한 칸 약 90px로 넉넉하다. (대시보드는 스크롤이 되니 24시간 그대로)
+#
+# 메서드 이름(meteoEl)과 인자는 그대로 둔다 — 아래 (h)(i) 패치가 그 이름을 쓴다.
+METEO = r"""meteoEl(hours, tMin, tMax){
+    const R = window.React.createElement, N = hours.length;
+    const DIM='var(--dim,#8e9bb0)', ACC='var(--acc,#ff7a2f)', BLUE='#54aaff';
+    /* 예보가 없으면 지어내지 않고 그대로 말한다(대시보드와 같은 태도). */
+    if (!N) return R('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',
+      height:'100%',color:DIM,fontSize:'30px',fontWeight:700}}, '시간대별 예보 없음');
+
+    const num=(v,d)=>(v!=null&&!isNaN(v))?(+v).toFixed(d==null?0:d):'-';
+    const NOWBG='rgba(255,122,47,.10)';           /* '지금' 칸 세로 밴드 */
+    const cell=(child,i,extra)=>R('div',{style:Object.assign({display:'flex',flexDirection:'column',
+      alignItems:'center',justifyContent:'center',padding:'7px 2px',minWidth:0,
+      background:(i===0?NOWBG:'transparent')}, extra||{})}, child);
+    const lab=(txt)=>R('div',{style:{display:'flex',alignItems:'center',justifyContent:'flex-end',
+      paddingRight:'16px',fontSize:'25px',fontWeight:700,color:DIM,whiteSpace:'nowrap'}}, txt);
+
+    /* ── 날씨 아이콘 (메테오그램에서 쓰던 통일 SVG 그대로) ── */
     const CLD='M8.5 25a5.2 5.2 0 0 1-.1-10.4 7.8 7.8 0 0 1 15-1.9 5.7 5.7 0 0 1-1 12.3h-13.9z';
     const MOON='M20 4.8a11.6 11.6 0 1 0 7.4 16.2A9.6 9.6 0 0 1 20 4.8z';
     const rays=(cx,cy,ri,ro,sw)=>[0,45,90,135,180,225,270,315].map((a,q)=>{const rd=a*Math.PI/180;
-      return R('line',{key:'ry'+q,x1:cx+Math.cos(rd)*ri,y1:cy+Math.sin(rd)*ri,x2:cx+Math.cos(rd)*ro,y2:cy+Math.sin(rd)*ro,style:{stroke:'#ffb020',strokeWidth:sw,strokeLinecap:'round'}});});
+      return R('line',{key:'ry'+q,x1:cx+Math.cos(rd)*ri,y1:cy+Math.sin(rd)*ri,
+        x2:cx+Math.cos(rd)*ro,y2:cy+Math.sin(rd)*ro,
+        style:{stroke:'#ffb020',strokeWidth:sw,strokeLinecap:'round'}});});
     const WX={
       sun:[R('circle',{key:'c',cx:16,cy:16,r:6.2,style:{fill:'#ffb020'}})].concat(rays(16,16,9,12.6,2.6)),
       moon:[R('path',{key:'m',d:MOON,style:{fill:'#b7c4ff'}})],
-      cloud:[R('path',{key:'c',d:CLD,style:{fill:'var(--dim,#8e9bb0)'}})],
+      cloud:[R('path',{key:'c',d:CLD,style:{fill:DIM}})],
       cloudsun:[R('circle',{key:'s',cx:21.5,cy:9.5,r:4.4,style:{fill:'#ffb020'}})].concat(rays(21.5,9.5,6.4,8.8,2.2))
-        .concat([R('path',{key:'c',d:CLD,transform:'translate(-1.5 3.5) scale(.88)',style:{fill:'var(--dim,#8e9bb0)'}})]),
+        .concat([R('path',{key:'c',d:CLD,transform:'translate(-1.5 3.5) scale(.88)',style:{fill:DIM}})]),
       cloudmoon:[R('path',{key:'m',d:MOON,transform:'translate(12.5 1.5) scale(.42)',style:{fill:'#b7c4ff'}}),
-        R('path',{key:'c',d:CLD,transform:'translate(-1.5 3.5) scale(.88)',style:{fill:'var(--dim,#8e9bb0)'}})],
-      rain:[R('path',{key:'c',d:CLD,transform:'translate(1.5 -2.5) scale(.92)',style:{fill:'var(--dim,#8e9bb0)'}})]
-        .concat([[10.5,23],[16,24],[21.5,23]].map((p,q)=>R('line',{key:'dp'+q,x1:p[0],y1:p[1],x2:p[0]-1.6,y2:p[1]+4.6,style:{stroke:'#54aaff',strokeWidth:2.6,strokeLinecap:'round'}}))),
-      snow:[R('path',{key:'c',d:CLD,transform:'translate(1.5 -2.5) scale(.92)',style:{fill:'var(--dim,#8e9bb0)'}})]
-        .concat([[10.5,25],[16,27],[21.5,25]].map((p,q)=>R('circle',{key:'sf'+q,cx:p[0],cy:p[1],r:1.7,style:{fill:'#54aaff',opacity:0.85}}))),
-      storm:[R('path',{key:'c',d:CLD,transform:'translate(1.5 -3.5) scale(.92)',style:{fill:'var(--dim,#8e9bb0)'}}),
+        R('path',{key:'c',d:CLD,transform:'translate(-1.5 3.5) scale(.88)',style:{fill:DIM}})],
+      rain:[R('path',{key:'c',d:CLD,transform:'translate(1.5 -2.5) scale(.92)',style:{fill:DIM}})]
+        .concat([[10.5,23],[16,24],[21.5,23]].map((p,q)=>R('line',{key:'dp'+q,x1:p[0],y1:p[1],
+          x2:p[0]-1.6,y2:p[1]+4.6,style:{stroke:BLUE,strokeWidth:2.6,strokeLinecap:'round'}}))),
+      snow:[R('path',{key:'c',d:CLD,transform:'translate(1.5 -2.5) scale(.92)',style:{fill:DIM}})]
+        .concat([[10.5,25],[16,27],[21.5,25]].map((p,q)=>R('circle',{key:'sf'+q,cx:p[0],cy:p[1],r:1.7,
+          style:{fill:BLUE,opacity:0.85}}))),
+      storm:[R('path',{key:'c',d:CLD,transform:'translate(1.5 -3.5) scale(.92)',style:{fill:DIM}}),
         R('path',{key:'b',d:'M17 19l-4.2 6.8h3.4l-2.4 6.2 7.6-8.8h-3.5l2.8-4.2z',style:{fill:'#ffb020'}})]
     };
-    const wxSvg=(wx,fb)=>WX[wx]? R('svg',{viewBox:'0 0 32 32',width:34,height:34,style:{display:'block',margin:'0 auto'}},WX[wx])
-                               : R('span',{style:{fontSize:'30px',lineHeight:1.2}},fb||'☁️');
-    const svg=R('svg',{viewBox:'0 0 '+VW+' '+VH,preserveAspectRatio:'none',style:{position:'absolute',left:0,top:0,width:'100%',height:'100%'}},kids);
-    /* 지금(첫 칸) 기온점 — SVG는 늘어나면 타원이 되므로 HTML 오버레이(항상 원형) */
-    const nowDot=R('div',{style:{position:'absolute',left:(0.5/N*100)+'%',top:(yOf(tvv[0])/VH*100)+'%',transform:'translate(-50%,-50%)',width:'13px',height:'13px',borderRadius:'50%',background:'var(--acc,#ff7a2f)',border:'2.5px solid #fff',boxSizing:'border-box'}});
-    const labs=hours.map((h,i)=>R('div',{key:'L'+i,style:{position:'absolute',left:((i+0.5)/N*100)+'%',top:(yOf(tvv[i])/VH*100)+'%',transform:'translate(-50%,-140%)',fontSize:'27px',fontWeight:800,color:i===0?'var(--acc,#ff7a2f)':'currentColor',whiteSpace:'nowrap'}},(h.t!=null?h.t:'-')+'°'));
-    /* 강수량 — 막대 바로 위에. 기온선과 겹쳐도 읽히도록 글자에 외곽선을 준다. */
-    const rainLabs=hours.map((h,i)=> (h.rain>0 && rainTop[i]!=null)
-      ? R('div',{key:'RL'+i,style:{position:'absolute',left:((i+0.5)/N*100)+'%',top:(rainTop[i]/VH*100)+'%',
-          transform:'translate(-50%,-104%)',fontSize:'23px',fontWeight:800,color:'#54aaff',whiteSpace:'nowrap',
-          paintOrder:'stroke',WebkitTextStroke:'4px var(--panel,#151b26)'}}, h.rain+'mm')
-      : null).filter(Boolean);
-    /* 체감 최고 지점에만 값 표시(v2). 붉은 점선이 뭔지 범례를 봐야 알던 걸,
-       가장 중요한 한 점 — 오늘 가장 더울 때 체감 몇 도인지 — 로 대신한다.
-       폭염 때 온열질환 구급 수요를 가늠하는 값이라 벽면에서 바로 보여야 한다.
-       기온 라벨과 겹치지 않게, 같은 칸이면 표시하지 않는다. */
-    const fMaxI=fvv.reduce((b,v,i)=>v>fvv[b]?i:b,0);
-    const feelsLab=(V2 && Math.abs(fvv[fMaxI]-tvv[fMaxI])>=1.5)
-      ? [R('div',{key:'FL',style:{position:'absolute',left:((fMaxI+0.5)/N*100)+'%',top:(yOf(fvv[fMaxI])/VH*100)+'%',
-          transform:'translate(-50%,-120%)',fontSize:'24px',fontWeight:800,color:'#ff5a5a',whiteSpace:'nowrap',
-          paintOrder:'stroke',WebkitTextStroke:'4px var(--panel,#151b26)'}},'체감 '+Math.round(fvv[fMaxI])+'°')]
-      : [];
-    /* 범례 — 실선=기온, 점선=체감 */
-    const legend=R('div',{style:{position:'absolute',right:'12px',top:'0px',display:'flex',gap:'20px',alignItems:'center',fontSize:'21px',fontWeight:700,color:'var(--dim,#8e9bb0)'}},
-      R('div',{style:{display:'flex',alignItems:'center',gap:'8px'}},R('span',{style:{width:'28px',height:'4px',borderRadius:'2px',background:'#ff9a3c',display:'inline-block'}}),'기온'),
-      R('div',{style:{display:'flex',alignItems:'center',gap:'8px'}},R('span',{style:{width:'28px',height:'0px',borderTop:'3px dashed #ff5a5a',display:'inline-block',opacity:0.85}}),'체감'));
-    const grid=(fn)=>R('div',{style:{display:'grid',gridTemplateColumns:'repeat('+N+',1fr)'}},hours.map((h,i)=>R('div',{key:i,style:{textAlign:'center',overflow:'hidden'}},fn(h,i))));
-    return R('div',{style:{display:'flex',flexDirection:'column',height:'100%',minHeight:0,gap:'8px'}},
-      grid((h,i)=>R('div',{},R('div',{style:{fontSize:'26px',fontWeight:700,color:i===0?'var(--acc,#ff7a2f)':'var(--dim,#8e9bb0)',marginBottom:'4px'}},h.label),wxSvg(h.wx,h.icon))),
-      R('div',{style:{position:'relative',flex:1,minHeight:'90px'}},svg,nowDot,rainLabs,labs,feelsLab,legend),
-      /* 맨 아래는 강수확률만. mm는 위 막대에 붙였다(칸이 좁아 둘을 한 칸에 쓰면 옆 칸과 붙는다). */
-      grid((h,i)=>R('div',{style:{fontSize:'23px',fontWeight:700,color:h.pop>=50?'#54aaff':'var(--dim,#8e9bb0)',whiteSpace:'nowrap'}},(h.pop!=null?h.pop:0)+'%')));
-  }'''
+    const wxSvg=(wx,fb)=>WX[wx]? R('svg',{viewBox:'0 0 32 32',width:52,height:52,style:{display:'block'}},WX[wx])
+                               : R('span',{style:{fontSize:'44px',lineHeight:1.1}},fb||'☁️');
+
+    /* ── 기온 행: 표 격자에 정렬된 꺾은선 + 값 (대시보드와 같은 구성) ──
+       SVG를 가로로 늘리면(preserveAspectRatio none) 원·글자가 찌그러지므로
+       선·면만 SVG로 그리고 점과 숫자는 HTML로 덧놓는다. */
+    const GH=196, pT=52, pB=26;
+    const tvv=hours.map(h=>(h.t!=null&&!isNaN(h.t))?h.t:null);
+    const known=tvv.filter(v=>v!=null);
+    let lo=known.length?Math.min.apply(null,known):0, hi=known.length?Math.max.apply(null,known):1;
+    if(!(hi-lo>=3)) hi=lo+3;
+    const yOf=t=>pT+(1-((t-lo)/(hi-lo)))*(GH-pT-pB);
+    const VW=N*100, xOf=i=>(i+0.5)*(VW/N);
+    const pts=hours.map((h,i)=>[xOf(i), yOf(tvv[i]!=null?tvv[i]:(lo+hi)/2)]);
+    const lineStr=pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+    const gk=[
+      R('defs',{key:'d'},R('linearGradient',{id:'wtG',x1:'0',y1:'0',x2:'0',y2:'1'},
+        R('stop',{offset:'0',style:{stopColor:'#ff9a3c',stopOpacity:0.22}}),
+        R('stop',{offset:'1',style:{stopColor:'#ff9a3c',stopOpacity:0.02}}))),
+      R('rect',{key:'nb',x:0,y:0,width:VW/N,height:GH,style:{fill:NOWBG}}),
+      R('polygon',{key:'ar',points:'0,'+GH+' '+lineStr+' '+VW+','+GH,fill:'url(#wtG)',stroke:'none'}),
+      R('polyline',{key:'ln',points:lineStr,style:{fill:'none',stroke:'#ff9a3c',strokeWidth:4,
+        strokeLinecap:'round',strokeLinejoin:'round',vectorEffect:'non-scaling-stroke'}})
+    ];
+    const graphRow=R('div',{style:{gridColumn:'2 / -1',position:'relative',height:GH+'px'}},
+      R('svg',{viewBox:'0 0 '+VW+' '+GH,preserveAspectRatio:'none',
+        style:{position:'absolute',left:0,top:0,width:'100%',height:'100%'}},gk),
+      hours.map((h,i)=>[
+        R('div',{key:'d'+i,style:{position:'absolute',left:((i+0.5)/N*100)+'%',top:(pts[i][1]/GH*100)+'%',
+          transform:'translate(-50%,-50%)',width:(i===0?'15px':'11px'),height:(i===0?'15px':'11px'),
+          borderRadius:'50%',boxSizing:'border-box',
+          background:(i===0?ACC:'var(--panel,#151b26)'),border:'3px solid '+(i===0?'#fff':'#ff9a3c')}}),
+        R('div',{key:'v'+i,style:{position:'absolute',left:((i+0.5)/N*100)+'%',top:(pts[i][1]/GH*100)+'%',
+          transform:'translate(-50%,-155%)',fontSize:'29px',fontWeight:800,whiteSpace:'nowrap',
+          color:(i===0?ACC:'currentColor'),paintOrder:'stroke',
+          WebkitTextStroke:'5px var(--panel,#151b26)'}}, num(h.t)+'°')
+      ]));
+
+    /* ── 나머지 행들 — 대시보드와 같은 순서·같은 강조 규칙 ── */
+    const kids=[];
+    const push=(label,fn,extra)=>{ kids.push(lab(label));
+      hours.forEach((h,i)=>kids.push(cell(fn(h,i),i,extra))); };
+
+    push('', (h,i)=>R('div',{style:{fontSize:'29px',fontWeight:800,whiteSpace:'nowrap',
+      color:(i===0?ACC:'currentColor')}}, i===0?'지금':(h.label||'')));
+    push('날씨', (h)=>wxSvg(h.wx,h.icon));
+    kids.push(lab('기온'), graphRow);
+    push('체감', (h)=>R('div',{style:{fontSize:'27px',fontWeight:700,color:DIM}}, num(h.feels)+'°'));
+    /* 강수 — 있으면 파란 알약, 없으면 옅은 점(대시보드와 동일) */
+    push('강수', (h)=>((h.rain||0)>0)
+      ? R('div',{style:{fontSize:'25px',fontWeight:800,color:'#fff',background:BLUE,
+          padding:'4px 12px',borderRadius:'999px',whiteSpace:'nowrap'}}, num(h.rain,1))
+      : R('div',{style:{fontSize:'27px',color:DIM,opacity:0.45,fontWeight:700}}, '·'));
+    /* 강수확률 — 숫자 + 미니 막대 */
+    push('강수확률', (h)=>{ const p=(h.pop!=null?h.pop:0), col=(p>=60?BLUE:(p>=30?'#7fb8ff':DIM));
+      return R('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',gap:'5px',width:'100%'}},
+        R('div',{style:{fontSize:'26px',fontWeight:(p>=60?800:600),color:col}}, p+'%'),
+        R('div',{style:{width:'62px',height:'7px',borderRadius:'4px',background:'rgba(255,255,255,.10)',overflow:'hidden'}},
+          R('div',{style:{width:p+'%',height:'100%',background:col,borderRadius:'4px'}}))); });
+    /* 바람 — 방향 원형 칩(회전 화살표) + 방위명 + 풍속. 방향 자료가 없으면 화살표를 숨긴다. */
+    push('바람', (h)=>R('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',gap:'3px'}},
+      R('div',{style:{width:'46px',height:'46px',borderRadius:'50%',background:'rgba(255,255,255,.07)',
+        display:'flex',alignItems:'center',justifyContent:'center'}},
+        R('div',{style:{fontSize:'26px',lineHeight:1,fontWeight:800,color:ACC,
+          transform:'rotate('+(h.deg!=null?h.deg:0)+'deg)'}}, h.deg!=null?'↑':'')),
+      R('div',{style:{fontSize:'20px',color:DIM,whiteSpace:'nowrap'}}, h.dir||''),
+      R('div',{style:{fontSize:'24px',fontWeight:700}}, num(h.wind,1))));
+    push('습도', (h)=>R('div',{style:{fontSize:'27px',fontWeight:700,color:DIM}},
+      h.humid!=null?(h.humid+'%'):'-'));
+
+    return R('div',{style:{display:'grid',gridTemplateColumns:'118px repeat('+N+',1fr)',
+      alignItems:'center',height:'100%',alignContent:'space-evenly'}}, kids);
+  }"""
+
 patch('  // 특보는 실황값에서 파생',
       '  ' + METEO + '\n\n  // 특보는 실황값에서 파생',
       'meteoEl 주입')
@@ -667,9 +687,12 @@ INJECT = r'''
     var stations=NAMES.map(function(nm){
       /* 일산은 regions에 없다 → 지역기상은 '고양'. 단 AWS/미세먼지는 일산 고유 키. */
       var r=byName[sig(nm)]||{}, a=aws[nm]||{}, w=a.wind||{}, pm=pmBy[sig(nm)]||{}, det=r.detail||{};
-      var hrs=((det.hourly)||[]).slice(0,12).map(function(o,k){   /* 실제 시간대별 예보 → 메테오그램 */
+      var hrs=((det.hourly)||[]).slice(0,12).map(function(o,k){   /* 실제 시간대별 예보 → 시간대별 표 */
         return { label:(k===0?'지금':(o.hour||'')), t:nv(o.temp), feels:nv(o.feels_like),
-          rain:nv(o.rain_mm), pop:nv(o.rain_pop), icon:(o.icon||wicon(o.weather)), wx:wxType(o.weather,o.hour) };
+          rain:nv(o.rain_mm), pop:nv(o.rain_pop), icon:(o.icon||wicon(o.weather)), wx:wxType(o.weather,o.hour),
+          /* 대시보드(지도.html)의 시간대별 표와 같은 항목을 쓰려고 바람·습도를 추가.
+             셋 다 예보에 원래 들어 있던 값인데 벽면에선 안 쓰고 있었다. */
+          wind:nv(o.wind_ms), deg:nv(o.wind_deg), dir:(o.wind_dir||''), humid:nv(o.humid) };
       });
       return { temp:nv(r.temp), humid:nv(r.humid), wind:nv(w.ws10!=null?w.ws10:r.wind), gust:nv(w.wss),
         /* 풍향(도) — 풍속과 같은 AWS 지점의 실측(wds)을 쓰고, 없으면 기상청 실황(vec).
