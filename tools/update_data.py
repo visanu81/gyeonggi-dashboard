@@ -541,14 +541,21 @@ def fetch_one_region_forecast(region):
         result['pop']     = h0['rain_pop']
 
     # 오늘 일 최고/최저
+    # ⚠ 반드시 by_time으로 순회할 것 — items는 '캐시를 안 쓴 회차'에만 만들어진다.
+    #   예전엔 여기서 items를 써서, 캐시가 맞는 회차(=5분 주기의 약 97%)마다
+    #   UnboundLocalError로 이 함수가 통째로 죽었다. 죽으면 호출부가 '수집 실패'로 보고
+    #   직전 값을 되살리므로, 시군 기온·습도가 예보 발표시각 사이(최대 3시간) 얼어붙었다.
+    #   갱신 시각(updated)은 매 회차 새로 찍혀서 화면에는 정상으로 보였다 — 그래서
+    #   2026-08-17 전체 점검 전까지 아무도 몰랐다. (실측: 의정부 05:10~07:11 22.8° 고정)
+    #   by_time은 캐시·비캐시 양쪽 모두에 있다.
     today = now.strftime('%Y%m%d')
-    for it in items:
-        if it['fcstDate'] != today: continue
-        if it['category'] == 'TMX' and result['tmax'] is None:
-            try: result['tmax'] = float(it['fcstValue'])
+    for (fdate, _ftime), cats in by_time.items():
+        if fdate != today: continue
+        if result['tmax'] is None and 'TMX' in cats:
+            try: result['tmax'] = float(cats['TMX'])
             except: pass
-        elif it['category'] == 'TMN' and result['tmin'] is None:
-            try: result['tmin'] = float(it['fcstValue'])
+        if result['tmin'] is None and 'TMN' in cats:
+            try: result['tmin'] = float(cats['TMN'])
             except: pass
 
     # (weather는 위 308-310에서 hourly[0]=현재 시각 값으로 이미 설정됨.
@@ -1621,11 +1628,18 @@ def fetch_apihub_warnings():
         if cmd in ('해제', '대치해제', '변경해제'):
             continue
 
-        # 지역 매칭
-        full_text = f'{reg_up_ko} {reg_ko}'
-        is_north_gg = any(k in full_text for k in north)
-        # 경기북부 + 경기 전체(시군 또는 경기도 광역)
-        is_gyeonggi = is_north_gg or '경기' in full_text
+        # 지역 매칭 — '이름에 글자가 들어있나'가 아니라 특보구역 '코드'로 판정한다.
+        # ⚠ 예전엔 f'{reg_up_ko} {reg_ko}'에 관할 시군명이 들어있는지만 봤다. 그래서
+        #   관할에 '광주'(경기 광주시)가 있는 경기남부에서, 광주'광역시'의 특보구역인
+        #   '광주동부·광주서부'(L1130xxx)가 통째로 우리 관할로 잡혔다. 광주광역시에
+        #   호우경보가 나면 경기남부 상황실에 '호우경보 발효'가 뜬다는 뜻이다.
+        #   (2026-08-17 전체 점검에서 발견 — 2026-08-15 가짜 재난문자와 같은 부류)
+        #   NORTH_GG_REG_MAP은 프로파일이 들고 있는 '관할 특보구역 코드' 정본이라
+        #   이름 충돌이 원천적으로 없다. 경기 육상 특보구역은 전부 L101xxxx 계열이다.
+        _rid = str(reg_id or '')
+        is_north_gg = _rid in NORTH_GG_REG_MAP
+        # 경기 전체(관할 밖 경기 시군 포함) — 화면의 '경기도 특보' 집계용
+        is_gyeonggi = is_north_gg or _rid.startswith('L101')
 
         # 시간 포맷
         def fmt(s):

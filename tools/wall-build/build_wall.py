@@ -129,8 +129,9 @@ patch("""      { rank:0, name:'평상', fg:'#2ad19a', bg:'rgba(42,209,154,.12)',
 # ── 시간대별 예보 → 메테오그램(기온선+체감선+강수막대, 실제 예보) ──
 # (e) st() 반환에 실제 hourly 실어보내기
 patch('feels, effHum, wet, fireRisk, windDeg: Math.round(r3*360),',
-      'feels, effHum, wet, fireRisk, hourly:(g&&g.hourly)?g.hourly:null, windDeg: Math.round(r3*360),',
-      'st() → hourly')
+      'feels, effHum, wet, fireRisk, hourly:(g&&g.hourly)?g.hourly:null, '
+      'windDeg: (g && g.wdeg != null) ? Math.round(g.wdeg) : null,',
+      'st() → hourly + 풍향 실값')
 
 # (f) hours 생성: 합성 → 실제 예보 우선 (정규식으로 블록 교체)
 HOURS_NEW = '''// hourly — 실제 예보(있으면) 우선, 없으면 합성 곡선(14시 최고·새벽 최저)
@@ -434,6 +435,33 @@ patch("""      msgs = ((EXT().msgs || MSGS)[s.name] || MSGS['기본']).map(m=>({
       });""",
       '재난문자 종류별 색 (호우=파랑, 강풍=주황)')
 
+# ── (j8) 풍향 — 난수를 실측값으로 ★중요 ──────────────────────────────
+# 원본 디자인은 풍향을 관서번호 기반 의사난수(r3)로 만들었다. 풍속·순간풍속은 실측인데
+# 풍향만 지어낸 값이라, 벽면의 화살표와 '남서' 같은 방위 글자가 실제와 무관했다.
+# 실제 풍향은 데이터에 이미 있었다(AWS wds, 기상청 실황 vec) — 안 쓰고 있었을 뿐이다.
+# 위 stations에 wdeg를 실어 보내고(st() 패치), 값이 없을 땐 '—'로 비운다.
+# 주의: windDeg가 null일 때 원본 계산식 (null+22.5)%360/45 → 0 → '북'이 되어
+#       '자료 없음'이 '북풍'으로 둔갑한다. 그래서 세 곳 모두 null을 먼저 걸러야 한다.
+patch("      windDir: ['북','북동','동','남동','남','남서','서','북서']"
+      "[Math.floor(((s.windDeg+22.5)%360)/45)], windDeg: s.windDeg,",
+      "      windDir: (s.windDeg==null ? '—' : ['북','북동','동','남동','남','남서','서','북서']"
+      "[Math.floor(((s.windDeg+22.5)%360)/45)]), windDeg: (s.windDeg==null ? 0 : s.windDeg),\n"
+      "      windArrow: (s.windDeg==null ? '' : '↑'),",
+      '풍향 방위글자 → 실값·자료없으면 —')
+
+patch('<div style="font-size:52px;line-height:1;color:var(--acc,#ff7a2f);'
+      'transform:rotate({{ windDeg }}deg);">↑</div>',
+      '<div style="font-size:52px;line-height:1;color:var(--acc,#ff7a2f);'
+      'transform:rotate({{ windDeg }}deg);">{{ windArrow }}</div>',
+      '풍향 화살표 → 자료 없으면 숨김')
+
+patch("      note:'실효습도 '+s.effHum+'% · 풍속 '+s.wind+'m/s · 풍향 '"
+      "+['북','북동','동','남동','남','남서','서','북서'][Math.floor(((s.windDeg+22.5)%360)/45)],",
+      "      note:'실효습도 '+s.effHum+'% · 풍속 '+s.wind+'m/s · 풍향 '"
+      "+(s.windDeg==null ? '—' : ['북','북동','동','남동','남','남서','서','북서']"
+      "[Math.floor(((s.windDeg+22.5)%360)/45)]),",
+      '산불 설명줄 풍향 → 실값')
+
 # ── (m) 하단 관서 레일 — 관서 수에 맞춰 칸·높이 자동 ──────────────────
 # 원본은 'repeat(11,1fr)'에 높이 150px로 박혀 있다. 경기북부(11개)에 맞춘 값이라
 # 경기남부(21개)에서는 21개가 11칸 그리드에 들어가 2줄이 되는데 높이는 그대로라
@@ -644,6 +672,10 @@ INJECT = r'''
           rain:nv(o.rain_mm), pop:nv(o.rain_pop), icon:(o.icon||wicon(o.weather)), wx:wxType(o.weather,o.hour) };
       });
       return { temp:nv(r.temp), humid:nv(r.humid), wind:nv(w.ws10!=null?w.ws10:r.wind), gust:nv(w.wss),
+        /* 풍향(도) — 풍속과 같은 AWS 지점의 실측(wds)을 쓰고, 없으면 기상청 실황(vec).
+           둘 다 없으면 null → 화면에 '—'. 예전엔 이 값이 아예 없어서 벽면이 관서번호로
+           만든 난수를 풍향으로 띄웠다(2026-08-17 점검에서 발견). */
+        wdeg:nv(w.wds!=null?w.wds:r.vec),
         rain:nv(a.rn60!=null?a.rn60:r.rain), pm10:nv(pm.pm10),
         feels:nv(det.feels_like!=null?det.feels_like:r.feels), eff:nv(r.effHumid),
         hourly:(hrs.length?hrs:null) };

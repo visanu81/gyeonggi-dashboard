@@ -1087,7 +1087,7 @@ http://scripts.sil.org/OFL
             </div>
             <div style="background:var(--panel2,#1b2230);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:6px;">
               <div style="font-size:29px;font-weight:520;color:var(--dim,#8e9bb0);">풍향</div>
-              <div style="display:flex;align-items:center;gap:12px;"><div style="font-size:74px;font-weight:660;line-height:1;">{{ windDir }}</div><div style="font-size:52px;line-height:1;color:var(--acc,#ff7a2f);transform:rotate({{ windDeg }}deg);">↑</div></div>
+              <div style="display:flex;align-items:center;gap:12px;"><div style="font-size:74px;font-weight:660;line-height:1;">{{ windDir }}</div><div style="font-size:52px;line-height:1;color:var(--acc,#ff7a2f);transform:rotate({{ windDeg }}deg);">{{ windArrow }}</div></div>
             </div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
@@ -1409,7 +1409,7 @@ class Component extends DCLogic {
     const fireRisk = wet ? 0 : (effHum<=35 && wind>=4 ? 2 : (effHum<=45 ? 1 : 0));
     const skyIdx = rain1h >= 20 ? 4 : (wet ? 3 : (r2 > .72 ? 1 : 0));
     return { i, name, temp:+temp, humid, wind:+wind, gust:(g && g.gust!=null)?+g.gust:+(wind*1.7).toFixed(1), rain1h, sky:SKY[skyIdx],
-      feels, effHum, wet, fireRisk, hourly:(g&&g.hourly)?g.hourly:null, windDeg: Math.round(r3*360),
+      feels, effHum, wet, fireRisk, hourly:(g&&g.hourly)?g.hourly:null, windDeg: (g && g.wdeg != null) ? Math.round(g.wdeg) : null,
       pm10: (g && g.pm10 != null) ? g.pm10 : Math.round(14 + r1*46) };
   }
 
@@ -1616,7 +1616,7 @@ class Component extends DCLogic {
     const fireRisk = s.fireRisk;
     imp.push({ icon:'🔥', title:'산불·화재 확산',
       level:['낮음','주의','높음'][fireRisk],
-      note:'실효습도 '+s.effHum+'% · 풍속 '+s.wind+'m/s · 풍향 '+['북','북동','동','남동','남','남서','서','북서'][Math.floor(((s.windDeg+22.5)%360)/45)],
+      note:'실효습도 '+s.effHum+'% · 풍속 '+s.wind+'m/s · 풍향 '+(s.windDeg==null ? '—' : ['북','북동','동','남동','남','남서','서','북서'][Math.floor(((s.windDeg+22.5)%360)/45)]),
       color:['var(--cGreen,#2ad19a)','var(--cAmber,#ffb020)','var(--cRed,#ff5a5a)'][fireRisk], bg:['rgba(42,209,154,.08)','rgba(255,176,32,.1)','rgba(255,77,77,.12)'][fireRisk] });
     const heat = s.feels>=38 ? 2 : (s.feels>=33 ? 1 : 0);
     imp.push({ icon:'🌡️', title:'온열질환 구급 수요',
@@ -1727,7 +1727,8 @@ class Component extends DCLogic {
       effHumColor: s.effHum<=35 ? 'var(--cRed,#ff5a5a)' : (s.effHum<=45 ? 'var(--cAmber,#ffb020)' : 'var(--fg,#f2f5fa)'),
       wind: s.wind.toFixed(1), gust: s.gust.toFixed(1),
       windColor: s.wind>=12 ? 'var(--cRed,#ff5a5a)' : (s.wind>=8 ? 'var(--cAmber,#ffb020)' : 'var(--fg,#f2f5fa)'),
-      windDir: ['북','북동','동','남동','남','남서','서','북서'][Math.floor(((s.windDeg+22.5)%360)/45)], windDeg: s.windDeg,
+      windDir: (s.windDeg==null ? '—' : ['북','북동','동','남동','남','남서','서','북서'][Math.floor(((s.windDeg+22.5)%360)/45)]), windDeg: (s.windDeg==null ? 0 : s.windDeg),
+      windArrow: (s.windDeg==null ? '' : '↑'),
       acc1: s.rain1h.toFixed(1), acc3: (s.rain1h*2.4).toFixed(1), acc6: (s.rain1h*4.1).toFixed(1), acc12: (s.rain1h*5.6).toFixed(1),
       hours: hourList, tMax, tMin, meteo: this.meteoEl(hours, tMin, tMax), pop: Math.max.apply(null, hours.map(function(h){return h.pop||0;})),
       warns: warnList, noWarn: warnList.length === 0, warnCount: warnList.length, prelimCount: warnList.length ? 1 : 0,
@@ -1835,6 +1836,10 @@ class Component extends DCLogic {
           rain:nv(o.rain_mm), pop:nv(o.rain_pop), icon:(o.icon||wicon(o.weather)), wx:wxType(o.weather,o.hour) };
       });
       return { temp:nv(r.temp), humid:nv(r.humid), wind:nv(w.ws10!=null?w.ws10:r.wind), gust:nv(w.wss),
+        /* 풍향(도) — 풍속과 같은 AWS 지점의 실측(wds)을 쓰고, 없으면 기상청 실황(vec).
+           둘 다 없으면 null → 화면에 '—'. 예전엔 이 값이 아예 없어서 벽면이 관서번호로
+           만든 난수를 풍향으로 띄웠다(2026-08-17 점검에서 발견). */
+        wdeg:nv(w.wds!=null?w.wds:r.vec),
         rain:nv(a.rn60!=null?a.rn60:r.rain), pm10:nv(pm.pm10),
         feels:nv(det.feels_like!=null?det.feels_like:r.feels), eff:nv(r.effHumid),
         hourly:(hrs.length?hrs:null) };
