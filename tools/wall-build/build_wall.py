@@ -296,6 +296,77 @@ _m = re.subn(r'<div style="flex:1;min-height:0;display:grid;grid-template-column
 assert _m[1] == 1, '시간대별 마크업 교체 실패(%d)' % _m[1]
 h = _m[0]; print('패치: 템플릿 → 메테오그램')
 
+# ── (u) 관할 위험구역 → 6시간 강수예측 ★사장님 요청(2026-08-17) ──────────
+# 왜 바꾸나 — 위험구역은 11개 관서 중 동두천(44)·의정부(19) 두 곳만 구글시트에 등록돼
+# 있어, 관서가 15초마다 순환하는 벽면에서 북부는 시간의 82%, 남부는 100%가
+# '등록된 위험구역 없음'이었다. 빈 카드가 화면 1/6을 계속 차지하고 있었다.
+# 무엇으로 바꾸나 — 6시간 강수예측(초단기예보). 매 회차 수집하면서도 지도·광역·호우·
+# 상황실 어디에서도 안 쓰던 유일한 데이터다(전 화면 grep 확인). 시간대별 예보(단기,
+# 3시간마다 갱신)와 달리 매시간 갱신이라 앞으로 몇 시간은 훨씬 정확하고,
+# 낙뢰(lgt)는 이 자료에만 있다 — 다른 어느 화면에도 안 나온다.
+# 위험구역 자체는 지도 화면(관서 focus)에 그대로 남아 있다.
+
+# (u1)은 INJECT(빌드 스크립트 자체 코드)라 아래에서 직접 치환한다.
+
+# (u2) 화면 요소 생성 메서드
+ULTRA = r"""ultraEl(rows){
+    const R = window.React.createElement;
+    const DIM='var(--dim,#8e9bb0)', BLUE='#54aaff', AMBER='#ffb020';
+    /* 자료가 없으면 지어내지 않는다(2026-08-15·17에 걷어낸 것과 같은 원칙). */
+    if(!rows || !rows.length) return R('div',{style:{flex:1,display:'flex',alignItems:'center',
+      justifyContent:'center',fontSize:'38px',fontWeight:700,color:DIM}},'초단기예보 자료 없음');
+    const N=rows.length;
+    const cell=(o,i)=>{
+      const wet=(o.rain||0)>0, hi=(o.pop||0)>=60;
+      return R('div',{key:i,style:{flex:'1 1 0',minWidth:0,display:'flex',flexDirection:'column',
+        alignItems:'center',justifyContent:'center',gap:'6px',padding:'10px 4px',borderRadius:'14px',
+        background:(wet?'rgba(84,170,255,.10)':'transparent')}},
+        R('div',{style:{fontSize:'27px',fontWeight:700,color:DIM,whiteSpace:'nowrap'}}, o.time||'-'),
+        R('div',{style:{fontSize:'46px',fontWeight:800,lineHeight:1.2,whiteSpace:'nowrap',
+          color:(wet?BLUE:'currentColor'),opacity:(wet?1:0.45)}},
+          (o.rain!=null? (wet? (+o.rain).toFixed(1) : '0') : '-'),
+          R('span',{style:{fontSize:'24px',fontWeight:700,marginLeft:'3px',color:DIM}},'mm')),
+        R('div',{style:{fontSize:'26px',fontWeight:(hi?800:600),color:(hi?BLUE:DIM),whiteSpace:'nowrap'}},
+          (o.pop!=null?o.pop:0)+'%'),
+        /* \uac15\uc218\ud615\ud0dc \u2014 \uae30\uc0c1\uccad\uc740 \ube44\uac00 \uc5c6\uc744 \ub54c '\uc5c6\uc74c'\uc744 \uc900\ub2e4. \uadf8\ub300\ub85c \uc4f0\uba74 \uc5ec\uc12f \uce78\uc774
+           \uc804\ubd80 '\uc5c6\uc74c'\uc73c\ub85c \ub3c4\ubc30\ub3fc \uc77d\uc744 \uac8c \uc5c6\ub2e4. \uc2e4\uc81c \ud615\ud0dc(\ube44\u00b7\ub208\u00b7\uc18c\ub098\uae30)\uc77c \ub54c\ub9cc \uc4f4\ub2e4. */
+        (function(){ var k=(o.pty && o.pty !== '\uc5c6\uc74c') ? o.pty : '';
+          return R('div',{style:{fontSize:'24px',fontWeight:700,whiteSpace:'nowrap',
+            color:(o.lgt?AMBER:BLUE),opacity:(k||o.lgt)?1:0}},
+            (o.lgt?'\u26a1 ':'')+(k||(o.lgt?'\ub099\ub8b0':'\u00b7'))); })());
+    };
+    return R('div',{style:{flex:1,minHeight:0,display:'flex',alignItems:'stretch',gap:'6px'}},
+      rows.map(cell));
+  }"""
+patch('  // 특보는 실황값에서 파생',
+      '  ' + ULTRA + '\n\n  // 특보는 실황값에서 파생',
+      'ultraEl 주입')
+
+# (u3) renderVals에 바인딩 — 합계·최대확률도 같이 계산해 부제에 쓴다
+patch('      risks: risks.slice(0,3), noRisk: risks.length === 0, riskCount: risks.length,',
+      """      risks: risks.slice(0,3), noRisk: risks.length === 0, riskCount: risks.length,
+      ultraEl: this.ultraEl((EXT().ultra||{})[s.name]),
+      ultraSum: (function(a){ if(!a||!a.length) return '\\u2014';
+        var t=a.reduce(function(x,o){ return x+(o.rain||0); },0);
+        var p=a.reduce(function(x,o){ return Math.max(x,o.pop||0); },0);
+        var g=a.some(function(o){ return o.lgt; });
+        return (t>0? ('6시간 '+t.toFixed(1)+'mm') : '강수 없음')+' \\u00b7 최대확률 '+p+'%'+(g?' \\u00b7 \\u26a1낙뢰':''); })
+        ((EXT().ultra||{})[s.name]),""",
+      'renderVals → 6시간 강수예측')
+
+# (u4) 카드 마크업 교체 — 제목·부제 + 6칸
+_u = re.subn(
+    r'<div style="font-size:40px;font-weight:800;">관할 위험구역</div>\s*'
+    r'<div style="font-size:30px;font-weight:700;color:var\(--dim,#8e9bb0\);">\{\{ riskCount \}\}곳 등록</div>\s*'
+    r'</div>\s*<div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;">.*?</sc-if>\s*</div>',
+    '<div style="font-size:40px;font-weight:800;">6시간 강수예측</div>\n'
+    '              <div style="font-size:28px;font-weight:700;color:var(--dim,#8e9bb0);">{{ ultraSum }}</div>\n'
+    '            </div>\n'
+    '            <div style="flex:1;min-height:0;display:flex;">{{ ultraEl }}</div>',
+    h, count=1, flags=re.S)
+assert _u[1] == 1, '위험구역 카드 마크업 교체 실패(%d)' % _u[1]
+h = _u[0]; print('패치: 위험구역 카드 → 6시간 강수예측')
+
 # (j) 하천·댐 카드 재작성 — 공식 기준 판정 + 댐 별도 표기 + 가짜값 제거
 #  · 원본은 상태를 '위험수위의 50/70/88%'라는 임의 비율로 매겼다. 우리 데이터엔 한강홍수통제소
 #    공식 주의보(warning)/경보(danger) 수위가 있으므로 그걸로 판정한다. (예: 연천 필승교는
@@ -747,8 +818,20 @@ INJECT = r'''
         outflow:nv(di.total_outflow!=null ? di.total_outflow : di.outflow) };
     }).filter(function(x){ return x; });
 
+    /* 6시간 강수예측 — 관서별. ultra_fcst는 시군 키라 관서명을 sig()로 바꿔 찾는다
+       (일산은 고양 값을 쓴다 — 지역기상이 같다). 없으면 빈 배열 → 화면에 '자료 없음'.
+       2026-08-17 추가: 위험구역 카드 자리에 넣는다. 매 회차 수집하면서도 어느 화면에서도
+       안 쓰던 유일한 데이터였다. */
+    var ultra={};
+    NAMES.forEach(function(nm){
+      var a=(D.ultra_fcst||{})[sig(nm)]||[];
+      ultra[nm]=a.slice(0,6).map(function(o){
+        return { time:String(o.time||'').slice(0,5), rain:nv(o.rain_mm), pop:nv(o.pop),
+                 pty:(o.pty_txt||''), lgt:(nv(o.lgt)||0)>0, temp:nv(o.temp) };
+      });
+    });
     return { stations:stations, rivers:rivers, msgs:msgs, warns:warnsByStation(D.warnings),
-             keyRivers:keyRivers, updated:D.updated };
+             keyRivers:keyRivers, ultra:ultra, updated:D.updated };
   }
   /* ── 위험구역: 구글시트 관서별 탭 (지도.html loadRiskSheet 포팅, name/type/note만) ── */
   function parseCSV(txt){ var lines=txt.replace(/\r/g,'').split('\n').filter(function(l){return l.length;});
