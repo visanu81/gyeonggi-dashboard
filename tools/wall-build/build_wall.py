@@ -575,6 +575,62 @@ patch("    return {\n      stageRef: (this.stageRef = this.stageRef || React.cre
       "      railStyle: _RAIL,",
       '관서 레일 크기 계산')
 
+# ── (m2) 관서 레일에 강수량 얹기 ★사장님 요청(2026-08-17) ─────────────────
+# 사장님: "어느 관서가 지금 제일 많이 맞고 있나"가 벽면에 없다.
+# 지금은 관서가 15초마다 돌아 11곳을 다 보려면 2분 45초가 걸린다 — 호우 때 너무 길다.
+#
+# 카드를 하나 더 만들거나 자동 전환(스와이프)을 넣는 대신 '늘 떠 있는' 하단 레일에
+# 한 줄을 얹었다. 전환 타이머를 늘리면 관서 순환(15초)과 겹쳐서 '지금 뭘 보는지'가
+# 헷갈리고, 급할 때 보고 싶은 조합을 언제 볼지 모르게 된다 — 벽면에선 치명적이다.
+# 레일은 항상 11곳이 동시에 보이므로 비교가 즉시 된다.
+#
+# 무슨 값인가 — 시간당(rn60)과 일누적(rnday). 12시간 누적은 이미 '현재 실황' 카드에
+# 있어 뺐고, 일누적은 지금까지 어느 화면에도 없던 값이다.
+# 비가 없는 관서는 '—'로 조용히 두고, 오는 곳만 파랗게 띄워 한눈에 잡히게 한다.
+
+# (m2-1) stAt 반환에 일누적 싣기 (레일이 stAt 결과를 쓴다)
+patch('rain1h, sky:SKY[skyIdx],',
+      'rain1h, rday:((g && g.rday != null) ? g.rday : 0), sky:SKY[skyIdx],',
+      'stAt → 일누적')
+
+# (m2-2) 레일 값 계산 — dc-runtime의 {{ }}에는 삼항연산자를 못 쓰므로 여기서 다 만든다
+patch("      return { name:n, temp:ss.temp.toFixed(1), "
+      "tag: ws.length ? ws[0].type.replace(/경보|주의보/,'') : '평상',",
+      "      const _r1 = ss.rain1h || 0, _rd = ss.rday || 0, _wetR = (_r1 > 0 || _rd > 0);\n"
+      "      return { name:n, temp:ss.temp.toFixed(1), "
+      "tag: ws.length ? ws[0].type.replace(/경보|주의보/,'') : '평상',\n"
+      "        rainTxt: _wetR ? ('시간당 ' + _r1.toFixed(1) + ' · 일 ' + _rd.toFixed(1) + 'mm') : '—',\n"
+      "        rainColor: cur ? '#12161d' : (_wetR ? '#54aaff' : 'var(--dim,#8e9bb0)'),\n"
+      "        rainWeight: _wetR ? 800 : 600,\n"
+      "        rainOpacity: _wetR ? 1 : 0.35,",
+      '레일 값 → 강수량')
+
+# (m2-3) 레일 칸 마크업 — 세 번째 줄 추가.
+# 칸 높이는 150px 고정이라 여백·기온을 조금 줄여 자리를 만든다
+# (안쪽 높이 118 → 126px: 관서명 40 + 기온 44 + 강수 26 + gap 12).
+patch('style="cursor:pointer;border-radius:18px;padding:16px 18px;display:flex;'
+      'flex-direction:column;justify-content:center;gap:6px;',
+      'style="cursor:pointer;border-radius:18px;padding:12px 18px;display:flex;'
+      'flex-direction:column;justify-content:center;gap:5px;',
+      '레일 칸 여백 축소(강수 줄 자리)')
+patch('<div style="font-size:50px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;'
+      'color:{{ s.fg }};">{{ s.temp }}°</div>',
+      '<div style="font-size:44px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;'
+      'color:{{ s.fg }};">{{ s.temp }}°</div>',
+      '레일 기온 50 → 44px')
+patch('            <div style="font-size:28px;font-weight:600;color:{{ s.sub }};white-space:nowrap;'
+      'overflow:hidden;text-overflow:ellipsis;">{{ s.tag }}</div>\n'
+      '          </div>\n'
+      '        </div>',
+      '            <div style="font-size:28px;font-weight:600;color:{{ s.sub }};white-space:nowrap;'
+      'overflow:hidden;text-overflow:ellipsis;">{{ s.tag }}</div>\n'
+      '          </div>\n'
+      '          <div style="font-size:25px;font-weight:{{ s.rainWeight }};color:{{ s.rainColor }};'
+      'opacity:{{ s.rainOpacity }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'
+      'line-height:1;">{{ s.rainTxt }}</div>\n'
+      '        </div>',
+      '레일에 강수량 줄 추가')
+
 # ── (k) 상단바에 '임진강 감시' 카드 ─────────────────────────────────────
 # 필승교·군남댐은 관서 순환과 무관하게 늘 봐야 하는 지점이다(필승교는 북측 황강댐
 # 무단방류를 가장 먼저 잡는 상류 지점, 군남댐 방류량은 곧 하류 임진강 수위).
@@ -771,6 +827,10 @@ INJECT = r'''
            만든 난수를 풍향으로 띄웠다(2026-08-17 점검에서 발견). */
         wdeg:nv(w.wds!=null?w.wds:r.vec),
         rain:nv(a.rn60!=null?a.rn60:r.rain), pm10:nv(pm.pm10),
+        /* 일누적 강수 — 하단 관서 레일에서 '어디가 제일 많이 맞았나'를 비교하는 값.
+           1시간(rain)은 '지금 오나', 일누적은 '얼마나 쌓였나'를 말한다. 일누적은
+           지금까지 어느 화면에도 없었다(실황 카드는 1·3·6·12시간만). 2026-08-17 추가. */
+        rday:nv(a.rnday),
         feels:nv(det.feels_like!=null?det.feels_like:r.feels), eff:nv(r.effHumid),
         hourly:(hrs.length?hrs:null) };
     });
