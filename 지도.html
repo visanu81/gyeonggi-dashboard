@@ -1024,6 +1024,26 @@ class Component extends DCLogic {
     });
   }
 
+  /* 권역을 고르면 그 권역만 감싸는 지도 틀(x y w h)을 돌려준다. 없으면 null.
+     틀(viewBox)과 상자 비율(aspect-ratio)이 반드시 같은 값을 써야 한다 —
+     하나만 좁히면 남는 쪽에 빈칸이 생긴다(2026-08-20 사장님 지적: 북부 선택 시
+     지도 아래 540px 공백). 그래서 계산을 여기 한 곳에 둔다. */
+  scopeBox(){
+    const geo=(typeof window!=='undefined'&&window.MAPGEO)?window.MAPGEO:null;
+    if(!geo||!geo.regions) return null;
+    const RC=(window.REGION_CONF||{}), sc=this.state.scope;
+    if(!RC.scopes || !sc || sc==='전체' || !RC.scopes[sc]) return null;
+    const keep=new Set(RC.scopes[sc]);
+    let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9,n=0;
+    geo.regions.forEach(function(g){
+      if(!keep.has(g.name) || g.bx==null) return;
+      n++; x0=Math.min(x0,g.bx); y0=Math.min(y0,g.by);
+      x1=Math.max(x1,g.bx+(g.bw||0)); y1=Math.max(y1,g.by+(g.bh||0));
+    });
+    if(!n || !(x1>x0&&y1>y0)) return null;
+    const pad=Math.max(x1-x0,y1-y0)*0.03;
+    return { x:x0-pad, y:y0-pad, w:(x1-x0)+pad*2, h:(y1-y0)+pad*2 };
+  }
   mapRegions(stations){
     const geo=(typeof window!=='undefined'&&window.MAPGEO)?window.MAPGEO:null;
     if(!geo||!geo.regions) return [];
@@ -1743,7 +1763,10 @@ class Component extends DCLogic {
     // 예전엔 1000/1030(북부 모양)이 박혀 있어, 남부 지도를 세로로 긴 틀에 넣느라
     // 위아래 여백만 생기고 지도는 작게 그려졌다.
     const _mg = (typeof window!=='undefined' && window.MAPGEO) ? window.MAPGEO : null;
-    const _mapAR = _mg && _mg.W && _mg.H ? (_mg.W + ' / ' + _mg.H) : '1000 / 1030';
+    /* 상자 비율 — 권역이 걸려 있으면 그 권역 틀의 비율. viewBox 와 같은 값이어야 한다. */
+    const _sb = this.scopeBox();
+    const _mapAR = _sb ? (_sb.w.toFixed(1) + ' / ' + _sb.h.toFixed(1))
+                       : (_mg && _mg.W && _mg.H ? (_mg.W + ' / ' + _mg.H) : '1000 / 1030');
     return {
       rootRef:this.rootRef, mapRef:this.mapRef, theme:st.theme, demo:st.demo,
       // 상황실(벽면) 모드 — 위험 시 wallAlarm 클래스로 경보색 전환(애니는 스타일시트)
@@ -1777,7 +1800,12 @@ class Component extends DCLogic {
       // map
       stations,
       mapRegions:this.mapRegions(stations),
-      mapViewBox:((typeof window!=='undefined'&&window.MAPGEO)?window.MAPGEO.viewBox:'0 0 1000 1030'),
+      mapViewBox:(function(self){
+        const b=self.scopeBox();
+        if(b) return b.x.toFixed(1)+' '+b.y.toFixed(1)+' '+b.w.toFixed(1)+' '+b.h.toFixed(1);
+        const g=(typeof window!=='undefined'&&window.MAPGEO)?window.MAPGEO:null;
+        return g?g.viewBox:'0 0 1000 1030';
+      })(this),
       mapLegend:[ {label:'평상', color:'var(--mapFill)'}, {label:'주의보', color:'var(--warn)'}, {label:'경보', color:'var(--severe)'} ],
       // focus zoom + risk zones
       focus:st.focus, noFocus:!st.focus,
