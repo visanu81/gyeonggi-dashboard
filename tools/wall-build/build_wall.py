@@ -597,9 +597,14 @@ patch('rain1h, sky:SKY[skyIdx],',
 patch("      return { name:n, temp:ss.temp.toFixed(1), "
       "tag: ws.length ? ws[0].type.replace(/경보|주의보/,'') : '평상',",
       "      const _r1 = ss.rain1h || 0, _rd = ss.rday || 0, _wetR = (_r1 > 0 || _rd > 0);\n"
+      "      /* 칸이 좁으면(경기 전체 31개 = 16칸, 한 칸 220px) 긴 문구가 잘린다.\n"
+      "         잘린 숫자는 '무엇의 값인지' 모르게 되어 위험하므로, 좁을 땐 누적 하나만\n"
+      "         이름표를 붙여 보여준다. 넓을 땐(11·21개 = 326px) 둘 다 보여준다. */\n"
+      "      const _narrow = NAMES.length > 22;\n"
       "      return { name:n, temp:ss.temp.toFixed(1), "
       "tag: ws.length ? ws[0].type.replace(/경보|주의보/,'') : '평상',\n"
-      "        rainTxt: _wetR ? ('시간당 ' + _r1.toFixed(1) + ' · 일 ' + _rd.toFixed(1) + 'mm') : '—',\n"
+      "        rainTxt: _wetR ? (_narrow ? ('일 ' + _rd.toFixed(1) + 'mm')\n"
+      "               : ('시간당 ' + _r1.toFixed(1) + ' · 일 ' + _rd.toFixed(1) + 'mm')) : '—',\n"
       "        rainColor: cur ? '#12161d' : (_wetR ? '#54aaff' : 'var(--dim,#8e9bb0)'),\n"
       "        rainWeight: _wetR ? 800 : 600,\n"
       "        rainOpacity: _wetR ? 1 : 0.35,",
@@ -630,6 +635,25 @@ patch('            <div style="font-size:28px;font-weight:600;color:{{ s.sub }};
       'line-height:1;">{{ s.rainTxt }}</div>\n'
       '        </div>',
       '레일에 강수량 줄 추가')
+
+# (m3) 순환 주기를 관서 수에 맞춘다
+# 15초 고정이라 경기 전체(31개)에서는 한 바퀴가 7분 45초다 — 벽면에서 특정 시군을
+# 다시 보려면 8분을 기다려야 한다는 뜻이라 쓸 수가 없다. 한 바퀴를 3분 안쪽으로
+# 맞추되, 사람이 읽을 수 있는 최소 시간(6초)은 지킨다.
+#   11개 → 15초(한 바퀴 2분 45초) · 21개 → 8초(2분 48초) · 31개 → 6초(3분 6초)
+#
+# ⚠ 고칠 곳이 두 군데다 — 실제 타이머와 화면에 적히는 '순환 N초'. 하나만 고치면
+#   '15초'라고 써 놓고 6초마다 넘어가는(또는 그 반대) 화면이 된다.
+# ⚠ props.rotateSeconds 에는 디자인 편집기 기본값 15가 늘 들어 있어서 `|| 계산식`
+#   폴백이 절대 안 걸린다(실제로 그렇게 만들었다가 31개에서 15초가 그대로 나왔다).
+#   그래서 props 를 보지 않고 관서 수로 바로 계산한다.
+ROT = 'Math.max(6, Math.min(15, Math.round(170 / Math.max(1, NAMES.length))))'
+patch('      const rot = (this.props.rotateSeconds || 15) * 1000;',
+      '      const rot = (' + ROT + ') * 1000;',
+      '순환 타이머 → 관서 수에 맞춰 자동')
+patch('    const rotSec = this.props.rotateSeconds || 15;',
+      '    const rotSec = ' + ROT + ';',
+      '순환 표시 → 관서 수에 맞춰 자동')
 
 # ── (k) 상단바에 '임진강 감시' 카드 ─────────────────────────────────────
 # 필승교·군남댐은 관서 순환과 무관하게 늘 봐야 하는 지점이다(필승교는 북측 황강댐

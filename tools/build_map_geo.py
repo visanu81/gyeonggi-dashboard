@@ -62,6 +62,14 @@ GROUPS = {
         '광주': ['31250'], '여주': ['31280'], '양평': ['31380'],
     },
 }
+# 경기 전체(ggweather) — 북부 10 + 남부 21 = 경기도 31개 시군.
+# ⚠ 일산은 여기서 고양에 합친다. 일산은 '소방서 관할' 단위지 시군이 아니라서,
+#   경기도 지도에 따로 그리면 없는 행정구역이 하나 생긴 것처럼 보인다.
+#   (북부 전용 지도에서는 관서가 단위라 지금처럼 나눠 그리는 게 맞다)
+GROUPS['all'] = dict(GROUPS['south'])
+GROUPS['all'].update({k: v for k, v in GROUPS['north'].items() if k not in ('고양', '일산')})
+GROUPS['all']['고양'] = GROUPS['north']['고양'] + GROUPS['north']['일산']   # 덕양+일산동+일산서
+
 # 화면 표시 순서(북→남, 서→동). 지도 자체엔 영향 없고 파일 내 순서만 정한다.
 ORDER = {
     'north': ['의정부', '양주', '동두천', '포천', '연천', '가평', '남양주', '구리',
@@ -70,6 +78,9 @@ ORDER = {
               '안양', '군포', '의왕', '안산', '수원', '용인', '이천', '여주', '화성',
               '오산', '안성', '평택'],
 }
+ORDER['all'] = (['연천', '포천', '동두천', '양주', '파주', '가평', '의정부', '고양',
+                 '남양주', '구리']                       # 북부 10 (일산은 고양에 포함)
+                + ORDER['south'])                        # 남부 21
 
 
 def load_geojson(refresh=False):
@@ -261,7 +272,7 @@ def verify():
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('--verify', action='store_true')
-    ap.add_argument('--profile', choices=['north', 'south'])
+    ap.add_argument('--profile', choices=['north', 'south', 'all'])
     ap.add_argument('--merge', action='store_true', help='시 안의 구 경계선 제거')
     ap.add_argument('--out', help='출력 파일명 (프로젝트 루트 기준)')
     a = ap.parse_args()

@@ -1336,7 +1336,7 @@ class Component extends DCLogic {
     this.setState({ theme: this.props.startTheme || 'dark' });
     this.fit(); window.addEventListener('resize', this._fit = ()=>this.fit());
     this.timer = setInterval(()=>{
-      const rot = (this.props.rotateSeconds || 15) * 1000;
+      const rot = (Math.max(6, Math.min(15, Math.round(170 / Math.max(1, NAMES.length))))) * 1000;
       const st = this.state;
       let next = { now: new Date() };
       if (st.playing && Date.now() - st.started >= rot){
@@ -1697,8 +1697,13 @@ class Component extends DCLogic {
       const ss = this.stAt(k), ws = this.warnsOf(ss);
       const sev = ws.length ? Math.max.apply(null, ws.map(x=>x.sev)) : 0;
       const _r1 = ss.rain1h || 0, _rd = ss.rday || 0, _wetR = (_r1 > 0 || _rd > 0);
+      /* 칸이 좁으면(경기 전체 31개 = 16칸, 한 칸 220px) 긴 문구가 잘린다.
+         잘린 숫자는 '무엇의 값인지' 모르게 되어 위험하므로, 좁을 땐 누적 하나만
+         이름표를 붙여 보여준다. 넓을 땐(11·21개 = 326px) 둘 다 보여준다. */
+      const _narrow = NAMES.length > 22;
       return { name:n, temp:ss.temp.toFixed(1), tag: ws.length ? ws[0].type.replace(/경보|주의보/,'') : '평상',
-        rainTxt: _wetR ? ('시간당 ' + _r1.toFixed(1) + ' · 일 ' + _rd.toFixed(1) + 'mm') : '—',
+        rainTxt: _wetR ? (_narrow ? ('일 ' + _rd.toFixed(1) + 'mm')
+               : ('시간당 ' + _r1.toFixed(1) + ' · 일 ' + _rd.toFixed(1) + 'mm')) : '—',
         rainColor: cur ? '#12161d' : (_wetR ? 'var(--cBlue,#54aaff)' : 'var(--dim,#8e9bb0)'),
         rainWeight: _wetR ? 800 : 600,
         rainOpacity: _wetR ? 1 : 0.35,
@@ -1710,7 +1715,7 @@ class Component extends DCLogic {
         go: ()=> this.setState({ idx:k, started:Date.now() }) };
     });
 
-    const rotSec = this.props.rotateSeconds || 15;
+    const rotSec = Math.max(6, Math.min(15, Math.round(170 / Math.max(1, NAMES.length))));
     const prog = Math.min(100, (Date.now() - this.state.started) / (rotSec*1000) * 100);
 
     const _rn = NAMES.length;
