@@ -143,6 +143,14 @@ def main():
             '고양': ['1019667'],
             '일산': [],
         },
+        # 권역 필터 — 화면 위 '경기 전체 / 경기북부 / 경기남부' 선택.
+        # 고르면 지도·관서목록·상단요약·특보·하천이 모두 그 권역만 보인다.
+        # 목록은 손으로 적지 않고 북부 원본(region.js)에 있는지로 나눈다 —
+        # 관서가 늘거나 옮겨져도 다시 생성만 하면 맞는다.
+        'scopes': {
+            '경기북부': [x for x in order if x in set(n['order'])],
+            '경기남부': [x for x in order if x not in set(n['order'])],
+        },
         'wideNames': ['경기북부', '경기남부'],
         'order': order,
         'warnOrder': ['경기도'] + order,

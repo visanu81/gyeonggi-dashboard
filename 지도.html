@@ -112,7 +112,7 @@
             <span style="width:6px; height:6px; border-radius:50%; background:var(--safe); animation:dashBlink 1.6s infinite;"></span>LIVE
           </span>
         </div>
-        <div style="font-size:11.5px; color:var(--ink3); margin-top:1px; white-space:nowrap;">동두천소방서 · 11개 소방관서 실시간 모니터링</div>
+        <div style="font-size:11.5px; color:var(--ink3); margin-top:1px; white-space:nowrap;">{{scopeCountText}} 실시간 모니터링</div>
       </div>
     </div>
 
@@ -123,6 +123,14 @@
         <sc-if value="{{stationPickerOpen}}" hint-placeholder-val="{{false}}">
           <div onClick="{{toggleStationPicker}}" style="position:fixed; inset:0; z-index:59;"></div>
           <div style="position:absolute; top:calc(100% + 7px); left:0; z-index:61; background:var(--surface); border:1px solid var(--border); border-radius:13px; box-shadow:var(--sh3); padding:7px; min-width:158px; max-height:70vh; overflow:auto;">
+            <sc-if value="{{hasScopes}}" hint-placeholder-val="{{false}}">
+              <div style="font-size:10px; color:var(--ink3); font-weight:800; padding:5px 10px 6px;">권역</div>
+              <div style="display:flex; gap:5px; padding:0 6px 8px; border-bottom:1px solid var(--border); margin-bottom:6px;">
+                <sc-for list="{{scopeList}}" as="g" hint-placeholder-count="3">
+                  <div onClick="{{g.pick}}" style="flex:1; text-align:center; padding:7px 4px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:800; white-space:nowrap; background:{{g.bg}}; color:{{g.fg}}; border:1px solid {{g.bd}};">{{g.label}}</div>
+                </sc-for>
+              </div>
+            </sc-if>
             <div style="font-size:10px; color:var(--ink3); font-weight:800; padding:5px 10px 7px;">내 관서 선택</div>
             <sc-for list="{{stationList}}" as="s" hint-placeholder-count="11">
               <div onClick="{{s.pick}}" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 11px; border-radius:9px; cursor:pointer; background:{{s.selBg}};" style-hover="background:var(--surface2)">
@@ -194,7 +202,7 @@
       <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:15px 18px 10px;">
         <div>
           <div style="font-size:15px; font-weight:800; color:var(--ink); letter-spacing:-.3px;">경기북부 관서 상황도</div>
-          <div style="font-size:11.5px; color:var(--ink3); margin-top:2px;">지역을 누르면 확대 + 상세가 열립니다 · 11개 소방관서</div>
+          <div style="font-size:11.5px; color:var(--ink3); margin-top:2px;">지역을 누르면 확대 + 상세가 열립니다 · {{scopeCountOnly}}</div>
         </div>
         <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
           <sc-for list="{{mapLegend}}" as="lg" hint-placeholder-count="4">
@@ -636,10 +644,25 @@ class Component extends DCLogic {
       autoApplied: null,
       openRiskTypes: {},
       myStation: (function(){ var h=((window.REGION_CONF||{}).home)||'동두천'; try{ return (typeof localStorage!=='undefined' && localStorage.getItem('ggMyStation')) || h; }catch(e){ return h; } })(),
+      /* 마지막에 고른 권역을 기억한다. 저장된 값이 지금 지역에 없는 권역이면(예: 북부
+         전용 사이트에서 옛 값이 남아 있으면) 전체로 되돌린다. */
+      scope: (function(){ var g=((window.REGION_CONF||{}).scopes)||null; if(!g) return '전체';
+        try{ var v=(typeof localStorage!=='undefined') && localStorage.getItem('ggScope');
+          return (v && (v==='전체' || g[v])) ? v : '전체'; }catch(e){ return '전체'; } })(),
       stationPickerOpen: false
     };
   }
   setMyStation(name){ try{ if(typeof localStorage!=='undefined') localStorage.setItem('ggMyStation', name); }catch(e){} this.setState({myStation:name, stationPickerOpen:false}); }
+  /* 권역 전환. 지금 보고 있는 관서가 새 권역에 없으면 그 권역 첫 관서로 옮긴다
+     — 안 그러면 '선택된 관서'가 목록에 없는 상태가 되어 화면이 빈다. */
+  setScope(sc){
+    const RC=(window.REGION_CONF||{}), g=RC.scopes||{};
+    const list=(sc==='전체') ? (RC.order||[]) : (g[sc]||[]);
+    let st=this.state.myStation||RC.home;
+    if(list.length && list.indexOf(st)<0) st=list[0];
+    try{ if(typeof localStorage!=='undefined'){ localStorage.setItem('ggScope', sc); localStorage.setItem('ggMyStation', st); } }catch(e){}
+    this.setState({scope:sc, myStation:st, stationPickerOpen:false, focus:null});
+  }
   toggleStationPicker(){ this.setState({stationPickerOpen:!this.state.stationPickerOpen}); }
   componentDidMount(){
     this._clock = setInterval(()=>this.setState({now:new Date()}), 1000);
@@ -901,7 +924,32 @@ class Component extends DCLogic {
   fitMap(){ const el=this.mapRef.current; if(!el) return; const w=el.clientWidth; if(!w) return; let s=(w-12)/this.MAPW; s=Math.max(.5, Math.min(1.5, s)); if(Math.abs(s-this.state.mapScale)>0.008) this.setState({mapScale:s}); }
 
   getData(){ return (typeof window!=='undefined' && window.DASH) ? window.DASH : this.FB; }
-  working(){ const b=this.getData(); return this.state.demo ? this.applyDemo(b) : b; }
+  working(){ const b=this.getData(); return this.scoped(this.state.demo ? this.applyDemo(b) : b); }
+  /* 권역 필터 — 화면 위에서 '경기북부/경기남부'를 고르면 그 권역만 남긴다.
+     여기 한 곳에서 거르면 지도·관서목록·상단요약·특보·하천·미세먼지가 모두 따라온다
+     (모든 화면이 working() 을 거쳐 데이터를 읽는다).
+     region.js 에 scopes 가 없는 지역(경기북부·남부 전용 사이트)은 그대로 통과한다. */
+  scoped(d){
+    const RC=(window.REGION_CONF||{}), sc=this.state.scope;
+    const g=RC.scopes;
+    if(!g || !sc || sc==='전체' || !g[sc]) return d;
+    const names=g[sc], alias=RC.alias||{};
+    const inName=new Set(names);
+    const inSig=new Set(names.map(function(n){ return alias[n]||n; }));
+    const hitArea=function(a){ a=String(a||'');
+      if(a.indexOf('전역')>=0) return true;
+      for(const x of inSig) if(a.indexOf(x)>=0) return true;
+      return (((RC.wideNames)||[]).some(function(w){ return a.indexOf(w)>=0 && (w===sc); }));
+    };
+    return Object.assign({}, d, {
+      stations:(d.stations||[]).filter(function(x){ return inName.has(x.name); }),
+      rivers:(d.rivers||[]).filter(function(r){ return inSig.has(r.sigun); }),
+      pm:(d.pm||[]).filter(function(x){ return inSig.has(x.region); }),
+      fire:(d.fire||[]).filter(function(x){ return String(x.region||'').split('·').some(function(n){ return inSig.has(n); }); }),
+      warnings:(d.warnings||[]).filter(function(w){ return hitArea(w.area); }),
+      messages:(d.messages||[]).filter(function(m){ return !m.region || m.region==='경기도' || inSig.has(m.region); })
+    });
+  }
   applyDemo(base){
     const c = JSON.parse(JSON.stringify(base));
     c.warnings = [
@@ -988,7 +1036,11 @@ class Component extends DCLogic {
     //   시가 중간에 있고 뒤에 방위(동북부/남부)가 붙는 특보구역은 그대로 남아 관서명('파주')과
     //   안 맞아 지도에 색이 안 뜬다(파주만 폭염주의보가 방위별로 발효돼 이 버그에 걸렸음).
     (D.warnings||[]).forEach(w=>{ const wl=(w.level==='severe'||String(w.type||'').indexOf('경보')>=0)?'danger':'warning'; String(w.area||'').split(/[,·\/]/).forEach(a=>{ const n=this._canonRegion(a); if(n && warnLv[n]!=='danger') warnLv[n]=wl; }); });
-    return geo.regions.map(g=>{
+    /* 권역을 고르면 그 권역 관서만 그린다. by 는 이미 걸러진 stations 로 만들었으므로
+       거기 없는 지역은 지도에서도 뺀다(경기북부를 골랐는데 남부가 그려지면 안 된다).
+       권역 필터가 없는 지역(북부·남부 전용 사이트)에서는 by 에 전 관서가 있어 그대로다. */
+    const _sc=this.state.scope, _hasScope=!!((window.REGION_CONF||{}).scopes) && _sc && _sc!=='전체';
+    return geo.regions.filter(g=> !_hasScope || by[g.name]).map(g=>{
       const s=by[g.name]||{};
       const wl = warnLv[g.name] || (s.sigun?warnLv[s.sigun]:null) || null;
       const lv = wl || 'normal'; const alert = lv!=='normal';
@@ -1771,6 +1823,32 @@ class Component extends DCLogic {
       stationCards:stationOrder, forecast, hourlyTable:this.hourlyTableBody(myFc), nowSummary:this.nowSummaryBody(d), fcTempLine, fcTempArea, fcRainBars, fcMax:Math.round(tmx), fcMin:Math.round(tmn),
       // 관서 선택 (헤더 드롭다운)
       myStation, stationPickerOpen:st.stationPickerOpen, toggleStationPicker:()=>this.toggleStationPicker(),
+      scopeList:(function(self){
+        const RC=(window.REGION_CONF||{}), g=RC.scopes;
+        if(!g) return [];
+        const cur=self.state.scope||'전체';
+        return ['전체'].concat(Object.keys(g)).map(function(k){
+          const label=(k==='전체'?'경기 전체':k), on=(cur===k);
+          return { key:k, label:label, isSel:on,
+            bg:(on?'var(--brand)':'var(--surface2)'), fg:(on?'#fff':'var(--ink2)'),
+            bd:(on?'var(--brand)':'var(--border2)'),
+            pick:()=>self.setScope(k) };
+        });
+      })(this),
+      hasScopes:!!((window.REGION_CONF||{}).scopes),
+      /* 머리말·지도 부제의 '○○ · N개' 문구. 권역을 고르면 그 권역·개수로 바뀐다.
+         권역 필터가 없는 지역에서는 region.js 의 office·countText 그대로라
+         경기북부·남부 사이트 문구는 지금과 똑같다. */
+      scopeCountText:(function(self){
+        const RC=(window.REGION_CONF||{}), g=RC.scopes, sc=self.state.scope;
+        if(g && sc && sc!=='전체' && g[sc]) return sc+' · '+g[sc].length+'개 소방서';
+        return (RC.office||'')+' · '+(RC.countText||'');
+      })(this),
+      scopeCountOnly:(function(self){
+        const RC=(window.REGION_CONF||{}), g=RC.scopes, sc=self.state.scope;
+        if(g && sc && sc!=='전체' && g[sc]) return g[sc].length+'개 소방서';
+        return RC.countText||'';
+      })(this),
       stationList:(d.stations||[]).map(s=>({ name:s.name, isSel:(s.name===myStation),
         selBg:(s.name===myStation?'var(--brandSoft)':'transparent'), selW:(s.name===myStation?800:600), selColor:(s.name===myStation?'var(--brand)':'var(--ink)'),
         pick:()=>this.setMyStation(s.name) })),
