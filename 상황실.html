@@ -1815,9 +1815,15 @@ class Component extends DCLogic {
   var NAMES=RC.order||['고양','일산','파주','연천','의정부','양주','동두천','포천','가평','남양주','구리'];
   var ADMIN=RC.admin||{고양:'고양시',파주:'파주시',연천:'연천군',의정부:'의정부시',양주:'양주시',동두천:'동두천시',포천:'포천시',가평:'가평군',남양주:'남양주시',구리:'구리시'};
   /* SIG = 실제 시군(일산은 고양의 일부라 제외). 하천 표시명에서 '괄호 안이 시군인지' 판정용. */
-  var SIG=NAMES.filter(function(n){ return n!=='일산'; });
+  /* 관서명 → 데이터상의 시군명. 소방서가 시(市)를 나눠 맡는 곳(분당·송탄·일산)은
+     기상청 자료가 시군 단위로만 나오므로 소속 시군 값을 본다.
+     ⚠ 예전엔 '일산'만 하드코딩돼 있었다. 경기 전체(34관서)를 붙이면서 분당·송탄이
+       소속 시군을 못 찾아 기온 0.0°·특보 '평상'으로 떴다 — region.js 의 alias 를
+       읽도록 바꿔, 관서가 늘어도 코드를 안 고치게 했다. */
+  var ALIAS=((typeof window!=='undefined'&&window.REGION_CONF)||{}).alias||{'일산':'고양'};
+  var SIG=NAMES.filter(function(n){ return !ALIAS[n]; });
   function nv(x){ return (x==null||x===''||isNaN(x))?null:+x; }
-  function sig(nm){ return nm==='일산'?'고양':nm; }
+  function sig(nm){ return ALIAS[nm]||nm; }
   /* 표시명: 괄호 안(예 '임진강 (연천 임진교)'→'연천 임진교'). 단 괄호가 시군뿐이면
      지점 구분이 안 되니 하천명을 붙인다('신천 (연천)'→'연천 신천'). */
   function shortRiver(nm){ var s=String(nm||''), m=s.match(/^\s*([^(]+?)\s*\(([^)]+)\)/);

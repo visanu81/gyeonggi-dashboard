@@ -71,32 +71,13 @@ def dict_strict(a, b, label):
     return {**(a or {}), **(b or {})}
 
 
-def merge_ilsan(aws):
-    """일산 실측을 고양에 합친다.
-
-    경기 전체는 시군 단위(31개)라 '일산'이 없다 — 일산은 소방서 관할이지 시군이 아니다.
-    그런데 북부 수집은 일산을 따로 재므로(고양고봉 관측소), 그냥 두면 그 관측소가
-    통째로 버려지고 고양은 주교 한 곳만 보게 된다. 수집기가 관서 안에서 '가장 많이 온
-    지점'을 고르는 것과 같은 원칙으로, 둘 중 많은 쪽을 고양 값으로 삼는다.
-    """
-    il = aws.pop('일산', None)
-    go = aws.get('고양')
-    if not il:
-        return aws
-    if not go:
-        aws['고양'] = il
-        return aws
-    # 강수 4종은 각각 큰 쪽, 순간최대풍속도 큰 쪽. 대표 관측소명은 비를 더 맞은 쪽.
-    wetter = il if (il.get('rn60') or 0, il.get('rnday') or 0) > \
-                   (go.get('rn60') or 0, go.get('rnday') or 0) else go
-    merged = dict(wetter)
-    for k in ('rn15', 'rn60', 'rn12h', 'rnday', 'wss'):
-        vals = [x.get(k) for x in (go, il) if x.get(k) is not None]
-        merged[k] = max(vals) if vals else None
-    merged['ok'] = (go.get('ok') or 0) + (il.get('ok') or 0)
-    merged['total'] = (go.get('total') or 0) + (il.get('total') or 0)
-    aws['고양'] = merged
-    return aws
+# ⚠ 소방서 하위관서(분당·송탄·일산)를 여기서 regions 에 복제하지 않는다.
+#   한때 복제했다가 성남·평택·고양이 regions 에 두 번씩 들어가, 시군 집계(최고기온·
+#   특보 건수 등)가 이중으로 세어지는 문제가 있었다.
+#   기상청 자료는 시군 단위라 '분당의 기온'이라는 건 없다 — 성남 값을 보는 게 맞다.
+#   그래서 regions/pm 은 시군 31개 그대로 두고, 화면이 region-all.js 의 alias
+#   ({'분당':'성남', ...})로 소속 시군 값을 끌어다 쓴다. 실측 강수·바람만 관서명 키
+#   (aws['분당'])로 갈라지는데, 이건 북부에서 일산이 이미 그렇게 동작하는 구조다.
 
 
 def newer(n, s, key):
@@ -114,7 +95,7 @@ def merge(n, s):
                            lambda p: p['region'], 'pm(미세먼지)')
     out['fire'] = cat_strict(n.get('fire'), s.get('fire'),
                              lambda f: f['region'], 'fire(산불권역)')
-    out['aws'] = merge_ilsan(dict_strict(n.get('aws'), s.get('aws'), 'aws(실측강수)'))
+    out['aws'] = dict_strict(n.get('aws'), s.get('aws'), 'aws(실측강수)')
     out['ultra_fcst'] = dict_strict(n.get('ultra_fcst'), s.get('ultra_fcst'),
                                     'ultra_fcst(6시간예측)')
 

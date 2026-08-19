@@ -26,7 +26,7 @@ except Exception:
 
 ROOT = Path(__file__).resolve().parent.parent
 COLS = 7          # 벌집 격자 열 수
-ROW_SIZES = [4, 6, 5, 5, 6, 5]      # 행별 시군 수 (합 31, 위=북쪽)
+ROW_SIZES = [5, 6, 6, 6, 6, 5]      # 행별 관서 수 (합 34, 위=북쪽)
 
 
 def load_conf(js_file):
@@ -93,23 +93,37 @@ def main():
     s = load_conf('region-south.js')
     cent = load_map()
 
-    order = [x for x in n['order'] if x != '일산'] + list(s['order'])
+    # 경기도 소방서 순서 (사장님 지정, 2026-08-19). 가평은 동두천-가평-연천 사이.
+    order = ['수원', '성남', '분당', '부천', '안양', '안산', '용인', '평택', '송탄',
+             '광명', '시흥', '군포', '화성', '이천', '김포', '광주', '안성', '하남',
+             '의왕', '오산', '여주', '양평', '과천', '고양', '일산', '의정부',
+             '남양주', '파주', '구리', '포천', '양주', '동두천', '가평', '연천']
+    if len(order) != 34:
+        raise SystemExit(f'관서가 34개가 아니다: {len(order)}개')
+    # 송탄은 지도 경계가 없다(평택시에 하위 구가 없어 시군구 자료로 분리 불가).
+    # 배치도 자리는 필요하므로 평택 중심에서 북쪽으로 조금 올린 가상 좌표를 쓴다
+    # — 송탄소방서 관할이 평택 북부(서정동·진위면·서탄면)라 방향이 맞다.
+    if '송탄' not in cent and '평택' in cent:
+        px, py = cent['평택']
+        cent['송탄'] = (px, py - 40)
     missing = [x for x in order if x not in cent]
     if missing:
-        raise SystemExit(f'지도에 없는 시군: {missing}')
-    if len(order) != 31:
-        raise SystemExit(f'시군이 31개가 아니다: {len(order)}개')
+        raise SystemExit(f'배치 좌표가 없는 관서: {missing}')
 
-    n_admin = {k: v for k, v in n['admin'].items() if k != '일산'}
-    n_rmatch = {k: v for k, v in n['riverMatch'].items() if k != '일산'}
-    n_fgroup = {k: v for k, v in n['fireGroup'].items() if k != '일산'}
+    # 소방서가 시(市)를 나눠 맡는 곳 — 하위관서: 소속 시군.
+    # 기상청 자료는 시군 단위라 하천·산불권역은 소속 시군 것을 그대로 물려받고,
+    # 실측 강수·바람만 자기 관할 관측소 값으로 갈라진다(프로파일에서 관측소를 나눠 뒀다).
+    SUB = {'분당': '성남', '송탄': '평택', '일산': '고양'}
+    n_admin = dict(n['admin'])
+    n_rmatch = dict(n['riverMatch'])
+    n_fgroup = dict(n['fireGroup'])
 
     conf = {
         'key': 'all',
         'label': '경기도',
         'office': '경기도',
         'home': '수원',                       # 도청 소재지. merge_all.py 의 HOME_FROM 과 맞출 것
-        'countText': '31개 시군',
+        'countText': '34개 소방서',
         'dataHost': 'https://ggweather.visanu81.workers.dev',
         'order': order,
         'warnOrder': ['경기도'] + order,
@@ -117,7 +131,10 @@ def main():
         'admin': merge_dict(n_admin, s['admin'], 'admin'),
         'riverMatch': merge_dict(n_rmatch, s['riverMatch'], 'riverMatch'),
         'fireGroup': merge_dict(n_fgroup, s['fireGroup'], 'fireGroup'),
-        'alias': {'일산': '고양'},            # 옛 링크·북부 표기가 들어와도 고양으로 받는다
+        # 관서명 → 데이터상의 시군명. 하위관서는 소속 시군 값을 본다.
+        # (기온·예보·특보·미세먼지가 시군 단위로만 나오기 때문. 실측 강수·바람은
+        #  관서명 키로 따로 들어와서 이 별칭과 무관하게 관할 값이 쓰인다.)
+        'alias': dict(SUB),
         'floodKeywords': sorted(set(n['floodKeywords']) | set(s['floodKeywords'])),
         # 임진강 필승교·군남댐은 경기 전체에서도 늘 봐야 하는 지점이라 그대로 둔다
         'topRiversTitle': n.get('topRiversTitle') or '주요 감시',
@@ -125,6 +142,18 @@ def main():
         'meteoV2': True,
         'riverMeta': merge_dict(n['riverMeta'], s['riverMeta'], 'riverMeta'),
     }
+
+    # 하위관서 — 소속 시군 값을 물려받는다
+    ADMIN_SUB = {'분당': '성남시 분당구', '송탄': '평택시 송탄', '일산': '고양시 일산'}
+    for sub, parent in SUB.items():
+        conf['admin'][sub] = ADMIN_SUB[sub]
+        if parent in conf['riverMatch']:
+            conf['riverMatch'][sub] = list(conf['riverMatch'][parent])
+        if parent in conf['fireGroup']:
+            conf['fireGroup'][sub] = conf['fireGroup'][parent]
+    miss = [x for x in order if x not in conf['admin']]
+    if miss:
+        raise SystemExit(f'admin 이 빠진 관서: {miss}')
 
     body = (
         '// ===== 경기 전체(31개 시군) 화면 설정 =====\n'

@@ -44,9 +44,9 @@ grep -rl 'gyeonggi-dashboard\.visanu81\.workers\.dev' --include='*.html' --inclu
   | xargs -r sed -i 's|gyeonggi-dashboard\.visanu81\.workers\.dev|ggweather.visanu81.workers.dev|g'
 grep -rl '경기북부' --include='*.html' . | xargs -r sed -i 's|경기북부|경기도|g'
 grep -rl '동두천소방서 · 11개 소방관서' --include='*.html' . \
-  | xargs -r sed -i 's|동두천소방서 · 11개 소방관서|경기도 · 31개 시군|g'
+  | xargs -r sed -i 's|동두천소방서 · 11개 소방관서|경기도 · 34개 소방서|g'
 grep -rl '11개 소방관서' --include='*.html' . \
-  | xargs -r sed -i 's|11개 소방관서|31개 시군|g; s|10개 시군|31개 시군|g'
+  | xargs -r sed -i 's|11개 소방관서|34개 소방서|g; s|10개 시군|34개 소방서|g'
 
 # ── 여기서부터는 미리보기 전용 ──
 # 아직 배포 안 된 주소 대신 로컬 파일을 보게 한다.
@@ -55,5 +55,6 @@ grep -rl 'ggweather\.visanu81\.workers\.dev' --include='*.html' --include='*.js'
 
 echo "생성: $DST"
 echo "--- 남은 북부 흔적(있으면 확인) ---"
+# 제작자 크레딧(제작 : 소방위 한경승 · 동두천소방서)은 남아 있어야 정상이라 뺀다.
 grep -rn 'gyeonggi-dashboard\.visanu81\|경기북부\|11개 소방관서\|21개 시군' \
-  --include='*.html' --include='*.js' . | head || echo "없음"
+  --include='*.html' --include='*.js' . | grep -v '제작' | head || echo "없음"

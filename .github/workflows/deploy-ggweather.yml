@@ -75,9 +75,9 @@ jobs:
           # 화면에 박힌 지역 이름 (제작자 소속 '동두천소방서'는 건드리지 않는다)
           grep -rl '경기북부' --include='*.html' . | xargs -r sed -i 's|경기북부|경기도|g'
           grep -rl '동두천소방서 · 11개 소방관서' --include='*.html' . \
-            | xargs -r sed -i 's|동두천소방서 · 11개 소방관서|경기도 · 31개 시군|g'
+            | xargs -r sed -i 's|동두천소방서 · 11개 소방관서|경기도 · 34개 소방서|g'
           grep -rl '11개 소방관서' --include='*.html' . \
-            | xargs -r sed -i 's|11개 소방관서|31개 시군|g; s|10개 시군|31개 시군|g'
+            | xargs -r sed -i 's|11개 소방관서|34개 소방서|g; s|10개 시군|34개 소방서|g'
 
       - name: 남은 북부 흔적 검사
         run: |
