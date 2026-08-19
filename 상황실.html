@@ -1239,7 +1239,7 @@ http://scripts.sil.org/OFL
     <!-- ===== STATION RAIL ===== -->
     <div style="{{ railStyle }}">
       <sc-for list="{{ rail }}" as="s" hint-placeholder-count="11">
-        <div sc-camel-on-click="{{ s.go }}" style="cursor:pointer;border-radius:18px;padding:12px 18px;display:flex;flex-direction:column;justify-content:center;gap:5px;background:{{ s.bg }};border:3px solid {{ s.border }};">
+        <div sc-camel-on-click="{{ s.go }}" style="cursor:pointer;border-radius:18px;padding:12px 12px;display:flex;flex-direction:column;justify-content:center;gap:5px;background:{{ s.bg }};border:3px solid {{ s.border }};">
           <div style="display:flex;align-items:center;gap:10px;">
             <div style="width:14px;height:14px;border-radius:50%;background:{{ s.dot }};flex:none;"></div>
             <div style="font-size:36px;font-weight:660;color:{{ s.fg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s.name }}</div>
@@ -1721,8 +1721,11 @@ class Component extends DCLogic {
     const _rn = NAMES.length;
     const _rcols = _rn <= 12 ? _rn : Math.ceil(_rn / 2);
     const _rrows = Math.ceil(_rn / _rcols);
+    /* minmax(0,1fr) 를 쓴다. 그냥 1fr 이면 칸의 최소폭이 auto라, 줄바꿈 없는 글자가
+       칸을 밀어내 무대 밖으로 넘친다 — 34개(17칸)에서 실제로 141px 넘쳐 맨 오른쪽
+       안성·연천이 화면 밖으로 나갔다(2026-08-19 사장님 발견). */
     const _RAIL = 'height:' + (_rrows * 150 + (_rrows - 1) * 14) + 'px;flex:none;display:grid;'
-                + 'grid-template-columns:repeat(' + _rcols + ',1fr);gap:14px;';
+                + 'grid-template-columns:repeat(' + _rcols + ',minmax(0,1fr));gap:14px;';
     const _RC = (typeof window!=='undefined' && window.REGION_CONF) || {};
     const _kraw = (EXT().keyRivers) || [];
     const _kf = (v,d) => (v==null ? '-' : (+v).toFixed(d==null?1:d));

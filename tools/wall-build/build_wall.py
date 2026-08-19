@@ -567,8 +567,11 @@ patch('<div style="height:150px;flex:none;display:grid;grid-template-columns:rep
 RAILVALS = '''    const _rn = NAMES.length;
     const _rcols = _rn <= 12 ? _rn : Math.ceil(_rn / 2);
     const _rrows = Math.ceil(_rn / _rcols);
+    /* minmax(0,1fr) 를 쓴다. 그냥 1fr 이면 칸의 최소폭이 auto라, 줄바꿈 없는 글자가
+       칸을 밀어내 무대 밖으로 넘친다 — 34개(17칸)에서 실제로 141px 넘쳐 맨 오른쪽
+       안성·연천이 화면 밖으로 나갔다(2026-08-19 사장님 발견). */
     const _RAIL = 'height:' + (_rrows * 150 + (_rrows - 1) * 14) + 'px;flex:none;display:grid;'
-                + 'grid-template-columns:repeat(' + _rcols + ',1fr);gap:14px;';
+                + 'grid-template-columns:repeat(' + _rcols + ',minmax(0,1fr));gap:14px;';
 '''
 patch("    return {\n      stageRef: (this.stageRef = this.stageRef || React.createRef()),",
       RAILVALS + "    return {\n      stageRef: (this.stageRef = this.stageRef || React.createRef()),\n"
@@ -615,7 +618,9 @@ patch("      return { name:n, temp:ss.temp.toFixed(1), "
 # (안쪽 높이 118 → 126px: 관서명 40 + 기온 44 + 강수 26 + gap 12).
 patch('style="cursor:pointer;border-radius:18px;padding:16px 18px;display:flex;'
       'flex-direction:column;justify-content:center;gap:6px;',
-      'style="cursor:pointer;border-radius:18px;padding:12px 18px;display:flex;'
+      # 좌우 18→12: 34개(한 칸 206px)에서 기온+특보태그가 한 줄에 들어가야 한다.
+      # 11·21개에서는 여유가 더 생길 뿐이라 영향 없다.
+      'style="cursor:pointer;border-radius:18px;padding:12px 12px;display:flex;'
       'flex-direction:column;justify-content:center;gap:5px;',
       '레일 칸 여백 축소(강수 줄 자리)')
 patch('<div style="font-size:50px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;'
