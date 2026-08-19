@@ -32,12 +32,16 @@ mv region-all.js    region.js
 rm -f data-south.js map-geo-south.js region-south.js   # 남부 전용본은 안 쓴다
 # 위험구역은 아직 경기 전체용 시트가 없다 → 북부 것을 그대로 두면 동두천·의정부만
 # 뜨는데, 그건 '경기 전체'에서 오해를 부른다. 빈 목록으로 시작한다.
-cat > risk-zones.js <<'RZ'
-// 경기 전체(ggweather) — 인명피해 우려지역. 아직 시트가 없어 비어 있다.
-// 채우려면 관서별 탭이 있는 구글시트를 만들고 RISK_SHEET_URL 을 넣으면 된다.
-window.RISK_ZONES = {};
-window.RISK_SHEET_URL = '';
-RZ
+# ⚠ 통째로 덮어쓰면 브이월드 지도 인증키까지 날아가 관서 상세 지도가 빈 화면이 된다
+#   (2026-08-19 점검에서 발견). 키 줄만 살려 두고 위험구역만 비운다.
+# 주석에도 VWORLD_KEY 라는 낱말이 있어서 그냥 grep 하면 주석 줄을 집는다.
+# 반드시 대입문(window.VWORLD_KEY =)만 골라야 한다.
+VW=$(grep -m1 '^window\.VWORLD_KEY' risk-zones.js || true)
+{ echo '// 경기 전체(ggweather) — 인명피해 우려지역. 아직 시트가 없어 비어 있다.';
+  echo "$VW";
+  echo 'window.RISK_ZONES = {};';
+  echo "window.RISK_SHEET_URL = '';"; } > risk-zones.js.new
+mv risk-zones.js.new risk-zones.js
 rm -f risk-zones-south.js
 
 grep -rl 'gyeonggi-dashboard\.visanu81\.workers\.dev' --include='*.html' --include='*.js' . \

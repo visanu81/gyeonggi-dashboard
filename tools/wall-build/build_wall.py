@@ -867,8 +867,17 @@ INJECT = r'''
     /* 하천 → 관서. sigun 없으면 이름에서 시군 추출(가장 긴 매칭 우선: '남양주'가 '양주'보다 먼저).
        전 관서를 []로 초기화 → 하천 없는 관서(예:구리)에 남의 하천 샘플이 뜨는 폴백 차단. */
     var rivers={}; NAMES.forEach(function(nm){ rivers[nm]=[]; });
+    /* 관서별 하천코드 표(region.js riverCodes)가 있으면 시군 배분보다 우선한다.
+       소방서가 시를 나눠 맡는 곳에서 남의 하천이 '관할'로 뜨는 것을 막는다. */
+    var RCODE=((typeof window!=='undefined'&&window.REGION_CONF)||{}).riverCodes||{};
     (D.rivers||[]).forEach(function(rv){
       var sg=rv.sigun;
+      /* 코드로 지정된 관서에 먼저 넣는다. 지정 관서가 하나라도 있으면 시군 배분은 건너뛴다. */
+      var _placed=false;
+      NAMES.forEach(function(nm){ var cs=RCODE[nm];
+        if(cs && cs.indexOf(String(rv.code))>=0){ rivers[nm].push(rv); _placed=true; } });
+      if(_placed) return;
+      if(RCODE[sg]) return;   /* 그 시군은 코드로만 받는다 — 남의 하천이 섞이지 않게 */
       if(!sg){ var best=''; SIG.forEach(function(x){ if(String(rv.name||'').indexOf(x)>=0 && x.length>best.length) best=x; }); sg=best; }
       if(!sg) return;
       /* 댐 = api:'dam'(원천 플래그). 댐은 '위험수위 대비 %'가 무의미(상시만수위 유지가 정상)라

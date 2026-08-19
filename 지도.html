@@ -662,7 +662,7 @@ class Component extends DCLogic {
       const ms = this.state.wallMode===2 ? 14000 : 10000;
       this._wallRot = setInterval(()=>{
         if(!this.state.wall || this.state.modal || this.state.wallPaused) return;
-        if(this.state.wallMode===2) this.setState({wallStn: (this.state.wallStn+1) % 11});
+        if(this.state.wallMode===2) this.setState({wallStn: (this.state.wallStn+1) % (((window.REGION_CONF||{}).order||[]).length||11)});
         else this.setState({wallSlide: (this.state.wallSlide+1) % 5});
       }, ms);
     }
@@ -929,7 +929,16 @@ class Component extends DCLogic {
   /* 관서별 하천 추리기. 예전엔 이름 문자열 매칭(r.name.includes(관서명))이었는데
      '양주'가 '남양주'에도 걸려, 남양주 하천(왕숙교·팔당댐)이 양주 관서에 뜨는 충돌이 있었다.
      이제 서버가 sigun을 명시해 준다. sigun이 없는 옛 데이터만 이름 매칭으로 폴백. */
-  riversOf(rivers, sigun){
+  riversOf(rivers, sigun, office){
+    /* 소방서가 시(市)를 나눠 맡는 곳은 시군으로 고르면 안 된다.
+       예: 송탄소방서에 평택 도심 안성천 군문교가 '관할'로 뜨고, 성남소방서에
+       분당구 궁내교가 뜬다(2026-08-19 사장님 지적). region.js 의 riverCodes 가
+       그런 관서만 관측소 코드로 직접 지정한다. 표에 없는 관서는 지금처럼 시군으로. */
+    const _rc=((window.REGION_CONF||{}).riverCodes)||{};
+    if(office && _rc[office]) {
+      const _set=_rc[office];
+      return (rivers||[]).filter(r=> _set.indexOf(String(r.code))>=0);
+    }
     if(!sigun) return [];
     return (rivers||[]).filter(r=> r.sigun ? (r.sigun===sigun) : String(r.name||'').includes(sigun));
   }
@@ -1124,17 +1133,17 @@ class Component extends DCLogic {
       const items=_gmap[t]; let mx=0; items.forEach(function(z){ mx=Math.max(mx, _lvOrder[z.level]||1); });
       return { type:t, count:items.length, color: mx>=4?'var(--severe)':mx>=3?'var(--warn)':mx>=2?'var(--caution)':'var(--safe)', items:items };
     }).sort(function(a,b){ return b.count-a.count; });
-    const near=this.riversOf(d.rivers, s.sigun||f).map(r=>{const lv=this.riverLevel(r);return{name:r.name, val:this.fmtNum(r.value,2), color:this.cvar(lv), statusTxt:lv==='danger'?'위험':lv==='warning'?'주의':'안전'};});
-    const fw=(d.warnings||[]).filter(w=>{const a=w.area||'';return a.includes(s.sigun||f)||a.includes('경기북부')||a.includes('전역');}).map(w=>this.warnBadge(w));
+    const near=this.riversOf(d.rivers, s.sigun||f, s.name||f).map(r=>{const lv=this.riverLevel(r);return{name:r.name, val:this.fmtNum(r.value,2), color:this.cvar(lv), statusTxt:lv==='danger'?'위험':lv==='warning'?'주의':'안전'};});
+    const fw=(d.warnings||[]).filter(w=>{const a=w.area||'';return a.includes(s.sigun||f)||(((window.REGION_CONF||{}).wideNames)||['경기북부']).some(function(_w){return a.includes(_w);})||a.includes('전역');}).map(w=>this.warnBadge(w));
     const lv=s.level||'normal';
     const status={label:lv==='danger'?'경보':lv==='warning'?'주의보':'정상', color:this.cvar(lv==='danger'?'danger':lv==='warning'?'warning':'safe')};
     const stats=[{label:'기온', val:this.fmtNum(s.temp,1), unit:'°'},{label:'체감', val:(s.feels!=null?s.feels:'-'), unit:'°'},{label:'강수', val:(s.rain!=null?s.rain:'-'), unit:'mm'},{label:'풍속', val:(s.wind!=null?s.wind:'-'), unit:'m/s'},{label:'습도', val:(s.humid!=null?s.humid:'-'), unit:'%'},{label:'강수확률', val:(s.pop!=null?s.pop:'-'), unit:'%'}];
     const hi=risks.filter(r=>r.level==='심각'||r.level==='경계').length;
     // v1 수준 상세 — regionBody(모달과 동일한 React 블록)를 focus 화면에 인라인 렌더
     const sg=s.sigun||f;
-    const nearRB=this.riversOf(d.rivers, sg).map(r=>({name:r.name, value:r.value, danger:r.danger, lv:this.riverLevel(r)}));
+    const nearRB=this.riversOf(d.rivers, sg, (s&&s.name)||sg).map(r=>({name:r.name, value:r.value, danger:r.danger, lv:this.riverLevel(r)}));
     const msgs=(d.messages||[]).filter(m=>m.region===sg || m.region===f || m.region==='경기도');
-    const warnsRB=(d.warnings||[]).filter(w=>{const a=w.area||'';return a.includes(sg)||a.includes('전역')||a.includes('경기북부');});
+    const warnsRB=(d.warnings||[]).filter(w=>{const a=w.area||'';return a.includes(sg)||a.includes('전역')||(((window.REGION_CONF||{}).wideNames)||['경기북부']).some(function(_w){return a.includes(_w);});});
     const pm=(d.pm||[]).find(p=>p.region===sg);
     const fire=(d.fire||[]).find(z=>(z.region||'').includes(sg));
     let detail=this.regionBody(s, nearRB, msgs, warnsRB, pm, fire);
@@ -1385,9 +1394,9 @@ class Component extends DCLogic {
     const btn=(label,title,onClick,href)=> href ? R('a',{key:label,title,href,style:bs},label) : R('button',{key:label,title,onClick,style:bs},label);
     const items=[];
     if(this.state.wallMode===2){
-      items.push(btn('◀','이전 관서',()=>self.setState({wallStn:(self.state.wallStn+10)%11, wallPaused:true})));
+      items.push(btn('◀','이전 관서',()=>self.setState({wallStn:(self.state.wallStn+(((window.REGION_CONF||{}).order||[]).length||11)-1)%(((window.REGION_CONF||{}).order||[]).length||11), wallPaused:true})));
       items.push(btn(this.state.wallPaused?'▶':'❚❚', this.state.wallPaused?'자동재생':'일시정지', ()=>self.setState({wallPaused:!self.state.wallPaused})));
-      items.push(btn('▶','다음 관서',()=>self.setState({wallStn:(self.state.wallStn+1)%11, wallPaused:true})));
+      items.push(btn('▶','다음 관서',()=>self.setState({wallStn:(self.state.wallStn+1)%(((window.REGION_CONF||{}).order||[]).length||11), wallPaused:true})));
     }
     items.push(btn(this.state.theme==='dark'?'☀':'☾','라이트/다크',()=>{ var th=self.state.theme==='dark'?'light':'dark'; try{ localStorage.setItem('ggTheme', th); }catch(e){} self.setState({theme:th}, ()=>self.applyTheme()); }));
     items.push(btn(this.state.wallMode===2?'전역판':'관서판', this.state.wallMode===2?'전역 개요(v1)':'관서별 순환(v2)', null, this.state.wallMode===2?'지도.html?wall=1':'지도.html?wall=2'));
@@ -1425,7 +1434,7 @@ class Component extends DCLogic {
 
     const grouped=this.groupWarns(d.warnings||[]);
     const myWarns=grouped.filter(g=> String(g.area||'').split(/,\s*/).some(nm=>{ nm=nm.trim(); return nm===f||nm===sg||nm==='경기도'; }));
-    const near=this.riversOf(d.rivers, sg).map(r=>{ const lv=this.riverLevel(r); return Object.assign({},r,{lv, pct:r.danger?Math.min(1,r.value/r.danger):0}); });
+    const near=this.riversOf(d.rivers, sg, (s&&s.name)||sg).map(r=>{ const lv=this.riverLevel(r); return Object.assign({},r,{lv, pct:r.danger?Math.min(1,r.value/r.danger):0}); });
     const worstPct=near.reduce((a,r)=>Math.max(a,r.pct||0),0);
     const msgs=(d.messages||[]).filter(m=> m.region===sg || m.region===f || m.region==='경기도');
     const pm=(d.pm||[]).find(p=>p.region===sg);
@@ -1470,7 +1479,7 @@ class Component extends DCLogic {
         R('div',{style:{display:'flex', alignItems:'baseline', gap:'10px'}},
           R('span',{style:{fontSize:'clamp(30px,3.4vw,56px)', fontWeight:800, color:'var(--ink)', letterSpacing:'-.5px', lineHeight:1}}, f),
           R('span',{style:{fontSize:'clamp(13px,1.1vw,19px)', fontWeight:700, color:'var(--ink3)'}}, '소방관서')),
-        R('div',{style:{fontSize:'clamp(12px,.95vw,15px)', marginTop:'5px'}}, R('span',{style:{color:'var(--brand)', fontWeight:800}}, (idx+1)+' / 11'), R('span',{style:{color:'var(--ink3)', fontWeight:600}}, '  · 다음 '+nextF)),
+        R('div',{style:{fontSize:'clamp(12px,.95vw,15px)', marginTop:'5px'}}, R('span',{style:{color:'var(--brand)', fontWeight:800}}, (idx+1)+' / '+(((window.REGION_CONF||{}).order||[]).length||11)), R('span',{style:{color:'var(--ink3)', fontWeight:600}}, '  · 다음 '+nextF)),
         R('div',{style:{position:'absolute', left:0, right:0, bottom:0, height:'6px', background:'var(--border)'}},
           R('div',{style:{height:'100%', width:progPct.toFixed(1)+'%', background:'var(--safe)', borderRadius:'0 3px 3px 0'}}))),
       // 2) 날씨 카드
@@ -1494,8 +1503,8 @@ class Component extends DCLogic {
           R('div',{style:{fontSize:'13px', color:'var(--ink3)', marginTop:'2px'}}, dateStr)),
         R('div',{style:{display:'flex', gap:'5px', alignItems:'center'}},
           tbtn(this.state.wallPaused?'▶':'❚❚', this.state.wallPaused?'자동재생':'일시정지', ()=>self.setState({wallPaused:!self.state.wallPaused})),
-          tbtn('‹','이전 관서', ()=>self.setState({wallStn:(self.state.wallStn+10)%11, wallPaused:true})),
-          tbtn('›','다음 관서', ()=>self.setState({wallStn:(self.state.wallStn+1)%11, wallPaused:true})),
+          tbtn('‹','이전 관서', ()=>self.setState({wallStn:(self.state.wallStn+(((window.REGION_CONF||{}).order||[]).length||11)-1)%(((window.REGION_CONF||{}).order||[]).length||11), wallPaused:true})),
+          tbtn('›','다음 관서', ()=>self.setState({wallStn:(self.state.wallStn+1)%(((window.REGION_CONF||{}).order||[]).length||11), wallPaused:true})),
           tbtn(this.state.theme==='dark'?'☀':'☾','라이트/다크', setTheme),
           tlink('전역','전역 개요(v1)','지도.html?wall=1'),
           tlink('일반','일반 대시보드','지도.html'))));
@@ -1810,9 +1819,9 @@ class Component extends DCLogic {
     if(modal.kind==='region'){
       const s=(d.stations||[]).find(x=>x.name===modal.key)||{};
       const sg=s.sigun||modal.key;
-      const near=this.riversOf(d.rivers, sg).map(r=>({name:r.name, value:r.value, danger:r.danger, lv:this.riverLevel(r)}));
+      const near=this.riversOf(d.rivers, sg, (s&&s.name)||sg).map(r=>({name:r.name, value:r.value, danger:r.danger, lv:this.riverLevel(r)}));
       const msgs=(d.messages||[]).filter(m=>m.region===sg || m.region===modal.key || m.region==='경기도');
-      const warns=(d.warnings||[]).filter(w=>{ const a=w.area||''; return a.includes(sg)||a.includes('전역')||a.includes('경기북부'); });
+      const warns=(d.warnings||[]).filter(w=>{ const a=w.area||''; return a.includes(sg)||a.includes('전역')||(((window.REGION_CONF||{}).wideNames)||['경기북부']).some(function(_w){return a.includes(_w);}); });
       const pm=(d.pm||[]).find(p=>p.region===sg);
       const fire=(d.fire||[]).find(f=>(f.region||'').includes(sg));
       return {modalTitle:modal.key+' 관서 상세', modalAccent:this.cvar(s.level==='danger'?'danger':s.level==='warning'?'warning':'safe'), modalMax:'620px',

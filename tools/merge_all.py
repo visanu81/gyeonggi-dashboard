@@ -100,9 +100,15 @@ def merge(n, s):
                                     'ultra_fcst(6시간예측)')
 
     # ── 목록 — 같은 것만 걸러 이어붙임 ──────────────────────────
-    # 하천은 두 지역이 같은 지점을 볼 수 있다(한강 본류 등) → 코드로 중복 제거
+    # 하천 중복 제거 — 키는 반드시 (코드, 시군) 짝이어야 한다.
+    # ⚠ 코드만으로 지우면 '한 관측소를 여러 관서가 나눠 보는' 정상 배정까지 지워진다.
+    #   실제로 그랬다(2026-08-19 점검): 안양천 충훈1교는 과천·안양·군포·의왕 4곳이,
+    #   안산천 안산10교는 시흥·안산 2곳이 함께 보도록 프로파일에 넣어 뒀는데,
+    #   첫 줄(과천·시흥)만 남고 나머지 4줄이 사라져 안양·안산·군포·의왕 네 소방서의
+    #   하천 카드가 통째로 '관할 하천 관측소 없음'이 됐다(57곳 → 53곳).
+    #   호우 때 그 관서가 볼 수 있는 실시간 수위가 0개가 되는, 가장 위험한 종류의 결함.
     out['rivers'] = cat_unique(n.get('rivers'), s.get('rivers'),
-                               lambda r: str(r.get('code')))
+                               lambda r: (str(r.get('code')), r.get('sigun')))
     out['warnings'] = cat_unique(n.get('warnings'), s.get('warnings'),
                                  lambda w: (w.get('type'), w.get('area'), w.get('time')))
     out['prelim_warnings'] = cat_unique(n.get('prelim_warnings'), s.get('prelim_warnings'),
