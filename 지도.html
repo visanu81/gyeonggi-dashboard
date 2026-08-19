@@ -1048,6 +1048,10 @@ class Component extends DCLogic {
     const geo=(typeof window!=='undefined'&&window.MAPGEO)?window.MAPGEO:null;
     if(!geo||!geo.regions) return [];
     const focus=this.state.focus;
+    /* 라벨·표시는 HTML 오버레이라 '지금 쓰는 지도 틀' 기준으로 위치를 잡아야 한다.
+       권역을 고르면 틀이 좁아지므로 전체 지도(geo.W/H) 기준으로 두면 어긋난다. */
+    const _sb=this.scopeBox();
+    const _vb=_sb || {x:0, y:0, w:geo.W, h:geo.H};
     const risks=this.getRisks(); const rc={}; risks.forEach(z=>{rc[z.region]=(rc[z.region]||0)+1;});
     const by={}; (stations||[]).forEach(s=>by[s.name]=s);
     // 지도 색은 '실제 발효특보(warnings)' 기준 — 강수량이 아님. 특보 없으면 평상(흰색).
@@ -1077,7 +1081,7 @@ class Component extends DCLogic {
       // 서남부처럼 작은 시가 몰린 곳에서 서로 밀고 들어간다.
       const lblCls = (+lblScale < 0.85) ? 'mapLbl sm' : 'mapLbl';
       return { name:g.name, d:g.d, cx:g.cx, cy:g.cy, fill, ring, alert, lblScale, lblCls,
-        left:(g.cx/geo.W*100).toFixed(2)+'%', top:(g.cy/geo.H*100).toFixed(2)+'%',
+        left:(((g.cx-_vb.x)/_vb.w)*100).toFixed(2)+'%', top:(((g.cy-_vb.y)/_vb.h)*100).toFixed(2)+'%',
         stroke: alert?'#ffffff':'var(--mapStroke)', strokeW: alert?2.4:1.1,
         textCol: alert?'#ffffff':'var(--ink)',
         shadow: alert?'0 1px 3px rgba(0,0,0,.4)':'0 1px 2px rgba(255,255,255,.8)',
@@ -1188,9 +1192,11 @@ class Component extends DCLogic {
   }
   riskPins(){
     const geo=(typeof window!=='undefined')?window.MAPGEO:null; const f=this.state.focus; if(!geo||!f) return [];
+    /* 라벨과 같은 이유로 '지금 쓰는 지도 틀' 기준. mapRegions 와 같은 값이어야 한다. */
+    const _vb=this.scopeBox() || {x:0, y:0, w:geo.W, h:geo.H};
     const cmap={'심각':'var(--severe)','경계':'var(--severe)','주의':'var(--warn)','관심':'var(--caution)'};
     return this.getRisks().filter(z=>z.region===f).map(z=>({ id:z.id, name:z.name, note:z.note, level:z.level, type:z.type, lat:z.lat, lng:z.lng,
-      left:(z.x/geo.W*100).toFixed(2)+'%', top:(z.y/geo.H*100).toFixed(2)+'%', color:cmap[z.level]||'var(--warn)',
+      left:(((z.x-_vb.x)/_vb.w)*100).toFixed(2)+'%', top:(((z.y-_vb.y)/_vb.h)*100).toFixed(2)+'%', color:cmap[z.level]||'var(--warn)',
       open:()=>this.setState({modal:{kind:'loc', zone:z}}) }));
   }
   focusData(d){
