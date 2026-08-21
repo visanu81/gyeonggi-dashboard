@@ -30,17 +30,15 @@ mv data-all.js      data.js
 mv map-geo-all.js   map-geo.js
 mv region-all.js    region.js
 rm -f data-south.js map-geo-south.js region-south.js   # 남부 전용본은 안 쓴다
-# 위험구역은 아직 경기 전체용 시트가 없다 → 북부 것을 그대로 두면 동두천·의정부만
-# 뜨는데, 그건 '경기 전체'에서 오해를 부른다. 빈 목록으로 시작한다.
-# ⚠ 통째로 덮어쓰면 브이월드 지도 인증키까지 날아가 관서 상세 지도가 빈 화면이 된다
-#   (2026-08-19 점검에서 발견). 키 줄만 살려 두고 위험구역만 비운다.
-# 주석에도 VWORLD_KEY 라는 낱말이 있어서 그냥 grep 하면 주석 줄을 집는다.
-# 반드시 대입문(window.VWORLD_KEY =)만 골라야 한다.
-VW=$(grep -m1 '^window\.VWORLD_KEY' risk-zones.js || true)
-{ echo '// 경기 전체(ggweather) — 인명피해 우려지역. 아직 시트가 없어 비어 있다.';
-  echo "$VW";
-  echo 'window.RISK_ZONES = {};';
-  echo "window.RISK_SHEET_URL = '';"; } > risk-zones.js.new
+# 위험구역 — 경기 전체도 같은 구글시트를 그대로 본다(사장님 요청 2026-08-20).
+#   화면이 관서마다 '그 이름의 탭'을 찾아 읽으므로, 시트에 탭이 있는 관서만
+#   표시되고 없는 관서는 '등록된 위험구역 없음'이 된다 — 걸러낼 필요가 없다.
+#   (없는 탭을 부르면 구글이 첫 탭을 돌려주는 함정이 있는데, 첫 탭과 같은 내용이면
+#    건너뛰는 안전장치가 지도.html 에 이미 있다.)
+# 다만 북부에 하드코딩된 표본(window.RISK)은 지운다 — 경기 전체에선 동두천
+#   한 곳만 뜬 것처럼 보여 오해를 부른다. 시트에서 읽은 값이 이걸 덮어쓴다.
+grep -v '^window\.RISK *=' risk-zones.js > risk-zones.js.new
+echo 'window.RISK = [];' >> risk-zones.js.new
 mv risk-zones.js.new risk-zones.js
 rm -f risk-zones-south.js
 

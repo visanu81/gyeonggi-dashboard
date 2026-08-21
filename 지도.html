@@ -1138,8 +1138,13 @@ class Component extends DCLogic {
     };
     const fetchTxt=(url)=>fetch(url).then(r=>r.ok?r.text():'').catch(()=>'');
     const jobs=[];   // 관서별 후보 탭: 짧은이름 + 정식명
-    (geo?geo.regions:[]).forEach(g=>{ const set=[g.name]; if(ADMIN[g.name] && ADMIN[g.name]!==g.name) set.push(ADMIN[g.name]);
-      set.forEach(nm=>jobs.push({region:g.name, name:nm})); });
+    /* ⚠ 지도 영역이 아니라 '관서 목록'을 기준으로 돌아야 한다.
+       지도 경계가 없는 관서(송탄 — 평택시에 하위 구가 없어 분리 불가)는
+       geo.regions 에 없어서, 시트에 탭을 만들어도 영영 안 읽혔다. */
+    const _names=((window.REGION_CONF||{}).order)
+               || (geo?geo.regions.map(g=>g.name):[]);
+    _names.forEach(nm0=>{ const set=[nm0]; if(ADMIN[nm0] && ADMIN[nm0]!==nm0) set.push(ADMIN[nm0]);
+      set.forEach(nm=>jobs.push({region:nm0, name:nm})); });
     Promise.all([fetchTxt(base)].concat(jobs.map(j=>fetchTxt(base+sep+'sheet='+encodeURIComponent(j.name)).then(txt=>({region:j.region, txt}))))).then(all=>{
       const defTxt=all[0]||'';
       const items=rowsFrom(defTxt, '');                 // ① 첫 탭 — '지역' 칸으로 구분(첫 탭이 실제 관서면 여기서 잡힘)
