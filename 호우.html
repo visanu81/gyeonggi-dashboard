@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>호우 상황판 · 경기북부</title>
+<!-- support.js = dc-runtime 본체. 없으면 페이지가 부팅되지 않는다(템플릿이 글자로 노출).
+     반드시 진짜 head 안에 둘 것 — helmet에 넣으면 첫 렌더 뒤에 로드돼 부팅이 안 된다.
+     leaflet은 이 페이지가 지도를 안 그리므로 생략.
+     ※ 이 파일의 주석에는 절대 꺾쇠 태그를 쓰지 말 것. 런타임이 원본 HTML을 글자로 훑어
+       x-dc 시작점을 찾기 때문에, 주석 안의 태그를 진짜 태그로 오인해 화면이 깨진다. -->
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="호우상황판">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<!-- 순서 고정: data.js → data-adapter.js → dashboard-data.js(폴백은 반드시 어댑터 뒤).
+     뒤집으면 폴백이 실데이터를 이겨 영영 가짜 값이 보인다. -->
+<!-- 지역 설정 — 반드시 data-adapter.js보다 먼저. 없으면 어댑터가 경기북부 기본값으로
+     떨어져 남부 사이트에 북부 관서·강수량이 뜬다(2026-08-07 실제로 발생). -->
+<script src="region.js"></script>
+<script src="https://gyeonggi-dashboard.visanu81.workers.dev/data.js"></script>
+<script src="data-adapter.js"></script>
+<script src="dashboard-data.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --bg:#eef1f7; --bg2:#e6ebf4; --surface:#ffffff; --surface2:#f3f7fc; --surface3:#eaf0f8;
+    --border:#e4e9f2; --border2:#d3dbe9; --ink:#0f1b2d; --ink2:#4b5a74; --ink3:#8593aa;
+    --brand:#2563eb; --brand2:#1d4ed8; --brandSoft:#e9f0ff; --cyan:#0e7490;
+    --safe:#0ea371; --safeSoft:#e5f7f0; --caution:#e0930a; --cautionSoft:#fdf2df;
+    --warn:#ef6c1a; --warnSoft:#ffece0; --danger:#e5484d; --dangerSoft:#fdebec; --severe:#d42a2f; --severeSoft:#fbe3e3;
+    --sh1:0 1px 2px rgba(16,27,45,.06); --sh2:0 8px 26px -12px rgba(16,27,45,.16),0 2px 6px -3px rgba(16,27,45,.07);
+    --headerBg:rgba(255,255,255,.82); --grid:rgba(16,27,45,.05);
+  }
+  [data-theme="dark"]{
+    --bg:#080d18; --bg2:#0b1222; --surface:#111a2c; --surface2:#18233b; --surface3:#1e2a45;
+    --border:#26314c; --border2:#354364; --ink:#e9eef9; --ink2:#9fb0cf; --ink3:#6b7a99;
+    --brand:#4b8bf5; --brand2:#3b82f6; --brandSoft:rgba(75,139,245,.15); --cyan:#22d3ee;
+    --safe:#34d399; --safeSoft:rgba(52,211,153,.13); --caution:#fbbf24; --cautionSoft:rgba(251,191,36,.13);
+    --warn:#fb923c; --warnSoft:rgba(251,146,60,.14); --danger:#f87171; --dangerSoft:rgba(248,113,113,.13); --severe:#ef4444; --severeSoft:rgba(239,68,68,.16);
+    --sh1:0 1px 2px rgba(0,0,0,.5); --sh2:0 8px 26px -10px rgba(0,0,0,.6);
+    --headerBg:rgba(12,18,34,.82); --grid:rgba(255,255,255,.05);
+  }
+  html,body{ font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,sans-serif; background:var(--bg); color:var(--ink); font-feature-settings:'tnum'; -webkit-font-smoothing:antialiased; }
+  html{ scrollbar-width:none; -ms-overflow-style:none; }
+  html::-webkit-scrollbar, body::-webkit-scrollbar{ display:none; width:0; height:0; }
+  @keyframes dashBlink{ 0%,100%{ opacity:1 } 50%{ opacity:.4 } }
+  @keyframes dashRise{ from{ opacity:0; transform:translateY(10px) } to{ opacity:1; transform:none } }
+</style>
+</helmet>
+
+<div ref="{{rootRef}}" data-theme="{{theme}}" style="min-height:100vh; width:100%; background:var(--bg); padding-bottom:40px;">
+
+  <!-- ── 헤더 ─────────────────────────────────────────────── -->
+  <div style="position:sticky; top:0; z-index:50; background:var(--headerBg); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); padding:10px 16px;">
+    <div style="max-width:1280px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <a href="지도.html" style="display:flex; align-items:center; gap:5px; height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--border2); background:var(--surface); color:var(--ink2); font-size:12.5px; font-weight:800; text-decoration:none;">← 상황판</a>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:19px;">🌧</span>
+          <span style="font-size:17px; font-weight:900; color:var(--ink); letter-spacing:-.3px;">호우 상황판</span>
+        </div>
+        <div style="position:relative;">
+          <button onClick="{{toggleStationPicker}}" style="height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--border2); background:var(--surface); color:var(--ink); font-size:13px; font-weight:800; font-family:inherit; cursor:pointer;">{{myStation}} ▾</button>
+          <sc-if value="{{stationPickerOpen}}">
+            <div onClick="{{toggleStationPicker}}" style="position:fixed; inset:0; z-index:59;"></div>
+            <div style="position:absolute; top:calc(100% + 7px); left:0; z-index:61; background:var(--surface); border:1px solid var(--border2); border-radius:12px; box-shadow:var(--sh2); padding:6px; min-width:130px; max-height:70vh; overflow:auto;">
+              <sc-for list="{{stationList}}" as="s">
+                <div onClick="{{s.pick}}" style="padding:8px 11px; border-radius:8px; font-size:13px; cursor:pointer; background:{{s.selBg}}; color:{{s.selColor}}; font-weight:{{s.selW}};" style-hover="background:var(--surface2)">{{s.name}}</div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+        <div style="font-size:20px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums;">{{clockTime}}</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:7px;">
+        <span style="font-size:11px; color:var(--ink3);">{{updatedTxt}} 기준</span>
+        <button onClick="{{toggleDemo}}" style="{{demoBtnStyle}}">{{demoBtnLabel}}</button>
+        <button onClick="{{toggleTheme}}" style="height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--border2); background:var(--surface); color:var(--ink2); font-size:12.5px; font-weight:800; font-family:inherit; cursor:pointer;">{{themeLabel}}</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:1280px; margin:0 auto; padding:14px 16px; display:flex; flex-direction:column; gap:13px;">
+
+    <!-- 시연 중임을 절대 착각하지 않도록 크게 못박는다 (가짜 숫자를 실제로 오인하면 대형사고) -->
+    <sc-if value="{{demo}}">
+      <div style="background:var(--severe); border-radius:12px; padding:10px 15px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <span style="font-size:13px; font-weight:900; color:#fff;">▶ 시연 모드 — 아래 숫자는 전부 가짜입니다 (호우경보 상황 연습용)</span>
+        <span style="font-size:11.5px; color:#fff; opacity:.9;">실제 상황이 아닙니다. 끄려면 상단 '■ 시연 종료'.</span>
+      </div>
+    </sc-if>
+
+    <!-- ── ⓪ 태풍 — 진행 중일 때만 나타난다 (끝난 태풍이 남아 있으면 그게 오정보) ── -->
+    <sc-if value="{{hasTyphoon}}">
+      <div style="background:var(--surface); border:2px solid {{typBorder}}; border-radius:16px; box-shadow:var(--sh2); padding:15px 17px;">
+        {{typhoonBody}}
+      </div>
+    </sc-if>
+
+    <!-- ── ① 위험 배너 — 공식특보 / 우리 실측을 절대 섞지 않는다 ── -->
+    <div style="display:grid; grid-template-columns:{{bannerCols}}; gap:10px;">
+      <div style="background:{{warnBg}}; border:1px solid {{warnBorder}}; border-radius:14px; padding:12px 15px; display:flex; align-items:center; gap:11px;">
+        <span style="font-size:10.5px; font-weight:900; color:#fff; background:{{warnTagBg}}; padding:3px 8px; border-radius:6px; white-space:nowrap;">공식특보</span>
+        <span style="font-size:14px; font-weight:800; color:var(--ink); line-height:1.4;">{{warnText}}</span>
+      </div>
+      <div style="background:{{obsBg}}; border:1px solid {{obsBorder}}; border-radius:14px; padding:12px 15px; display:flex; align-items:center; gap:11px;">
+        <span style="font-size:10.5px; font-weight:900; color:#fff; background:{{obsTagBg}}; padding:3px 8px; border-radius:6px; white-space:nowrap;">실측 최다</span>
+        <div style="display:flex; flex-direction:column; gap:2px; min-width:0;">
+          <span style="font-size:14px; font-weight:800; color:var(--ink); line-height:1.4;">{{obsText}}</span>
+          <span style="font-size:11.5px; color:var(--ink2); line-height:1.4;">{{obsSub}}</span>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:11px; color:var(--ink3); margin-top:-6px; line-height:1.5;">※ 기상청 특보는 <b>예상</b> 기준이라 실측이 앞설 수 있습니다. 특보가 없어도 실측이 기준을 넘으면 대응하십시오. 호우주의보=3시간 60mm 또는 12시간 110mm · 경보=3시간 90mm 또는 12시간 180mm</div>
+
+    <!-- ── ② 11개 관서 누적강수 랭킹 (핵심) ───────────────── -->
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); padding:15px 17px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+        <div style="display:flex; align-items:baseline; gap:8px;">
+          <span style="font-size:15px; font-weight:900; color:var(--ink);">관서별 강수량</span>
+          <span style="font-size:11.5px; color:var(--ink3);">{{rankSrcTxt}}</span>
+        </div>
+        <div style="display:flex; gap:5px;">
+          <sc-for list="{{rankTabs}}" as="t">
+            <div onClick="{{t.pick}}" style="padding:6px 12px; border-radius:9px; font-size:12.5px; font-weight:800; cursor:pointer; border:1px solid {{t.bd}}; background:{{t.bg}}; color:{{t.fg}};" style-hover="filter:brightness(.97)">{{t.label}}</div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <sc-for list="{{rankRows}}" as="r">
+          <div style="display:grid; grid-template-columns:70px 1fr 78px; align-items:center; gap:10px; padding:7px 9px; border-radius:10px; background:{{r.rowBg}}; border:1px solid {{r.rowBd}};">
+            <div style="display:flex; align-items:center; gap:5px;">
+              <span style="font-size:13.5px; font-weight:{{r.nameW}}; color:{{r.nameColor}};">{{r.name}}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:9px; min-width:0;">
+              <div style="flex:1; height:9px; border-radius:5px; background:var(--surface3); overflow:hidden; min-width:0;">
+                <div style="height:100%; width:{{r.barW}}; background:{{r.barColor}}; border-radius:5px;"></div>
+              </div>
+              <span style="font-size:11px; color:var(--ink3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px;">{{r.sub}}</span>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:15px; font-weight:900; color:{{r.valColor}}; font-variant-numeric:tabular-nums;">{{r.valTxt}}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{rankEmpty}}">
+        <div style="font-size:12.5px; color:var(--ink3); padding:10px 2px;">강수 자료를 불러오는 중입니다.</div>
+      </sc-if>
+    </div>
+
+    <!-- ── ③ 우리 관할 + 6시간 예측 ────────────────────────── -->
+    <div style="display:grid; grid-template-columns:{{midCols}}; gap:13px;">
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); padding:15px 17px;">
+        <div style="font-size:15px; font-weight:900; color:var(--ink); margin-bottom:11px;">{{myStation}} 지금</div>
+        {{myNowBody}}
+      </div>
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); padding:15px 17px;">
+        <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:11px;">
+          <span style="font-size:15px; font-weight:900; color:var(--ink);">앞으로 6시간</span>
+          <span style="font-size:11.5px; color:var(--ink3);">초단기예보</span>
+        </div>
+        {{fcst6Body}}
+      </div>
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); padding:15px 17px;">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:11px; flex-wrap:wrap;">
+          <span style="font-size:15px; font-weight:900; color:var(--ink);">강풍</span>
+          <span style="font-size:11.5px; color:var(--ink3);">{{myStation}} · 순간최대</span>
+        </div>
+        {{windBody}}
+      </div>
+    </div>
+
+    <!-- ── ③-2 시간대별 강수 예보 (24시간) ───────────────────── -->
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); padding:15px 17px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:baseline; gap:8px;">
+          <span style="font-size:15px; font-weight:900; color:var(--ink);">시간대별 강수 예보</span>
+          <span style="font-size:11.5px; color:var(--ink3);">{{myStation}} · 앞으로 24시간</span>
+        </div>
+        <span style="font-size:11.5px; color:var(--ink3);">옆으로 밀어서 보기 →</span>
+      </div>
+      {{fcst24Body}}
+    </div>
+
+    <!-- ── ④ 하천 수위 ──────────────────────────────────────── -->
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); padding:15px 17px;">
+      <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:11px;">
+        <span style="font-size:15px; font-weight:900; color:var(--ink);">하천 수위</span>
+        <span style="font-size:11.5px; color:var(--ink3);">{{riverSub}}</span>
+      </div>
+      {{riverBody}}
+    </div>
+
+    <!-- ── ⑤ 레이더 + 초단기 예측강수 (각자 신선도 표시) ────────── -->
+    <div style="display:grid; grid-template-columns:{{radarCols}}; gap:13px;">
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); padding:15px 17px;">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:9px; flex-wrap:wrap;">
+          <span style="font-size:15px; font-weight:900; color:var(--ink);">비구름 (레이더)</span>
+          <span style="font-size:11.5px; font-weight:800; color:{{radarAgeColor}};">{{radarAge}}</span>
+        </div>
+        <div style="font-size:11.5px; color:var(--ink2); margin-bottom:9px; line-height:1.5;">지금 실제로 내리는 비를 레이더로 관측한 것입니다.</div>
+        <img src="https://gyeonggi-dashboard.visanu81.workers.dev/images/kma_radar.png" alt="레이더" style="width:100%; border-radius:11px; border:1px solid var(--border); background:var(--surface2);">
+        {{legendBody}}
+      </div>
+      <div style="background:var(--surface); border:1px solid {{qpfBorder}}; border-radius:16px; box-shadow:var(--sh2); padding:15px 17px;">
+        <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:9px; flex-wrap:wrap;">
+          <span style="font-size:15px; font-weight:900; color:var(--ink);">초단기 예측강수</span>
+          <span style="font-size:11.5px; font-weight:800; color:{{qpfAgeColor}};">{{qpfAge}}</span>
+        </div>
+        <div style="font-size:11.5px; color:var(--ink2); margin-bottom:9px; line-height:1.5;">앞으로 비구름이 어디로 갈지 기상청이 예측한 것입니다.</div>
+        {{qpfWarnBody}}
+        <img src="https://gyeonggi-dashboard.visanu81.workers.dev/images/kma_qpf.png" alt="초단기 예측강수" style="width:100%; border-radius:11px; border:1px solid var(--border); background:var(--surface2);">
+        {{legendBody2}}
+      </div>
+    </div>
+
+    <!-- ── ⑥ 기상청 해설 ────────────────────────────────────── -->
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); padding:15px 17px;">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+        <span style="font-size:15px; font-weight:900; color:var(--ink);">기상청 해설</span>
+        <span style="font-size:11.5px; color:var(--ink3);">{{infoTs}}</span>
+      </div>
+      {{infoBody}}
+    </div>
+
+    <!-- ── ⑥ 재난문자 ───────────────────────────────────────── -->
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); padding:15px 17px;">
+      <div style="font-size:15px; font-weight:900; color:var(--ink); margin-bottom:11px;">재난문자</div>
+      {{msgBody}}
+    </div>
+
+    <div style="font-size:11px; color:var(--ink3); text-align:center; padding:6px 0 2px; line-height:1.6;">
+      경기북부 호우 상황판 · 강수량은 기상청 AWS 실측(자동기상관측) 기준 · {{updatedTxt}} 기준<br>
+      관서 대표값은 <b>관할 안에서 가장 많이 온 관측소</b> 값입니다 (평균은 국지호우를 놓칩니다)
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1024},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;,&quot;section&quot;:&quot;표시&quot;},&quot;demo&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;표시&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#2563eb&quot;,&quot;options&quot;:[&quot;#2563eb&quot;,&quot;#0e7490&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;표시&quot;}}">
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    this.rootRef = React.createRef();
+    this.FB = { updated:'--', stations:[], rivers:[], warnings:[], prelim:[], messages:[], kmaImages:{} };
+    this.state = {
+      theme: props.theme === 'dark' ? 'dark' : 'light',
+      demo: !!props.demo,
+      now: new Date(),
+      w: (typeof window !== 'undefined' ? window.innerWidth : 1440),
+      rankTab: '12h',
+      myStation: (function(){ var h=((window.REGION_CONF||{}).home)||'동두천'; try{ return (typeof localStorage!=='undefined' && localStorage.getItem('ggMyStation')) || h; }catch(e){ return h; } })(),
+      stationPickerOpen: false
+    };
+  }
+
+  // ── 관서 선택 (지도.html과 localStorage 키를 공유 → 선택이 그대로 따라온다) ──
+  setMyStation(name){ try{ if(typeof localStorage!=='undefined') localStorage.setItem('ggMyStation', name); }catch(e){} this.setState({myStation:name, stationPickerOpen:false}); }
+  toggleStationPicker(){ this.setState({stationPickerOpen:!this.state.stationPickerOpen}); }
+
+  componentDidMount(){
+    this._clock = setInterval(()=>this.setState({now:new Date()}), 1000);
+    this._onResize = ()=>this.setState({w:window.innerWidth});
+    window.addEventListener('resize', this._onResize);
+    // helmet의 data.js/adapter는 '첫 렌더 후'에 실행된다 → 마운트 시점엔 DASH가 없을 수 있다
+    if(!window.DASH){ let n=0; this._poll=setInterval(()=>{ if(window.DASH || ++n>25){ clearInterval(this._poll); this.forceUpdate(); } }, 60); }
+    this.applyTheme();
+    this.startUpdatePoll();
+  }
+  componentDidUpdate(prev){
+    if(prev.theme !== this.props.theme && this.props.theme){ this.setState({theme:this.props.theme}); }
+    if(prev.accent !== this.props.accent){ this.applyTheme(); }
+  }
+  // ⚠ 이 메서드는 단 한 번만 정의할 것 (중복 정의로 타이머가 누수된 전례가 있음)
+  componentWillUnmount(){
+    clearInterval(this._clock); clearInterval(this._poll); clearInterval(this._upd); this._upd=null;
+    window.removeEventListener('resize', this._onResize);
+  }
+
+  applyTheme(){ try{ document.documentElement.setAttribute('data-theme', this.state.theme); if(this.props.accent){ document.documentElement.style.setProperty('--brand', this.props.accent); } }catch(e){} }
+  getData(){ return (typeof window!=='undefined' && window.DASH) ? window.DASH : this.FB; }
+  working(){ const b=this.getData(); return this.state.demo ? this.applyDemo(b) : b; }
+
+  /* ── 시연 모드 — 호우경보 상황 ──────────────────────────────
+     비가 안 올 때도 화면을 검증하고, 실제 상황 전에 눈에 익혀두기 위한 것.
+     시나리오는 지도.html의 시연(포천·동두천 호우경보)과 일부러 똑같이 맞췄다 —
+     두 화면을 나란히 켜도 앞뒤가 맞아야 하기 때문.
+     숫자는 공식 호우기준에 맞춰 각 단계가 하나씩 보이도록 구성했다:
+       포천 1시간 73mm → 극한호우(72mm↑) / 동두천 12시간 188mm → 경보급(180↑)
+       연천·양주·의정부 12시간 110~140mm → 주의보급(110↑) / 나머지는 그 아래  */
+  applyDemo(base){
+    const c = JSON.parse(JSON.stringify(base));
+    // 태풍 시연 — 실제 힌남노(2022) 제원을 본떠 만든 가상 태풍. 강도는 2026년부터
+    // 바뀐 숫자체계(1~5)로 표기한다(옛 중/강/매우강/초강력은 폐지).
+    (function(){
+      const hh = new Date().getHours();
+      const tm = (i)=>{ const d=new Date(Date.now()+i*6*3600*1000);
+        return String(d.getUTCFullYear()) + String(d.getUTCMonth()+1).padStart(2,'0') + String(d.getUTCDate()).padStart(2,'0')
+             + String(d.getUTCHours()).padStart(2,'0') + '00'; };
+      c.typhoon = [{
+        seq:'12', name:'루핏', name_en:'LUPIT', eff:'2', eff_txt:'직접영향', near_kr:true,
+        now:{lat:32.4, lon:126.1, ps:945, ws:45, dir:'NNE', sp:28, rad15:340, rad25:130, tm:tm(0)},
+        past:[],
+        fcst:[
+          {tm:tm(1), lat:34.2, lon:126.6, ps:950, ws:43, rad15:330, rad25:120, rad70:60},
+          {tm:tm(2), lat:36.1, lon:127.4, ps:960, ws:38, rad15:300, rad25:100, rad70:90},
+          {tm:tm(3), lat:38.0, lon:128.3, ps:975, ws:31, rad15:260, rad25:80,  rad70:130},
+          {tm:tm(4), lat:40.2, lon:129.5, ps:985, ws:25, rad15:220, rad25:null, rad70:180}
+        ]
+      }];
+    })();
+    c.warnings = [
+      {type:'호우경보', area:'포천, 동두천', level:'severe', time:'15:42'},
+      {type:'호우주의보', area:'연천, 양주, 의정부, 파주', level:'warning', time:'15:08'},
+      {type:'강풍주의보', area:'경기북부 전역', level:'warning', time:'14:30'}
+    ];
+    // 관서별 AWS 실측 — [1시간, 12시간, 일누적, 순간최대풍속, 강수대표소, 돌풍풍향(도), 바람최강소]
+    // 강풍도 경보 상황으로: 포천 28m/s(경보급 26↑), 연천 22m/s(주의보급 20↑)
+    const D = {
+      '포천':   [73, 196, 214, 28.4, '내촌면',   295, '관인'],
+      '동두천': [48, 188, 203, 21.6, '상패',     280, '하봉암'],
+      '연천':   [31, 141, 152, 22.3, '연천백의', 300, '군남'],
+      '양주':   [26, 124, 133, 17.8, '장흥면',   270, '남면'],
+      '의정부': [22, 113, 121, 15.2, '신곡',     265, '의정부'],
+      '파주':   [17,  96, 104, 14.6, '파주금촌', 285, '탄현'],
+      '가평':   [14,  71,  78, 12.1, '경기가평', 250, '가평조종'],
+      '남양주': [11,  58,  63, 10.4, '창현',     245, '오남'],
+      '고양':   [ 8,  44,  49,  9.2, '주교',     275, '고양'],
+      '일산':   [ 8,  44,  49,  9.2, '주교',     275, '고양'],
+      '구리':   [ 6,  33,  37,  7.6, '수택동',   240, '구리']
+    };
+    (c.stations||[]).forEach(s=>{
+      const v = D[s.name]; if(!v) return;
+      s.aws = { rn15:+(v[0]/4).toFixed(1), rn60:v[0], rn12h:v[1], rnday:v[2], wss:v[3],
+                station:v[4], ok:3, total:3 };
+      // 강풍은 별도 지점 — 실측에서도 11개 중 8개 관서가 '비 최다'와 '바람 최강'이 다르다.
+      // 시연도 일부러 다른 지점 이름을 넣어 그 사실이 화면에서 드러나게 한다.
+      s.aws.wind = { wss:v[3], ws10:+(v[3]*0.62).toFixed(1), wds:v[5], station:v[6] };
+      if(s.name==='일산') s.aws.alt='고양';       // 대체 표기도 시연에서 보이게
+      s.rain = v[0]; s.weather='비'; s.icon='🌧';
+      s.level = v[1]>=180 ? 'danger' : (v[1]>=110 ? 'warning' : 'normal');
+      s.cum12h = Math.round(v[1]*0.62);            // 자체집계가 실제보다 적게 나오는 문제도 재현
+      s.obs = Object.assign({}, s.obs, {rn1:v[0], pty:'1', base_time:'15:00'});
+      // 앞으로 6시간 — 강한 비가 이어지다 잦아드는 전형적 호우
+      const prof = (s.name==='포천'||s.name==='동두천') ? [42,38,29,18,9,3] : [21,17,12,7,3,1];
+      const hh = new Date().getHours();
+      s.fcst6 = prof.map((mm,i)=>({ time:String((hh+i+1)%24).padStart(2,'0')+':00',
+        rain_mm:mm, pop: Math.min(90, 40+mm), pty:1, pty_txt:'비', sky:4, temp:22, lgt: i<2?1:0 }));
+      // 24시간 시간대별 — 소강 뒤 야간에 2차 집중호우가 오는 시나리오(가장 위험한 전형).
+      // 야간 호우는 대피가 어려워 같은 양이라도 더 위험하다는 점을 시연에서 보이게 한다.
+      const hard = (s.name==='포천'||s.name==='동두천');
+      const p24 = hard ? [42,38,29,18,9,3,1,0,0,2,6,14,27,35,31,22,12,5,2,0,0,0,1,3]
+                       : [21,17,12,7,3,1,0,0,0,1,3,7,14,18,16,11,6,2,1,0,0,0,0,1];
+      s.forecast = p24.map((mm,i)=>({ hour:String((hh+i+1)%24)+'시', icon:(mm>0?'🌧':'☁'), weather:(mm>0?'비':'흐림'),
+        temp:+(23-(i%7)*0.4).toFixed(1), feels:23, rain:mm, pop:(mm>0?Math.min(90,40+mm*2):10),
+        wind:+(3+(mm/8)).toFixed(1), dir:'남서', deg:225, humid:Math.min(98, 80+mm) }));
+    });
+    // 하천 — 경보 상황에 맞춰 상승
+    const bump=(needle,val,tr)=>{ const r=(c.rivers||[]).filter(x=>(x.name||'').indexOf(needle)>=0)[0]; if(!r) return;
+      r.value=val; r.delta1=tr; r.delta3=+(tr*2.4).toFixed(2);
+      r.level = (r.danger!=null && val>=r.danger) ? 'danger' : ((r.warning!=null && val>=r.warning) ? 'warning' : 'safe'); };
+    bump('동두천 송천교',5.28,0.44); bump('한탄강',12.6,0.34); bump('군남댐',31.9,0.28);
+    bump('신천 (연천)',3.84,0.19); bump('필승교',1.62,0.21);
+    c.messages = [
+      {sender:'포천시', time:'15:44', text:'[포천시] 시간당 40mm 이상 강한 비가 내리고 있습니다. 저지대·하천변·산사태 위험지역 주민은 즉시 안전한 곳으로 대피하시기 바랍니다.', region:'포천'},
+      {sender:'동두천시', time:'15:31', text:'[동두천시] 신천 수위 급상승. 송천교 일대 하천변 산책로를 전면 통제합니다. 접근을 삼가시기 바랍니다.', region:'동두천'},
+      {sender:'경기도', time:'15:05', text:'[경기도] 호우경보 발효. 차량 침수에 주의하고 지하차도·급경사지 통행을 자제해 주세요.', region:'경기도'},
+      {sender:'연천군', time:'14:52', text:'[연천군] 임진강 수위 상승. 군남댐 방류가 예정되어 있으니 하천변 접근을 자제해 주세요.', region:'연천'}
+    ];
+    return c;
+  }
+
+  // 60초마다 운영 data.js를 다시 읽어 자동 반영 (절대 URL — 상대경로로 바꾸면 브랜치 데이터에 고착)
+  startUpdatePoll(){
+    if(this._upd) return;
+    this._upd = setInterval(()=>{
+      fetch('https://gyeonggi-dashboard.visanu81.workers.dev/data.js?_t='+Date.now(), {cache:'no-store'})
+        .then(r=>{ if(!r.ok) throw new Error('http '+r.status); return r.text(); })
+        .then(txt=>{
+          var k=txt.indexOf('DASHBOARD_DATA'); var i=txt.indexOf('=', k<0?0:k); if(i<0) return;
+          var obj=JSON.parse(txt.slice(i+1).replace(/;\s*$/,'').trim());
+          var cur=window.DASHBOARD_DATA && window.DASHBOARD_DATA.updated;
+          if(obj && obj.updated && obj.updated!==cur){
+            window.DASHBOARD_DATA=obj; if(window.adaptDashboard) window.adaptDashboard();
+            this.forceUpdate();
+          }
+        }).catch(()=>{});
+    }, 60000);
+  }
+
+  // ── 강수 헬퍼 ────────────────────────────────────────────
+  // AWS 결측은 null이다. 0(비 안 옴)과 반드시 구분한다.
+  num(v){ return (v===null || v===undefined || isNaN(v)) ? null : +v; }
+  mm(v){ const n=this.num(v); return n===null ? '—' : (n>=10 ? n.toFixed(0) : n.toFixed(1)); }
+
+  /* 공식 호우 기준 (기상청)
+       주의보 = 3시간 60mm  또는 12시간 110mm
+       경보   = 3시간 90mm  또는 12시간 180mm
+       극한호우 = 1시간 50mm+3시간 90mm, 또는 1시간 72mm
+     AWS는 3시간 누적을 주지 않으므로 1시간·12시간으로 판정하고, 3시간은 자체집계를 보조로 쓴다. */
+  rainLevel(rn60, rn12h){
+    const a=this.num(rn60), b=this.num(rn12h);
+    if(a!==null && a>=72) return {t:'극한호우', c:'var(--severe)', bg:'var(--severeSoft)', k:4};
+    if(b!==null && b>=180) return {t:'경보급',  c:'var(--severe)', bg:'var(--severeSoft)', k:4};
+    if(b!==null && b>=110) return {t:'주의보급', c:'var(--warn)',  bg:'var(--warnSoft)',  k:3};
+    if((a!==null && a>=20) || (b!==null && b>=60)) return {t:'주의', c:'var(--caution)', bg:'var(--cautionSoft)', k:2};
+    if((a!==null && a>0) || (b!==null && b>0))     return {t:'강수', c:'var(--safe)',   bg:'transparent', k:1};
+    return {t:'', c:'var(--ink3)', bg:'transparent', k:0};
+  }
+
+  renderVals(){
+    const d = this.working(), st = this.state, R = React.createElement;   // 시연 모드면 가짜 데이터로 그린다
+    const wide = st.w >= 900;
+    const myStation = st.myStation || '동두천';
+    const stations = d.stations || [];
+    const me = stations.filter(s=>s.name===myStation)[0] || stations[0] || {};
+
+    // 시계
+    const n=st.now, p2=x=>String(x).padStart(2,'0');
+    const clockTime = p2(n.getHours())+':'+p2(n.getMinutes())+':'+p2(n.getSeconds());
+
+    // ── 위험 배너 ①공식특보 ─────────────────────────────
+    const warns = (d.warnings||[]).filter(w=>/호우|태풍/.test(w.type||''));
+    const sev = warns.filter(w=>w.level==='severe').length>0;
+    const warnText = warns.length
+      ? warns.map(w=>(w.type||'')+' '+(w.area||'')).join(' · ')
+      : '발효 중인 호우특보 없음';
+    const prelimRain = (d.prelim||[]).filter(p=>/호우|태풍/.test(p.type||''));
+    const warnText2 = (!warns.length && prelimRain.length) ? ('예비특보 ' + prelimRain.map(p=>p.type).join('·')) : warnText;
+
+    // ── 위험 배너 ②우리 실측 (AWS) ──────────────────────
+    // 최악 관서 = 등급이 높은 곳. 등급이 같으면 '더 많이 온' 곳을 집는다.
+    // (등급만 비교하면 목록 순서상 앞선 관서가 이겨서, 경보 때 배너가 최악을 안 짚는다.
+    //  시연에서 포천 196mm·시간당 73mm(극한호우)를 두고 동두천 188mm가 뜨던 결함.)
+    let worst=null, worstLv=null;
+    stations.forEach(s=>{
+      const a=s.aws||{}; if(!a.ok) return;
+      const lv=this.rainLevel(a.rn60, a.rn12h);
+      if(lv.k===0) return;
+      const cur=(this.num(a.rn12h)||0), best=(worst ? (this.num((worst.aws||{}).rn12h)||0) : -1);
+      if(!worstLv || lv.k>worstLv.k || (lv.k===worstLv.k && cur>best)){ worst=s; worstLv=lv; }
+    });
+    // ⚠ 이 배너는 '경기북부 11개 관서 중 가장 많이 온 곳'이다(공식특보와 범위를 맞추기 위해).
+    //   내 관서와 다를 수 있으므로 라벨을 '실측 최다'로 하고, 내 관서 값을 아랫줄에 같이 적는다.
+    //   ('우리 실측'이라고만 쓰면 당연히 내 관서로 오해된다 — 실제로 그 지적을 받았다.)
+    let obsText='실측 강수 없음', obsSub='', obsLv={c:'var(--ink3)', bg:'var(--surface2)', k:0};
+    const meA = me.aws || {};
+    const meTxt = meA.ok
+      ? (myStation+' 12시간 '+this.mm(meA.rn12h)+'mm · 1시간 '+this.mm(meA.rn60)+'mm')
+      : (myStation+' 관측 자료없음');
+    if(worst && worstLv && worstLv.k>0){
+      const a=worst.aws||{};
+      obsText = worst.name+' 12시간 '+this.mm(a.rn12h)+'mm · 1시간 '+this.mm(a.rn60)+'mm'+(worstLv.t?(' — '+worstLv.t):'');
+      obsLv = worstLv;
+      obsSub = (worst.name===myStation)
+        ? '경기북부 11개 관서 중 최다 — 내 관서입니다'
+        : ('경기북부 11개 관서 중 최다 · 내 관서 ' + meTxt.replace(myStation+' ', myStation+' '));
+    } else {
+      obsText = '경기북부 전 관서 실측 강수 없음';
+      obsSub  = '내 관서 ' + meTxt;
+    }
+
+    // ── 관서별 랭킹 ─────────────────────────────────────
+    const TABS = [{k:'60',label:'1시간'},{k:'12h',label:'12시간'},{k:'day',label:'일누적'}];
+    const key = st.rankTab;
+    const pickVal = (a)=> key==='60' ? a.rn60 : (key==='day' ? a.rnday : a.rn12h);
+    let rows = stations.map(s=>{
+      const a = s.aws || {};
+      const v = a.ok ? this.num(pickVal(a)) : null;
+      return { s, a, v };
+    });
+    const maxV = Math.max(1, ...rows.map(r=>r.v===null?0:r.v));
+    rows.sort((x,y)=> (y.v===null?-1:y.v) - (x.v===null?-1:x.v));
+    const rankRows = rows.map(r=>{
+      const lv = this.rainLevel(r.a.rn60, r.a.rn12h);
+      const isMine = r.s.name===myStation;
+      const pct = r.v===null ? 0 : Math.max(2, Math.round(r.v/maxV*100));
+      let sub = '';
+      if(!r.a.ok) sub = '관측소 자료없음';
+      else {
+        sub = r.a.station || '';
+        if(r.a.alt) sub += ' (' + r.a.alt + ' 대체)';
+        if(r.a.ok && r.a.total && r.a.ok < r.a.total) sub += ' · ' + r.a.ok + '/' + r.a.total + '소';
+      }
+      return {
+        name: r.s.name,
+        valTxt: (r.v===null ? '—' : this.mm(r.v)),
+        valColor: (r.v===null ? 'var(--ink3)' : lv.c),
+        barW: pct + '%',
+        barColor: (r.v===null ? 'var(--border2)' : lv.c),
+        sub: sub,
+        rowBg: (isMine ? 'var(--brandSoft)' : (lv.k>=3 ? lv.bg : 'transparent')),
+        rowBd: (isMine ? 'var(--brand)' : 'transparent'),
+        nameW: (isMine ? 900 : 700),
+        nameColor: (isMine ? 'var(--brand)' : 'var(--ink)')
+      };
+    });
+    const rankTabs = TABS.map(t=>({
+      label: t.label,
+      bg: (st.rankTab===t.k ? 'var(--brand)' : 'var(--surface)'),
+      fg: (st.rankTab===t.k ? '#fff' : 'var(--ink2)'),
+      bd: (st.rankTab===t.k ? 'var(--brand)' : 'var(--border2)'),
+      pick: ()=>this.setState({rankTab:t.k})
+    }));
+    const anyAws = stations.filter(s=>(s.aws||{}).ok).length;
+
+    // 기상영상 신선도 — 어댑터가 tm(레이더 관측시각)을 버리므로 원본에서 직접 읽는다
+    const ki = this.kmaRaw();
+    const radarMin = (this.ageMinTm((ki.radar||{}).tm) !== null)
+      ? this.ageMinTm((ki.radar||{}).tm) : this.ageMin((ki.radar||{}).ts);
+    const qpfMin = this.ageMin((ki.qpf||{}).ts);
+
+    return {
+      rootRef:this.rootRef, theme:st.theme,
+      clockTime, myStation,
+      updatedTxt:(d.updated||'--').replace(/:\d\d$/,''),
+      // 관서 선택
+      stationPickerOpen:st.stationPickerOpen,
+      toggleStationPicker:()=>this.toggleStationPicker(),
+      stationList: stations.map(s=>({ name:s.name,
+        selBg:(s.name===myStation?'var(--brandSoft)':'transparent'),
+        selColor:(s.name===myStation?'var(--brand)':'var(--ink)'),
+        selW:(s.name===myStation?800:600),
+        pick:()=>this.setMyStation(s.name) })),
+      themeLabel: st.theme==='dark'?'☀ 라이트':'☾ 다크',
+      toggleTheme:()=>this.setState({theme:this.state.theme==='dark'?'light':'dark'}, ()=>this.applyTheme()),
+      // 시연 모드 ({{}}에서 삼항 연산을 못 쓰므로 스타일을 여기서 통째로 만들어 넘긴다)
+      demo: st.demo,
+      demoBtnLabel: st.demo?'■ 시연 종료':'▶ 시연 모드',
+      demoBtnStyle: 'height:36px; padding:0 13px; border-radius:10px; border:1px solid '+(st.demo?'var(--severe)':'var(--border2)')+'; background:'+(st.demo?'var(--severe)':'var(--surface)')+'; color:'+(st.demo?'#fff':'var(--ink2)')+'; font-size:12.5px; font-weight:800; font-family:inherit; cursor:pointer;',
+      toggleDemo:()=>this.setState({demo:!this.state.demo}),
+      // 레이아웃
+      bannerCols: wide ? '1fr 1fr' : 'minmax(0,1fr)',
+      // 넓은 화면은 3장(관할 강수 · 6시간 예측 · 강풍), 좁으면 세로 1열.
+      // 가운데(6시간)는 막대 6개라 더 넓게.
+      midCols:    wide ? 'minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr)' : 'minmax(0,1fr)',
+      radarCols:  wide ? '1fr 1fr' : 'minmax(0,1fr)',
+      // 태풍 (진행 중일 때만 카드가 뜬다)
+      hasTyphoon: ((d.typhoon||[]).length > 0),
+      typBorder: (function(){ var t=(d.typhoon||[])[0];
+        return (t && (t.eff==='1'||t.eff==='2')) ? 'var(--severe)' : 'var(--warn)'; })(),
+      typhoonBody: this.typhoonBody(d),
+      // 배너
+      warnText: warnText2,
+      warnBg: (warns.length ? (sev?'var(--severeSoft)':'var(--warnSoft)') : 'var(--surface)'),
+      warnBorder: (warns.length ? (sev?'var(--severe)':'var(--warn)') : 'var(--border)'),
+      warnTagBg: (warns.length ? (sev?'var(--severe)':'var(--warn)') : 'var(--ink3)'),
+      obsText, obsSub, obsBg:(obsLv.k>=2?obsLv.bg:'var(--surface)'),
+      obsBorder:(obsLv.k>=2?obsLv.c:'var(--border)'), obsTagBg:(obsLv.k>=2?obsLv.c:'var(--ink3)'),
+      // 랭킹
+      rankTabs, rankRows, rankEmpty: rankRows.length===0,
+      rankSrcTxt: anyAws ? ('기상청 AWS 실측 · ' + anyAws + '개 관서') : '자료 수신 대기',
+      // 본문 블록
+      myNowBody: this.myNowBody(me),
+      fcst6Body: this.fcst6Body(me),
+      fcst24Body: this.fcst24Body(me),
+      windBody: this.windBody(me, stations, myStation),
+      riverBody: this.riverBody(d),
+      riverSub: '한강홍수통제소',
+      msgBody: this.msgBody(d, me),
+      // 기상영상 신선도 — 레이더는 관측시각(tm)이 정확하고, 예측강수는 저장시각(ts)뿐이다.
+      // 6시간 전 '예측'을 아무 표시 없이 띄우면 오히려 위험하므로 나이를 항상 보여준다.
+      radarAge: this.ageTxt(radarMin) + (radarMin!==null && radarMin<30 ? ' 관측' : ' 관측 ⚠'),
+      radarAgeColor: this.ageColor(radarMin, 30),
+      qpfAge: this.ageTxt(qpfMin) + ' 자료',
+      qpfAgeColor: this.ageColor(qpfMin, 40),
+      qpfBorder: (qpfMin!==null && qpfMin>90) ? 'var(--warn)' : 'var(--border)',
+      qpfWarnBody: this.qpfWarnBody(qpfMin),
+      legendBody: this.legendBody(), legendBody2: this.legendBody(),
+      infoTs: (d.weatherInfo||{}).tmFc_display || '',
+      infoBody: this.infoBody(d)
+    };
+  }
+
+  // ── 기상영상 신선도 ─────────────────────────────────────
+  kmaRaw(){ try{ return (window.DASHBOARD_DATA && window.DASHBOARD_DATA.kma_images) || {}; }catch(e){ return {}; } }
+  ageMin(ts){   // '2026-07-15 13:32' → 경과 분
+    const m = String(ts||'').match(/(\d{4})-(\d\d)-(\d\d)\s+(\d\d):(\d\d)/);
+    if(!m) return null;
+    return Math.round((Date.now() - new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]).getTime())/60000);
+  }
+  ageMinTm(tm){ // '202607151315' → 경과 분
+    const s=String(tm||''); if(s.length<12) return null;
+    return Math.round((Date.now() - new Date(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12)).getTime())/60000);
+  }
+  ageTxt(min){
+    if(min===null) return '시각 미상';
+    if(min < 1) return '방금';
+    if(min < 60) return min + '분 전';
+    return Math.floor(min/60) + '시간 ' + (min%60) + '분 전';
+  }
+  ageColor(min, fresh){
+    if(min===null) return 'var(--ink3)';
+    if(min <= fresh) return 'var(--safe)';
+    if(min <= fresh*3) return 'var(--caution)';
+    return 'var(--severe)';
+  }
+  qpfWarnBody(min){
+    const R=React.createElement;
+    if(min===null || min<=90) return null;
+    return R('div',{style:{background:'var(--warnSoft)', border:'1px solid var(--warn)', borderRadius:'9px', padding:'8px 11px', marginBottom:'9px', fontSize:'12px', color:'var(--ink)', fontWeight:700, lineHeight:1.5}},
+      '⚠ 이 예측 그림은 ' + this.ageTxt(min) + ' 자료입니다. 기상청 예측 영상이 갱신되지 않고 있으니 지금 상황 판단에는 위쪽 레이더와 관서별 실측을 쓰십시오.');
+  }
+
+  // ── 색 읽는 법 (그림에도 범례가 있지만 작아서 안 보인다) ──
+  legendBody(){
+    const R=React.createElement;
+    const L=[['#40a0ff','1~5','약한 비'],['#00b050','5~10','보통'],['#ffd400','10~20','다소 강함'],
+             ['#ff8000','20~30','강한 비'],['#e00000','30~50','매우 강함'],['#c000c0','50↑','극한']];
+    return R('div',{style:{marginTop:'10px'}},
+      R('div',{style:{fontSize:'11px', color:'var(--ink3)', marginBottom:'6px'}}, '색 읽는 법 — 시간당 강수량(mm/h)'),
+      R('div',{style:{display:'flex', flexWrap:'wrap', gap:'6px'}},
+        L.map((x,i)=>R('div',{key:i, style:{display:'flex', alignItems:'center', gap:'4px', padding:'3px 7px', borderRadius:'6px', background:'var(--surface2)'}},
+          R('span',{style:{width:'11px', height:'11px', borderRadius:'3px', background:x[0], flexShrink:0}}),
+          R('span',{style:{fontSize:'10.5px', fontWeight:800, color:'var(--ink)'}}, x[1]),
+          R('span',{style:{fontSize:'10.5px', color:'var(--ink3)'}}, x[2])))),
+      R('div',{style:{fontSize:'10.5px', color:'var(--ink3)', marginTop:'6px', lineHeight:1.5}},
+        '시간당 30mm 이상(빨강)이면 하수구 역류·저지대 침수가 시작됩니다.'));
+  }
+
+  // ── 기상청 해설 (기상정보 전문 + 중기 강수전망) ──────────
+  infoBody(d){
+    const R=React.createElement;
+    const info = (d.weatherInfo||{}).content || '';
+    const mid  = (d.midForecast||{}).content || '';
+    // 중기전망에서 '(강수)' 문단만 뽑는다 — 기온 문단은 호우 상황에 불필요
+    let rainLine = '';
+    const mm = mid.match(/○\s*\(강수\)[^\n○]*/);
+    if(mm) rainLine = mm[0].trim();
+    if(!info && !rainLine) return R('div',{style:{fontSize:'13px', color:'var(--ink3)'}}, '기상청 해설을 불러오는 중입니다.');
+    return R('div',null,
+      rainLine ? R('div',{style:{background:'var(--brandSoft)', border:'1px solid var(--brand)', borderRadius:'10px', padding:'10px 12px', marginBottom:'10px'}},
+        R('div',{style:{fontSize:'11px', fontWeight:800, color:'var(--brand)', marginBottom:'3px'}}, '앞으로 며칠 (중기전망)'),
+        R('div',{style:{fontSize:'12.5px', color:'var(--ink)', lineHeight:1.6}}, rainLine)) : null,
+      info ? R('div',{style:{maxHeight:'240px', overflow:'auto', background:'var(--surface2)', borderRadius:'10px', padding:'11px 13px'}},
+        R('div',{style:{fontSize:'12.5px', color:'var(--ink2)', lineHeight:1.7, whiteSpace:'pre-wrap'}}, info)) : null,
+      R('div',{style:{fontSize:'10.5px', color:'var(--ink3)', marginTop:'7px'}}, '※ 기상청이 발표한 전국 기상정보 전문입니다. 호우 때는 강수 현황·전망이 실립니다.'));
+  }
+
+  // ── 우리 관할 지금 ───────────────────────────────────────
+  myNowBody(s){
+    const R=React.createElement;
+    const a=s.aws||{}, obs=s.obs||{};
+    if(!a.ok){
+      return R('div',{style:{fontSize:'13px', color:'var(--ink3)', lineHeight:1.6}},
+        '이 관서의 AWS 관측 자료가 없습니다.',
+        R('br'), '자체 집계 12시간 ' + (s.cum12h!=null?s.cum12h:'—') + 'mm');
+    }
+    const lv=this.rainLevel(a.rn60, a.rn12h);
+    const row=(label,val,unit)=>R('div',{style:{display:'flex', justifyContent:'space-between', alignItems:'baseline', padding:'6px 0', borderBottom:'1px solid var(--border)'}},
+      R('span',{style:{fontSize:'12.5px', color:'var(--ink2)'}}, label),
+      R('span',{style:{fontSize:'14px', fontWeight:800, color:'var(--ink)', fontVariantNumeric:'tabular-nums'}}, val + (val==='—'?'':unit)));
+    return R('div',null,
+      R('div',{style:{display:'flex', alignItems:'baseline', gap:'9px', marginBottom:'9px'}},
+        R('span',{style:{fontSize:'34px', fontWeight:900, color:lv.c, lineHeight:1, fontVariantNumeric:'tabular-nums'}}, this.mm(a.rn60)),
+        R('span',{style:{fontSize:'14px', fontWeight:700, color:'var(--ink2)'}}, 'mm/h'),
+        lv.t ? R('span',{style:{fontSize:'11px', fontWeight:900, color:'#fff', background:lv.c, padding:'3px 8px', borderRadius:'6px'}}, lv.t) : null),
+      row('15분', this.mm(a.rn15), 'mm'),
+      row('12시간', this.mm(a.rn12h), 'mm'),
+      row('오늘 누적', this.mm(a.rnday), 'mm'),
+      row('돌풍', this.mm(a.wss), 'm/s'),
+      R('div',{style:{fontSize:'11px', color:'var(--ink3)', marginTop:'8px', lineHeight:1.5}},
+        '관측소 ' + (a.station||'?') + (a.alt ? ' · ⚠ ' + a.alt + ' 관측소로 대체' : '') +
+        (a.total ? ' · 관할 ' + a.ok + '/' + a.total + '개소 수신' : ''),
+        R('br'), '자체 집계 12시간 ' + (s.cum12h!=null?s.cum12h:'—') + 'mm (참고)'));
+  }
+
+  // ── 앞으로 6시간 ────────────────────────────────────────
+  fcst6Body(s){
+    const R=React.createElement;
+    const list=(s.fcst6||[]);
+    if(!list.length) return R('div',{style:{fontSize:'13px', color:'var(--ink3)', lineHeight:1.6}}, '6시간 예측 자료를 불러오는 중입니다.');
+    const maxR = Math.max(1, ...list.map(x=>+x.rain_mm||0));
+    return R('div',{style:{display:'flex', gap:'7px'}},
+      list.map((x,i)=>{
+        const r=+x.rain_mm||0;
+        const h=Math.max(3, Math.round(r/maxR*74));
+        const c = r>=20 ? 'var(--severe)' : r>=10 ? 'var(--warn)' : r>=3 ? 'var(--caution)' : r>0 ? 'var(--brand)' : 'var(--border2)';
+        return R('div',{key:i, style:{flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', minWidth:0}},
+          R('span',{style:{fontSize:'11.5px', fontWeight:800, color:(r>0?'var(--ink)':'var(--ink3)')}}, r>0?r:'—'),
+          R('div',{style:{width:'100%', height:'78px', display:'flex', alignItems:'flex-end', background:'var(--surface2)', borderRadius:'7px', overflow:'hidden'}},
+            R('div',{style:{width:'100%', height:h+'px', background:c, borderRadius:'7px 7px 0 0'}})),
+          R('span',{style:{fontSize:'10.5px', color:'var(--ink3)'}}, (x.pop!=null?x.pop+'%':'')),
+          R('span',{style:{fontSize:'11px', fontWeight:700, color:'var(--ink2)'}}, (x.time||'').slice(0,2)+'시'));
+      }));
+  }
+
+  // ── 시간대별 강수 예보 (24시간, 단기예보) ─────────────────
+  // 6시간 예측(초단기)이 '급전개 판단'이라면, 이건 '야간 근무 편성·장비 사전배치'용.
+  // 강수량 문자열('1.0mm 미만' 등)은 서버의 parse_pcp가 이미 mm 숫자로 바꿔서 준다.
+  fcst24Body(s){
+    const R=React.createElement;
+    const list=(s.forecast||[]);
+    if(!list.length) return R('div',{style:{fontSize:'13px', color:'var(--ink3)'}}, '시간대별 예보를 불러오는 중입니다.');
+    const rains = list.map(x=>+x.rain||0);
+    const maxR = Math.max(1, ...rains);
+    const total = rains.reduce((a,b)=>a+b, 0);
+    const peak = Math.max(...rains);
+    const peakAt = peak>0 ? (list[rains.indexOf(peak)]||{}).hour : null;
+    const wet = rains.filter(v=>v>0).length;
+    const col = r => r>=30 ? 'var(--severe)' : r>=20 ? 'var(--warn)' : r>=10 ? 'var(--caution)' : r>=1 ? 'var(--brand)' : r>0 ? 'var(--cyan)' : 'var(--border2)';
+    // 요약 한 줄 — 숫자 24개를 눈으로 훑기 전에 결론부터
+    const summary = total<=0
+      ? '앞으로 24시간 비 예보 없음'
+      : ('앞으로 24시간 합계 ' + total.toFixed(1) + 'mm · 비 오는 시간 ' + wet + '시간'
+         + (peak>0 ? (' · 가장 강할 때 ' + peakAt + ' ' + peak + 'mm/h') : ''));
+    return R('div',null,
+      R('div',{style:{fontSize:'12.5px', fontWeight:800, color:(total>=30?'var(--warn)':'var(--ink2)'), marginBottom:'10px'}}, summary),
+      R('div',{style:{display:'flex', gap:'4px', overflowX:'auto', paddingBottom:'7px'}},
+        list.map((x,i)=>{
+          const r=+x.rain||0;
+          const h=r>0 ? Math.max(4, Math.round(r/maxR*70)) : 2;
+          const hr=String(x.hour||'');
+          const isNight = (function(){ const n=parseInt(hr,10); return !isNaN(n) && (n>=21 || n<=5); })();
+          return R('div',{key:i, style:{flex:'0 0 auto', width:'38px', display:'flex', flexDirection:'column', alignItems:'center', gap:'4px',
+                                        padding:'5px 0', borderRadius:'8px', background:(isNight?'var(--surface3)':'transparent')}},
+            R('span',{style:{fontSize:'10.5px', fontWeight:800, color:(r>0?'var(--ink)':'var(--ink3)'), height:'13px'}}, r>0?r:''),
+            R('div',{style:{width:'100%', height:'74px', display:'flex', alignItems:'flex-end', justifyContent:'center'}},
+              R('div',{style:{width:'16px', height:h+'px', background:col(r), borderRadius:'4px 4px 0 0'}})),
+            R('span',{style:{fontSize:'9.5px', color:'var(--ink3)', height:'12px'}}, (x.pop!=null && x.pop>0) ? (x.pop+'%') : ''),
+            R('span',{style:{fontSize:'10px', fontWeight:(isNight?800:600), color:(isNight?'var(--ink2)':'var(--ink3)')}}, hr.replace('시','')));
+        })),
+      R('div',{style:{fontSize:'10.5px', color:'var(--ink3)', marginTop:'4px', lineHeight:1.5}},
+        '위 숫자=시간당 mm · 아래=강수확률 · 회색칸=야간(21~05시). 야간 호우는 대피가 어려워 같은 양이라도 더 위험합니다.'));
+  }
+
+  // ── 태풍 ────────────────────────────────────────────────
+  /* 진행 중인 태풍만 표시한다. 태풍은 1년의 대부분이 '없음'이고, 끝난 태풍을 남겨두면
+     그 자체가 오정보라 서버도 실패 시 빈 배열을 준다(이전 값 보존 안 함).
+
+     ⚠ 태풍 강도는 2026년 제1호 '노카엔'부터 **숫자체계(1~5)**로 바뀌었다.
+       옛 명칭 '중/강/매우강/초강력'은 폐지 — 쓰면 오정보다.
+       최대풍속 경계(m/s): 17 / 25 / 33 / 44 / 54  (기상청 날씨누리 '태풍의 분류') */
+  typStrength(ws){
+    const v=this.num(ws);
+    if(v===null) return {t:'', c:'var(--ink3)'};
+    if(v>=54) return {t:'강도 5', c:'var(--severe)'};
+    if(v>=44) return {t:'강도 4', c:'var(--severe)'};
+    if(v>=33) return {t:'강도 3', c:'var(--warn)'};
+    if(v>=25) return {t:'강도 2', c:'var(--caution)'};
+    if(v>=17) return {t:'강도 1', c:'var(--brand)'};
+    return {t:'', c:'var(--ink3)'};
+  }
+  // '202209060900'(UTC) → 한국시각 '6일 18시'
+  typTm(tm){
+    const s=String(tm||''); if(s.length<12) return '';
+    const d=new Date(Date.UTC(+s.slice(0,4), +s.slice(4,6)-1, +s.slice(6,8), +s.slice(8,10), +s.slice(10,12)));
+    return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+'시';
+  }
+  typhoonBody(d){
+    const R=React.createElement;
+    const list=(d.typhoon||[]);
+    if(!list.length) return null;
+    return R('div',{style:{display:'flex', flexDirection:'column', gap:'14px'}},
+      list.map((t,i)=>{
+        const n=t.now||{}, st=this.typStrength(n.ws);
+        const near = (t.eff==='1'||t.eff==='2');
+        const chip=(txt,bg)=>R('span',{style:{fontSize:'11px', fontWeight:900, color:'#fff', background:bg, padding:'3px 9px', borderRadius:'6px', whiteSpace:'nowrap'}}, txt);
+        const cell=(label,val)=>R('div',{style:{display:'flex', flexDirection:'column', gap:'2px'}},
+          R('span',{style:{fontSize:'10.5px', color:'var(--ink3)'}}, label),
+          R('span',{style:{fontSize:'14px', fontWeight:800, color:'var(--ink)', fontVariantNumeric:'tabular-nums'}}, val));
+        return R('div',{key:i},
+          R('div',{style:{display:'flex', alignItems:'center', gap:'9px', flexWrap:'wrap', marginBottom:'11px'}},
+            R('span',{style:{fontSize:'19px'}}, '🌀'),
+            R('span',{style:{fontSize:'17px', fontWeight:900, color:'var(--ink)'}},
+              '제' + t.seq + '호 태풍 ' + (t.name||'')),
+            st.t ? chip(st.t, st.c) : null,
+            chip(t.eff_txt || '', near ? 'var(--severe)' : 'var(--ink3)'),
+            R('span',{style:{fontSize:'11px', color:'var(--ink3)', marginLeft:'auto'}},
+              n.tm ? (this.typTm(n.tm) + ' 기준') : '')),
+          R('div',{style:{display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(96px,1fr))', gap:'11px',
+                          padding:'11px 13px', background:'var(--surface2)', borderRadius:'11px'}},
+            cell('중심기압', (n.ps!=null? n.ps+' hPa':'—')),
+            cell('최대풍속', (n.ws!=null? n.ws+' m/s':'—')),
+            cell('이동', ((n.dir||'—') + (n.sp!=null? ' '+n.sp+'km/h':''))),
+            cell('강풍반경', (n.rad15!=null? n.rad15+' km':'—')),
+            cell('폭풍반경', (n.rad25!=null? n.rad25+' km':'—'))),
+          // 예상 진로 — 진행 중인 태풍에만 붙는다
+          (t.fcst && t.fcst.length)
+            ? R('div',{style:{marginTop:'11px'}},
+                R('div',{style:{fontSize:'11.5px', fontWeight:800, color:'var(--ink2)', marginBottom:'7px'}}, '예상 진로'),
+                R('div',{style:{display:'flex', gap:'7px', overflowX:'auto', paddingBottom:'5px'}},
+                  t.fcst.map((p,j)=>{
+                    const ps=this.typStrength(p.ws);
+                    return R('div',{key:j, style:{flex:'0 0 auto', minWidth:'88px', padding:'8px 10px', borderRadius:'9px',
+                                                  background:'var(--surface2)', border:'1px solid var(--border)'}},
+                      R('div',{style:{fontSize:'11px', fontWeight:800, color:'var(--ink)'}}, this.typTm(p.tm)),
+                      R('div',{style:{fontSize:'10.5px', color:'var(--ink3)', marginTop:'3px'}},
+                        (p.lat!=null? p.lat.toFixed(1)+'N ':'') + (p.lon!=null? p.lon.toFixed(1)+'E':'')),
+                      R('div',{style:{fontSize:'11px', fontWeight:800, color:ps.c, marginTop:'3px'}},
+                        (p.ps!=null? p.ps+'hPa':'') + (p.ws!=null? ' · '+p.ws+'m/s':'')));
+                  })))
+            : R('div',{style:{fontSize:'11.5px', color:'var(--ink3)', marginTop:'9px'}},
+                '예상 진로 정보가 아직 없습니다 (기상청 발표 대기).'),
+          R('div',{style:{fontSize:'10.5px', color:'var(--ink3)', marginTop:'9px', lineHeight:1.55}},
+            '강풍반경=초속 15m 이상 부는 범위 · 폭풍반경=초속 25m 이상. 시각은 한국시각.',
+            near ? R('span',{style:{color:'var(--severe)', fontWeight:800}}, ' · 한반도 ' + t.eff_txt + ' 태풍입니다.') : null));
+      }));
+  }
+
+  // ── 강풍 ────────────────────────────────────────────────
+  /* 공식 강풍 기준(기상청): 주의보 = 평균 14m/s↑ 또는 순간 20m/s↑
+                             경보   = 평균 21m/s↑ 또는 순간 26m/s↑  (산지는 더 엄격)
+     AWS의 WSS가 곧 '순간최대풍속'이라 20/26을 그대로 적용한다.
+     ※ 소방 고소작업(사다리차 등) 중단 기준은 별도이나 확인된 수치가 없어 넣지 않았다.
+       현장 기준을 알려주면 그 선을 여기에 함께 긋는다. 임의 수치를 지어내지 않는다. */
+  windLevel(wss, ws10){
+    const g=this.num(wss), a=this.num(ws10);
+    if((g!==null && g>=26) || (a!==null && a>=21)) return {t:'경보급',  c:'var(--severe)', bg:'var(--severeSoft)', k:4};
+    if((g!==null && g>=20) || (a!==null && a>=14)) return {t:'주의보급', c:'var(--warn)',   bg:'var(--warnSoft)',  k:3};
+    if(g!==null && g>=14) return {t:'강함', c:'var(--caution)', bg:'var(--cautionSoft)', k:2};
+    if(g!==null && g>=10) return {t:'다소 강함', c:'var(--brand)', bg:'transparent', k:1};
+    return {t:'', c:'var(--ink3)', bg:'transparent', k:0};
+  }
+  dirTxt(deg){
+    const d=this.num(deg); if(d===null) return '';
+    const N=['북','북북동','북동','동북동','동','동남동','남동','남남동','남','남남서','남서','서남서','서','서북서','북서','북북서'];
+    return N[Math.round((d%360)/22.5)%16] || '';
+  }
+  /* 고가·굴절차 운용 '경고' — 판정이 아니다.
+     ⚠ 왜 판정을 안 하나:
+       ① 12.5m/s는 '사다리 선단 풍속계' 값이고, 이 카드의 숫자는 '지상 10m' AWS 값이다.
+          높이 올라갈수록 바람이 세므로, 지상이 12.5 미만이어도 사다리 끝은 이미 넘었을 수 있다.
+          "지상 12.5 = 중지"로 띄우면 실제보다 안전하다고 오판하게 만든다.
+       ② 12.5는 '장비 제작·검사 기준'이지 소방청의 '현장 운용 중지 기준'이 아니다.
+          그런 수치 지침은 존재를 확인하지 못했다(SOP 209는 정성적 문구뿐).
+       ③ 순간풍속인지 평균풍속인지 어느 문서에도 명시가 없다.
+     → 상황판이 없는 기준을 만들어내면 지휘관이 그걸 믿고 판단하게 된다. 경고만 한다. */
+  aerialWarnBody(){
+    const R=React.createElement;
+    const b=(x)=>R('b',null,x);
+    return R('div',{style:{marginTop:'10px', paddingTop:'10px', borderTop:'1px dashed var(--border2)'}},
+      // ★ 경고는 AWS 숫자 '바로 밑'에 붙인다 — 숫자와 떨어지면 숫자만 읽는다.
+      //   임계값(12.5)은 여기 두지 않는다. 지상값 옆에 놓이는 순간 '아직 12.5 안 됐네'로 오독된다.
+      R('div',{style:{background:'var(--cautionSoft)', border:'1px solid var(--caution)', borderRadius:'9px', padding:'9px 11px'}},
+        R('div',{style:{fontSize:'11.5px', fontWeight:900, color:'var(--ink)', marginBottom:'4px'}},
+          '⚠ 이 숫자로 사다리차 가부를 판단하지 마십시오'),
+        R('div',{style:{fontSize:'11px', color:'var(--ink2)', lineHeight:1.6}},
+          '판단은 ', b('사다리 선단 풍속계 실측'), '으로 하십시오. 바람은 높이 올라갈수록 강해집니다 — ',
+          R('b',{style:{color:'var(--severe)'}}, '지상 20m 높이에서 지상보다 50%까지 빠를 수 있습니다'),
+          ' (뉴질랜드 정부 WorkSafe NZ).')),
+      R('details',{style:{marginTop:'8px'}},
+        R('summary',{style:{fontSize:'11px', color:'var(--brand)', cursor:'pointer', fontWeight:800}},
+          '📖 선진국 기준 보기'),
+        R('div',{style:{fontSize:'10.5px', color:'var(--ink2)', lineHeight:1.7, marginTop:'8px'}},
+          R('div',{style:{fontWeight:800, color:'var(--ink)', marginBottom:'6px'}},
+            '아래 수치는 전부 「장비에서 잰 풍속」입니다 — 위 지상 관측값과 같은 자로 잰 값이 아닙니다.'),
+          b('· 유럽 EN 14043:2014 §1.3 — 고가사다리차'), R('br'),
+          '사다리에 작용하는 풍속 12.5 m/s 이하를 전제로 설계. ',
+          R('b',{style:{color:'var(--severe)'}}, '초과 시 즉시 중지가 아닙니다'),
+          ' — 지지로프 등 추가조치를 붙여 사용(§7.1 k). 제조사에 따라 22 m/s까지 단계별 조치 후 운용하는 사례가 있습니다.',
+          R('br'), R('br'),
+          b('· 미국 NFPA 1900 (2024년, 구 NFPA 1901)'), R('br'),
+          '전국 통일 수치 없음 — ', b('기종별 하중표(명판)에 위임'), '. 제조사 매뉴얼: "풍속계는 장비 선단에 다는 것이 최선", "정격을 넘기기 전에 접어서 격납하라"(E-ONE). 미국 산업안전(OSHA) 고소작업차 규정에는 풍속 조항 자체가 없습니다.',
+          R('br'), R('br'),
+          b('· 미국·유럽 고소작업대(MEWP)는 12.5 m/s로 수렴'), R('br'),
+          'ANSI A92.20 = 28 mph = 12.5 m/s. (소방차가 아니라 일반 고소작업대 — 참고)',
+          R('br'), R('br'),
+          b('· 일본 — 관측값과 비교 가능한 유일한 선례'), R('br'),
+          '10분 평균 10 m/s 이상이면 2m 이상 고소작업 중지 (후생노동성 基発第309号). ',
+          '※ 소방이 아니라 산업안전 법령이고, 측정 지점 규정이 없습니다.',
+          R('br'), R('br'),
+          R('b',{style:{color:'var(--severe)'}}, '· 한국 소방청의 풍속 수치 지침은 확인되지 않았습니다.'),
+          ' 영국·일본 소방도 수치 기준이 없습니다 — 국제적으로 공통입니다.',
+          R('br'), R('br'),
+          R('div',{style:{padding:'8px 10px', background:'var(--brandSoft)', borderRadius:'8px', fontWeight:800, color:'var(--ink)'}},
+            '※ 우리 관서 차량의 실제 한계는 차량 명판에 있습니다. 기종마다 다릅니다. 표준을 아무리 뒤져도 "우리 차가 몇 m/s까지인지"는 나오지 않습니다.'))));
+  }
+
+  /* 풍력계급(육상 상태) — 기상청 지상기상관측지침. 바람이 셀 때만 한 줄 붙인다.
+     ⚠ '간판이 날아간다'류의 표현은 기상청 현행 자료에 없는 업계 통념이라 쓰지 않는다. */
+  beaufortTxt(wss){
+    const v=this.num(wss); if(v===null) return '';
+    if(v>=28.5) return '광범위한 파괴';
+    if(v>=24.5) return '나무가 뿌리째 뽑히고 가옥에 큰 손해';
+    if(v>=20.8) return '굴뚝이 넘어지고 기와가 벗겨짐';
+    if(v>=17.2) return '나뭇가지가 꺾이고 바람을 안고 걷기 어려움';
+    if(v>=13.9) return '작은 나무가 흔들림';
+    return '';
+  }
+  /* 선택 관서 중심의 강풍 카드. '동두천 지금'(강수)과 나란히 놓이므로 같은 얼개로 짠다.
+     11개 관서 랭킹 대신 내 관서를 크게 보여주되, '북부 최강'은 한 줄로 남긴다 —
+     지원 판단(어느 관서가 제일 위험한가)을 잃지 않기 위해서. */
+  windBody(me, stations, myStation){
+    const R=React.createElement;
+    const w = (me.aws||{}).wind || {};
+    const v = this.num(w.wss);
+    // 북부 최강 (내 관서 제외하고 비교했을 때 더 센 곳이 있으면 알린다)
+    let top=null, topV=-1;
+    stations.forEach(s=>{ const ww=(s.aws||{}).wind||{}; const vv=this.num(ww.wss);
+      if(vv!==null && vv>topV){ topV=vv; top={name:s.name, w:ww}; } });
+
+    if(v===null){
+      return R('div',{style:{fontSize:'13px', color:'var(--ink3)', lineHeight:1.6}},
+        '이 관서의 바람 자료가 없습니다.',
+        top ? R('div',{style:{fontSize:'11.5px', marginTop:'7px'}},
+          '북부 최강 ' + top.name + ' ' + this.mm(top.w.wss) + 'm/s') : null);
+    }
+    const lv = this.windLevel(w.wss, w.ws10);
+    const dir = this.dirTxt(w.wds);
+    const row=(label,val)=>R('div',{style:{display:'flex', justifyContent:'space-between', alignItems:'baseline', padding:'6px 0', borderBottom:'1px solid var(--border)'}},
+      R('span',{style:{fontSize:'12.5px', color:'var(--ink2)'}}, label),
+      R('span',{style:{fontSize:'14px', fontWeight:800, color:'var(--ink)', fontVariantNumeric:'tabular-nums'}}, val));
+    const topLv = top ? this.windLevel(top.w.wss, top.w.ws10) : null;
+    return R('div',null,
+      R('div',{style:{display:'flex', alignItems:'baseline', gap:'9px', marginBottom:'9px'}},
+        R('span',{style:{fontSize:'34px', fontWeight:900, color:lv.c, lineHeight:1, fontVariantNumeric:'tabular-nums'}}, this.mm(w.wss)),
+        R('span',{style:{fontSize:'14px', fontWeight:700, color:'var(--ink2)'}}, 'm/s'),
+        lv.t ? R('span',{style:{fontSize:'11px', fontWeight:900, color:'#fff', background:lv.c, padding:'3px 8px', borderRadius:'6px'}}, lv.t) : null),
+      row('풍향', dir ? (dir+'풍') : '—'),
+      row('10분 평균', this.mm(w.ws10) + (this.num(w.ws10)===null?'':' m/s')),
+      (function(bf){ return bf
+        ? R('div',{style:{marginTop:'9px', padding:'8px 10px', borderRadius:'8px', background:lv.bg!=='transparent'?lv.bg:'var(--surface2)',
+                          fontSize:'11.5px', fontWeight:700, color:'var(--ink)', lineHeight:1.5}}, '지금 이 바람이면 — ' + bf)
+        : null; })(this.beaufortTxt(w.wss)),
+      R('div',{style:{fontSize:'11px', color:'var(--ink3)', marginTop:'8px', lineHeight:1.55}},
+        '관측소 ' + (w.station||'?') + ' · 관할에서 바람이 가장 센 지점',
+        R('br'), '기준 — 주의보 20m/s · 경보 26m/s (순간, 기상청)'),
+      this.aerialWarnBody(),
+      (top && top.name!==myStation && topV>v)
+        ? R('div',{style:{marginTop:'9px', paddingTop:'9px', borderTop:'1px solid var(--border)', fontSize:'11.5px',
+                          fontWeight:(topLv&&topLv.k>=3?800:600), color:(topLv&&topLv.k>=3?topLv.c:'var(--ink2)')}},
+            '북부 최강 — ' + top.name + ' ' + top.w.station + ' ' + this.mm(top.w.wss) + 'm/s'
+            + (topLv&&topLv.t?(' · '+topLv.t):''))
+        : null);
+  }
+
+  // ── 하천 수위 ───────────────────────────────────────────
+  riverBody(d){
+    const R=React.createElement;
+    const rv=(d.rivers||[]);
+    if(!rv.length) return R('div',{style:{fontSize:'13px', color:'var(--ink3)'}}, '하천 자료를 불러오는 중입니다.');
+    const order={danger:0, warning:1, safe:2};
+    const list=rv.slice().sort((a,b)=>(order[a.level]==null?3:order[a.level])-(order[b.level]==null?3:order[b.level]));
+    return R('div',{style:{display:'grid', gridTemplateColumns:(this.state.w>=900?'repeat(4,1fr)':'repeat(2,1fr)'), gap:'8px'}},
+      list.map((r,i)=>{
+        const c = r.level==='danger'?'var(--severe)':r.level==='warning'?'var(--warn)':'var(--safe)';
+        const bg = r.level==='danger'?'var(--severeSoft)':r.level==='warning'?'var(--warnSoft)':'var(--surface2)';
+        const d1 = (r.delta1!=null && !isNaN(r.delta1)) ? ((r.delta1>0?'▲':r.delta1<0?'▼':'-') + Math.abs(r.delta1).toFixed(2)) : '';
+        return R('div',{key:i, style:{background:bg, border:'1px solid '+(r.level==='safe'?'var(--border)':c), borderRadius:'11px', padding:'10px 11px'}},
+          R('div',{style:{fontSize:'11.5px', color:'var(--ink2)', marginBottom:'4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}, r.name||''),
+          R('div',{style:{display:'flex', alignItems:'baseline', gap:'5px'}},
+            R('span',{style:{fontSize:'19px', fontWeight:900, color:c, fontVariantNumeric:'tabular-nums'}}, (r.value!=null?(+r.value).toFixed(2):'—')),
+            R('span',{style:{fontSize:'11px', color:'var(--ink3)'}}, 'm'),
+            d1 ? R('span',{style:{fontSize:'11px', fontWeight:700, color:(r.delta1>0?'var(--warn)':'var(--ink3)'), marginLeft:'auto'}}, d1) : null),
+          // ⚠ 이 값은 한강홍수통제소 4단계 중 '관심(attwl)'과 '경계(almwl)'다.
+          //   예전엔 '주의/심각'이라고 적었는데 실제 주의·심각은 이보다 높은 값이라 라벨이 한 단계씩 틀렸다.
+          R('div',{style:{fontSize:'10.5px', color:'var(--ink3)', marginTop:'3px'}}, '관심 '+(r.warning!=null?r.warning:'—')+'m · 경계 '+(r.danger!=null?r.danger:'—')+'m'));
+      }));
+  }
+
+  // ── 재난문자 ────────────────────────────────────────────
+  msgBody(d, me){
+    const R=React.createElement;
+    const sig = me.sigun || me.name;
+    let list = (d.messages||[]).filter(m=>/호우|비|침수|하천|산사태|대피|홍수|태풍/.test(m.text||''));
+    if(!list.length) list = (d.messages||[]).slice(0,5);
+    if(!list.length) return R('div',{style:{fontSize:'13px', color:'var(--ink3)'}}, '최근 재난문자가 없습니다.');
+    return R('div',{style:{display:'flex', flexDirection:'column', gap:'7px'}},
+      list.slice(0,6).map((m,i)=>{
+        const mine = (m.region===sig);
+        return R('div',{key:i, style:{padding:'9px 11px', borderRadius:'10px', background:(mine?'var(--brandSoft)':'var(--surface2)'), border:'1px solid '+(mine?'var(--brand)':'var(--border)')}},
+          R('div',{style:{display:'flex', justifyContent:'space-between', gap:'8px', marginBottom:'3px'}},
+            R('span',{style:{fontSize:'11.5px', fontWeight:800, color:(mine?'var(--brand)':'var(--ink2)')}}, m.sender||m.region||''),
+            R('span',{style:{fontSize:'10.5px', color:'var(--ink3)'}}, m.time||'')),
+          R('div',{style:{fontSize:'12px', color:'var(--ink2)', lineHeight:1.5, display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden'}}, m.text||''));
+      }));
+  }
+}
+</script>
+</body>

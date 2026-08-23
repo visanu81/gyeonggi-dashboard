@@ -1,0 +1,63 @@
+# wrangler가 Cloudflare Workers 정적 자산으로 업로드할 때 제외할 패턴
+# (.gitignore와 동일 문법)
+#
+# 사이트에 배포될 파일: index.html, data.js, icon.svg, manifest.json,
+# service-worker.js, images/, 상황판.html
+
+# === 🔒 보안 critical — API 키·인증 정보 ===
+.env
+.env.*
+credentials.json
+token.json
+*.pem
+*.key
+
+# === Git 메타데이터 (가장 큰 폴더 — 200MiB+) ===
+.git/
+.gitignore
+.gitattributes
+
+# === GitHub Actions / 워크플로우 ===
+.github/
+
+# === 빌드 도구 / 운영 폴더 ===
+.tmp/
+.claude/
+.vscode/
+.idea/
+node_modules/
+
+# === Python 소스 (소스코드 노출 차단) ===
+tools/
+__pycache__/
+*.py
+*.pyc
+*.pyo
+requirements.txt
+
+# === 운영 문서 / 가이드 (사이트와 무관) ===
+workflows/
+*.md
+CLAUDE.md
+README*
+
+# === 윈도우 스크립트 (PC 전용) ===
+*.bat
+*.vbs
+*.ps1
+
+# === 다른 지역(경기남부) 전용 파일 ===
+# 경기남부 배포(deploy-weather.yml)는 이 파일들을 data.js/map-geo.js/region.js로
+# '이름을 바꾼 뒤' wrangler를 돌리므로 여기서 제외해도 남부 사이트는 정상이다.
+# 제외하지 않으면 북부 사이트가 쓰지도 않는 남부 데이터 수백 KB를 함께 싣는다.
+data-south.js
+map-geo-south.js
+region-south.js
+risk-zones-south.js
+상황판-south.html
+
+# === wrangler 설정 (배포 도구 자체) ===
+wrangler.toml
+wrangler.json
+.assetsignore
+_worker.js
