@@ -125,7 +125,7 @@
     </div>
     <div style="font-size:11px; color:var(--ink3); margin-top:-6px; line-height:1.5;">※ 기상청 특보는 <b>예상</b> 기준이라 실측이 앞설 수 있습니다. 특보가 없어도 실측이 기준을 넘으면 대응하십시오. 호우주의보=3시간 60mm 또는 12시간 110mm · 경보=3시간 90mm 또는 12시간 180mm</div>
 
-    <!-- ── ② 11개 관서 누적강수 랭킹 (핵심) ───────────────── -->
+    <!-- ── ② 관서별 누적강수 랭킹 (핵심) ───────────────── -->
     <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); padding:15px 17px;">
       <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
         <div style="display:flex; align-items:baseline; gap:8px;">
@@ -296,13 +296,23 @@ class Component extends DCLogic {
 
   /* ── 시연 모드 — 호우경보 상황 ──────────────────────────────
      비가 안 올 때도 화면을 검증하고, 실제 상황 전에 눈에 익혀두기 위한 것.
-     시나리오는 지도.html의 시연(포천·동두천 호우경보)과 일부러 똑같이 맞췄다 —
-     두 화면을 나란히 켜도 앞뒤가 맞아야 하기 때문.
-     숫자는 공식 호우기준에 맞춰 각 단계가 하나씩 보이도록 구성했다:
-       포천 1시간 73mm → 극한호우(72mm↑) / 동두천 12시간 188mm → 경보급(180↑)
-       연천·양주·의정부 12시간 110~140mm → 주의보급(110↑) / 나머지는 그 아래  */
+     ⚠ 어느 지역 사이트로 배포돼도(북부 11·남부 21·전체 34 관서) 맞아야 한다 —
+       관서 이름·개수를 글자로 박지 말고 REGION_CONF.order에서 가져올 것.
+       (예전엔 북부 11개 관서가 박혀 있어 남부·전체 사이트의 시연이 어긋났다.)
+     방식: 심한 순서의 '배역'(1번=극한호우, 뒤로 갈수록 약한 비)을 만들어 두고
+       그 지역 관서들에게 차례로 입힌다. 숫자는 공식 호우기준에 맞춰 각 단계가
+       하나씩 보이도록 구성했다:
+       1번 1시간 73mm → 극한호우(72mm↑) / 2번 12시간 188mm → 경보급(180↑)
+       3~5번 12시간 110~141mm → 주의보급(110↑) / 나머지는 그 아래.
+     북부 배역은 지도.html의 시연(포천·동두천 호우경보)과 일부러 똑같이 맞췄다 —
+     두 화면을 나란히 켜도 앞뒤가 맞아야 하기 때문. 경기 전체 사이트에도 북부
+     관서가 다 있으므로 같은 배역이 되고, 남부 관서들은 비가 잦아드는 남쪽
+     가장자리 역할(약한 비)을 맡는다. 남부 전용 사이트는 그 지역 관서 순서대로
+     배역을 새로 세운다.  */
   applyDemo(base){
     const c = JSON.parse(JSON.stringify(base));
+    const RC = window.REGION_CONF||{};
+    const regionLabel = RC.label || '경기북부';
     // 태풍 시연 — 실제 힌남노(2022) 제원을 본떠 만든 가상 태풍. 강도는 2026년부터
     // 바뀐 숫자체계(1~5)로 표기한다(옛 중/강/매우강/초강력은 폐지).
     (function(){
@@ -322,64 +332,112 @@ class Component extends DCLogic {
         ]
       }];
     })();
-    c.warnings = [
-      {type:'호우경보', area:'포천, 동두천', level:'severe', time:'15:42'},
-      {type:'호우주의보', area:'연천, 양주, 의정부, 파주', level:'warning', time:'15:08'},
-      {type:'강풍주의보', area:'경기북부 전역', level:'warning', time:'14:30'}
+    // 배역표(심한 순) — [1시간, 12시간, 일누적, 순간최대풍속, 돌풍풍향(도)]
+    // 강풍도 경보 상황으로: 1번 28m/s(경보급 26↑), 3번 22m/s(주의보급 20↑)
+    const ROLE = [
+      [73, 196, 214, 28.4, 295],
+      [48, 188, 203, 21.6, 280],
+      [31, 141, 152, 22.3, 300],
+      [26, 124, 133, 17.8, 270],
+      [22, 113, 121, 15.2, 265],
+      [17,  96, 104, 14.6, 285],
+      [14,  71,  78, 12.1, 250],
+      [11,  58,  63, 10.4, 245],
+      [ 8,  44,  49,  9.2, 275],
+      [ 8,  44,  49,  9.2, 275],
+      [ 6,  33,  37,  7.6, 240]
     ];
-    // 관서별 AWS 실측 — [1시간, 12시간, 일누적, 순간최대풍속, 강수대표소, 돌풍풍향(도), 바람최강소]
-    // 강풍도 경보 상황으로: 포천 28m/s(경보급 26↑), 연천 22m/s(주의보급 20↑)
-    const D = {
-      '포천':   [73, 196, 214, 28.4, '내촌면',   295, '관인'],
-      '동두천': [48, 188, 203, 21.6, '상패',     280, '하봉암'],
-      '연천':   [31, 141, 152, 22.3, '연천백의', 300, '군남'],
-      '양주':   [26, 124, 133, 17.8, '장흥면',   270, '남면'],
-      '의정부': [22, 113, 121, 15.2, '신곡',     265, '의정부'],
-      '파주':   [17,  96, 104, 14.6, '파주금촌', 285, '탄현'],
-      '가평':   [14,  71,  78, 12.1, '경기가평', 250, '가평조종'],
-      '남양주': [11,  58,  63, 10.4, '창현',     245, '오남'],
-      '고양':   [ 8,  44,  49,  9.2, '주교',     275, '고양'],
-      '일산':   [ 8,  44,  49,  9.2, '주교',     275, '고양'],
-      '구리':   [ 6,  33,  37,  7.6, '수택동',   240, '구리']
+    // 12번째 배역부터(관서가 11개를 넘는 남부·전체 사이트): 점차 잦아드는 약한 비
+    const roleVals = (i)=>{
+      if(ROLE[i]) return ROLE[i];
+      const k = i - ROLE.length;
+      const h = Math.max(0, 5-k);
+      const t = Math.max(2, 28-k*2);
+      return [h, t, t+h+3, Math.max(3.5, +(7-k*0.2).toFixed(1)), 240+((i*25)%120)];
     };
+    // 배역 캐스팅 — 북부 캐스팅(지도.html 시연과 동일)이 있는 관서를 먼저 세우고,
+    // 나머지 관서는 지역 관서 순서(REGION_CONF.order)대로 뒤 순번에 세운다.
+    const NORTH_CAST = ['포천','동두천','연천','양주','의정부','파주','가평','남양주','고양','일산','구리'];
+    // 북부 관서의 실제 AWS 지점명 [강수대표소, 바람최강소] — 강풍은 별도 지점이라
+    // 실측에서도 '비 최다'와 '바람 최강'이 다른 관서가 많다. 시연도 일부러 다른
+    // 지점 이름을 넣어 그 사실이 화면에서 드러나게 한다. 표에 없는 관서(남부)는
+    // 실데이터에 든 그 관서의 실제 지점명을 그대로 쓴다.
+    const SITE = {
+      '포천':['내촌면','관인'], '동두천':['상패','하봉암'], '연천':['연천백의','군남'],
+      '양주':['장흥면','남면'], '의정부':['신곡','의정부'], '파주':['파주금촌','탄현'],
+      '가평':['경기가평','가평조종'], '남양주':['창현','오남'], '고양':['주교','고양'],
+      '일산':['주교','고양'], '구리':['수택동','구리']
+    };
+    const order = (RC.order && RC.order.length) ? RC.order : (c.stations||[]).map(s=>s.name);
+    const cast = NORTH_CAST.filter(n=>order.indexOf(n)>=0)
+                   .concat(order.filter(n=>NORTH_CAST.indexOf(n)<0));
+    const roleOf = {}; cast.forEach((n,i)=>{ roleOf[n]=i; });
+    c.warnings = [
+      {type:'호우경보', area:cast.slice(0,2).join(', '), level:'severe', time:'15:42'},
+      {type:'호우주의보', area:cast.slice(2,6).join(', '), level:'warning', time:'15:08'},
+      {type:'강풍주의보', area:regionLabel+' 전역', level:'warning', time:'14:30'}
+    ];
     (c.stations||[]).forEach(s=>{
-      const v = D[s.name]; if(!v) return;
+      const ri = roleOf[s.name]; if(ri===undefined) return;
+      const v = roleVals(ri);
+      const site = SITE[s.name] ||
+        [((s.aws||{}).station)||s.name, (((s.aws||{}).wind||{}).station)||((s.aws||{}).station)||s.name];
       s.aws = { rn15:+(v[0]/4).toFixed(1), rn60:v[0], rn12h:v[1], rnday:v[2], wss:v[3],
-                station:v[4], ok:3, total:3 };
-      // 강풍은 별도 지점 — 실측에서도 11개 중 8개 관서가 '비 최다'와 '바람 최강'이 다르다.
-      // 시연도 일부러 다른 지점 이름을 넣어 그 사실이 화면에서 드러나게 한다.
-      s.aws.wind = { wss:v[3], ws10:+(v[3]*0.62).toFixed(1), wds:v[5], station:v[6] };
+                station:site[0], ok:3, total:3 };
+      s.aws.wind = { wss:v[3], ws10:+(v[3]*0.62).toFixed(1), wds:v[4], station:site[1] };
       if(s.name==='일산') s.aws.alt='고양';       // 대체 표기도 시연에서 보이게
       s.rain = v[0]; s.weather='비'; s.icon='🌧';
       s.level = v[1]>=180 ? 'danger' : (v[1]>=110 ? 'warning' : 'normal');
       s.cum12h = Math.round(v[1]*0.62);            // 자체집계가 실제보다 적게 나오는 문제도 재현
       s.obs = Object.assign({}, s.obs, {rn1:v[0], pty:'1', base_time:'15:00'});
-      // 앞으로 6시간 — 강한 비가 이어지다 잦아드는 전형적 호우
-      const prof = (s.name==='포천'||s.name==='동두천') ? [42,38,29,18,9,3] : [21,17,12,7,3,1];
+      // 앞으로 6시간 — 강한 비가 이어지다 잦아드는 전형적 호우 (배역 1~2번 = 경보 관서)
+      const hard = ri < 2;
+      const prof = hard ? [42,38,29,18,9,3] : [21,17,12,7,3,1];
       const hh = new Date().getHours();
       s.fcst6 = prof.map((mm,i)=>({ time:String((hh+i+1)%24).padStart(2,'0')+':00',
         rain_mm:mm, pop: Math.min(90, 40+mm), pty:1, pty_txt:'비', sky:4, temp:22, lgt: i<2?1:0 }));
       // 24시간 시간대별 — 소강 뒤 야간에 2차 집중호우가 오는 시나리오(가장 위험한 전형).
       // 야간 호우는 대피가 어려워 같은 양이라도 더 위험하다는 점을 시연에서 보이게 한다.
-      const hard = (s.name==='포천'||s.name==='동두천');
       const p24 = hard ? [42,38,29,18,9,3,1,0,0,2,6,14,27,35,31,22,12,5,2,0,0,0,1,3]
                        : [21,17,12,7,3,1,0,0,0,1,3,7,14,18,16,11,6,2,1,0,0,0,0,1];
       s.forecast = p24.map((mm,i)=>({ hour:String((hh+i+1)%24)+'시', icon:(mm>0?'🌧':'☁'), weather:(mm>0?'비':'흐림'),
         temp:+(23-(i%7)*0.4).toFixed(1), feels:23, rain:mm, pop:(mm>0?Math.min(90,40+mm*2):10),
         wind:+(3+(mm/8)).toFixed(1), dir:'남서', deg:225, humid:Math.min(98, 80+mm) }));
     });
-    // 하천 — 경보 상황에 맞춰 상승
+    // 하천 — 경보 상황에 맞춰 상승. 북부 주요 하천을 콕 집어 올리고(지도.html과 동일),
+    // 그 하천이 하나도 없는 지역(남부 전용 사이트)은 임계값이 있는 앞쪽 두 곳을
+    // 자기 기준선(경계/주의) 위로 올려 하천 카드에도 '상황'이 보이게 한다.
+    let bumped = 0;
     const bump=(needle,val,tr)=>{ const r=(c.rivers||[]).filter(x=>(x.name||'').indexOf(needle)>=0)[0]; if(!r) return;
+      bumped++;
       r.value=val; r.delta1=tr; r.delta3=+(tr*2.4).toFixed(2);
       r.level = (r.danger!=null && val>=r.danger) ? 'danger' : ((r.warning!=null && val>=r.warning) ? 'warning' : 'safe'); };
     bump('동두천 송천교',5.28,0.44); bump('한탄강',12.6,0.34); bump('군남댐',31.9,0.28);
     bump('신천 (연천)',3.84,0.19); bump('필승교',1.62,0.21);
-    c.messages = [
-      {sender:'포천시', time:'15:44', text:'[포천시] 시간당 40mm 이상 강한 비가 내리고 있습니다. 저지대·하천변·산사태 위험지역 주민은 즉시 안전한 곳으로 대피하시기 바랍니다.', region:'포천'},
-      {sender:'동두천시', time:'15:31', text:'[동두천시] 신천 수위 급상승. 송천교 일대 하천변 산책로를 전면 통제합니다. 접근을 삼가시기 바랍니다.', region:'동두천'},
-      {sender:'경기도', time:'15:05', text:'[경기도] 호우경보 발효. 차량 침수에 주의하고 지하차도·급경사지 통행을 자제해 주세요.', region:'경기도'},
-      {sender:'연천군', time:'14:52', text:'[연천군] 임진강 수위 상승. 군남댐 방류가 예정되어 있으니 하천변 접근을 자제해 주세요.', region:'연천'}
-    ];
+    if(!bumped){
+      (c.rivers||[]).filter(r=>r.warning!=null || r.danger!=null).slice(0,2).forEach((r,i)=>{
+        const ref = (i===0 && r.danger!=null) ? r.danger : (r.warning!=null ? r.warning : r.danger);
+        bump(r.name, +(ref*1.04).toFixed(2), i===0?0.44:0.19);
+      });
+    }
+    // 재난문자 — 북부 배역이 그대로면(북부·경기 전체 사이트) 지도.html 시연과 같은
+    // 실제 지명 문안을 쓰고, 아니면(남부) 배역 관서의 행정구역명으로 문안을 만든다.
+    if(cast[0]==='포천'){
+      c.messages = [
+        {sender:'포천시', time:'15:44', text:'[포천시] 시간당 40mm 이상 강한 비가 내리고 있습니다. 저지대·하천변·산사태 위험지역 주민은 즉시 안전한 곳으로 대피하시기 바랍니다.', region:'포천'},
+        {sender:'동두천시', time:'15:31', text:'[동두천시] 신천 수위 급상승. 송천교 일대 하천변 산책로를 전면 통제합니다. 접근을 삼가시기 바랍니다.', region:'동두천'},
+        {sender:'경기도', time:'15:05', text:'[경기도] 호우경보 발효. 차량 침수에 주의하고 지하차도·급경사지 통행을 자제해 주세요.', region:'경기도'},
+        {sender:'연천군', time:'14:52', text:'[연천군] 임진강 수위 상승. 군남댐 방류가 예정되어 있으니 하천변 접근을 자제해 주세요.', region:'연천'}
+      ];
+    } else {
+      const adm = (n)=>((RC.admin||{})[n])||n;
+      const a0=adm(cast[0]), a1=adm(cast[1]);
+      c.messages = [
+        {sender:a0, time:'15:44', text:'['+a0+'] 시간당 40mm 이상 강한 비가 내리고 있습니다. 저지대·하천변·산사태 위험지역 주민은 즉시 안전한 곳으로 대피하시기 바랍니다.', region:cast[0]},
+        {sender:a1, time:'15:31', text:'['+a1+'] 하천 수위가 급격히 오르고 있습니다. 하천변 산책로를 전면 통제합니다. 접근을 삼가시기 바랍니다.', region:cast[1]},
+        {sender:'경기도', time:'15:05', text:'[경기도] 호우경보 발효. 차량 침수에 주의하고 지하차도·급경사지 통행을 자제해 주세요.', region:'경기도'}
+      ];
+    }
     return c;
   }
 
@@ -453,9 +511,15 @@ class Component extends DCLogic {
       const cur=(this.num(a.rn12h)||0), best=(worst ? (this.num((worst.aws||{}).rn12h)||0) : -1);
       if(!worstLv || lv.k>worstLv.k || (lv.k===worstLv.k && cur>best)){ worst=s; worstLv=lv; }
     });
-    // ⚠ 이 배너는 '경기북부 11개 관서 중 가장 많이 온 곳'이다(공식특보와 범위를 맞추기 위해).
+    // ⚠ 이 배너는 '관할 전체 관서 중 가장 많이 온 곳'이다(공식특보와 범위를 맞추기 위해).
     //   내 관서와 다를 수 있으므로 라벨을 '실측 최다'로 하고, 내 관서 값을 아랫줄에 같이 적는다.
     //   ('우리 실측'이라고만 쓰면 당연히 내 관서로 오해된다 — 실제로 그 지적을 받았다.)
+    //   지역 이름·관서 수는 사이트마다 다르다(북부 11·남부 21·전체 34) — 글자로 박지 말고
+    //   REGION_CONF에서 만든다. '11개'가 박혀 있던 시절 전체 사이트에
+    //   '경기도 11개 관서 중 최다'로 잘못 떴다(2026-08-24 사장님 발견).
+    const RC = window.REGION_CONF||{};
+    const regionLabel = RC.label || '경기북부';
+    const staCnt = ((RC.order||[]).length) || stations.length;
     let obsText='실측 강수 없음', obsSub='', obsLv={c:'var(--ink3)', bg:'var(--surface2)', k:0};
     const meA = me.aws || {};
     const meTxt = meA.ok
@@ -466,10 +530,10 @@ class Component extends DCLogic {
       obsText = worst.name+' 12시간 '+this.mm(a.rn12h)+'mm · 1시간 '+this.mm(a.rn60)+'mm'+(worstLv.t?(' — '+worstLv.t):'');
       obsLv = worstLv;
       obsSub = (worst.name===myStation)
-        ? '경기북부 11개 관서 중 최다 — 내 관서입니다'
-        : ('경기북부 11개 관서 중 최다 · 내 관서 ' + meTxt.replace(myStation+' ', myStation+' '));
+        ? (regionLabel+' '+staCnt+'개 관서 중 최다 — 내 관서입니다')
+        : (regionLabel+' '+staCnt+'개 관서 중 최다 · 내 관서 ' + meTxt.replace(myStation+' ', myStation+' '));
     } else {
-      obsText = '경기북부 전 관서 실측 강수 없음';
+      obsText = regionLabel+' 전 관서 실측 강수 없음';
       obsSub  = '내 관서 ' + meTxt;
     }
 
@@ -892,13 +956,15 @@ class Component extends DCLogic {
     return '';
   }
   /* 선택 관서 중심의 강풍 카드. '동두천 지금'(강수)과 나란히 놓이므로 같은 얼개로 짠다.
-     11개 관서 랭킹 대신 내 관서를 크게 보여주되, '북부 최강'은 한 줄로 남긴다 —
-     지원 판단(어느 관서가 제일 위험한가)을 잃지 않기 위해서. */
+     관서 랭킹 대신 내 관서를 크게 보여주되, '관할 최강'은 한 줄로 남긴다 —
+     지원 판단(어느 관서가 제일 위험한가)을 잃지 않기 위해서.
+     '북부 최강'처럼 지역 이름을 글자로 박지 않는다 — 남부·전체 사이트에서도 맞아야 한다. */
   windBody(me, stations, myStation){
     const R=React.createElement;
+    const regionLabel = ((window.REGION_CONF||{}).label) || '경기북부';
     const w = (me.aws||{}).wind || {};
     const v = this.num(w.wss);
-    // 북부 최강 (내 관서 제외하고 비교했을 때 더 센 곳이 있으면 알린다)
+    // 관할 최강 (내 관서 제외하고 비교했을 때 더 센 곳이 있으면 알린다)
     let top=null, topV=-1;
     stations.forEach(s=>{ const ww=(s.aws||{}).wind||{}; const vv=this.num(ww.wss);
       if(vv!==null && vv>topV){ topV=vv; top={name:s.name, w:ww}; } });
@@ -907,7 +973,7 @@ class Component extends DCLogic {
       return R('div',{style:{fontSize:'13px', color:'var(--ink3)', lineHeight:1.6}},
         '이 관서의 바람 자료가 없습니다.',
         top ? R('div',{style:{fontSize:'11.5px', marginTop:'7px'}},
-          '북부 최강 ' + top.name + ' ' + this.mm(top.w.wss) + 'm/s') : null);
+          regionLabel + ' 최강 ' + top.name + ' ' + this.mm(top.w.wss) + 'm/s') : null);
     }
     const lv = this.windLevel(w.wss, w.ws10);
     const dir = this.dirTxt(w.wds);
@@ -933,7 +999,7 @@ class Component extends DCLogic {
       (top && top.name!==myStation && topV>v)
         ? R('div',{style:{marginTop:'9px', paddingTop:'9px', borderTop:'1px solid var(--border)', fontSize:'11.5px',
                           fontWeight:(topLv&&topLv.k>=3?800:600), color:(topLv&&topLv.k>=3?topLv.c:'var(--ink2)')}},
-            '북부 최강 — ' + top.name + ' ' + top.w.station + ' ' + this.mm(top.w.wss) + 'm/s'
+            regionLabel + ' 최강 — ' + top.name + ' ' + top.w.station + ' ' + this.mm(top.w.wss) + 'm/s'
             + (topLv&&topLv.t?(' · '+topLv.t):''))
         : null);
   }
