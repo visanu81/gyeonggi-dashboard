@@ -480,6 +480,18 @@ patch('한강홍수통제소 · 위험수위 대비',
       '한강홍수통제소 · 하천 위험수위 / 댐 저수율',
       '하천카드 부제')
 
+# (j9) 본문 3열이 내용에 밀려 틀어지던 것 차단 ★
+# 1fr(=minmax(auto,1fr))은 열의 최소폭이 '내용의 최소폭'이라, 특보 지역 나열이 긴 날
+# (예: 2026-08-25 폭염주의보에 21개 시군 한 줄) 가운데 열이 2200px까지 부풀어
+# 좌우 열이 짜부라졌다 — 6시간 강수예측 제목이 꺾이고 미세먼지 '좋음'이 세로로 섰다.
+# minmax(0,1fr)이면 어떤 내용도 열을 못 밀고, 지역 나열은 원래 달려 있던 말줄임(…)이 받는다.
+patch('style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:28px;">',
+      'style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:28px;">',
+      '본문 3열 밀림 차단')
+patch('style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">',
+      'style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:20px;">',
+      '칩 3열 밀림 차단')
+
 # (j6) 사다리차 판정 → 순간풍속 기준 (지도.html과 통일)
 # 원본은 '평균풍속 12/8m/s'로 단계를 정하면서 설명줄엔 순간풍속을 찍었다. 그래서
 # 순간풍속이 10m/s를 넘어도 표시는 '정상'으로 남는 일이 생긴다 — 고가 전개 가부는
@@ -877,20 +889,22 @@ INJECT = r'''
     var RCODE=((typeof window!=='undefined'&&window.REGION_CONF)||{}).riverCodes||{};
     (D.rivers||[]).forEach(function(rv){
       var sg=rv.sigun;
+      /* 댐 = api:'dam'(원천 플래그). 댐은 '위험수위 대비 %'가 무의미(상시만수위 유지가 정상)라
+         화면에서 저수율·유입·방류로 따로 표기하고, 침수판단(worst)에서는 제외한다. */
+      var isDam=(rv.api==='dam')||!!rv.dam_info, di=rv.dam_info||{};
+      /* ⚠ 반드시 이 entry(화면용 배열)를 넣을 것 — 원시 rv를 넣으면 이름 없는 '0.00m' 행이 된다.
+         2026-08-25 평택·송탄에서 실제 발생(코드 지정 관서만 원시 rv가 들어가고 있었다). */
+      var entry=[shortRiver(rv.name), nv(rv.value), nv(rv.danger), (isDam?'dam':''), (rv.level||'safe'),
+        nv(rv.delta_1h), nv(rv.warning), nv(di.storage_rate), nv(di.inflow),
+        nv(di.total_outflow!=null?di.total_outflow:di.outflow)];
       /* 코드로 지정된 관서에 먼저 넣는다. 지정 관서가 하나라도 있으면 시군 배분은 건너뛴다. */
       var _placed=false;
       NAMES.forEach(function(nm){ var cs=RCODE[nm];
-        if(cs && cs.indexOf(String(rv.code))>=0){ rivers[nm].push(rv); _placed=true; } });
+        if(cs && cs.indexOf(String(rv.code))>=0){ rivers[nm].push(entry); _placed=true; } });
       if(_placed) return;
       if(RCODE[sg]) return;   /* 그 시군은 코드로만 받는다 — 남의 하천이 섞이지 않게 */
       if(!sg){ var best=''; SIG.forEach(function(x){ if(String(rv.name||'').indexOf(x)>=0 && x.length>best.length) best=x; }); sg=best; }
       if(!sg) return;
-      /* 댐 = api:'dam'(원천 플래그). 댐은 '위험수위 대비 %'가 무의미(상시만수위 유지가 정상)라
-         화면에서 저수율·유입·방류로 따로 표기하고, 침수판단(worst)에서는 제외한다. */
-      var isDam=(rv.api==='dam')||!!rv.dam_info, di=rv.dam_info||{};
-      var entry=[shortRiver(rv.name), nv(rv.value), nv(rv.danger), (isDam?'dam':''), (rv.level||'safe'),
-        nv(rv.delta_1h), nv(rv.warning), nv(di.storage_rate), nv(di.inflow),
-        nv(di.total_outflow!=null?di.total_outflow:di.outflow)];
       NAMES.forEach(function(nm){ if(sig(nm)===sg && nm!=='일산') rivers[nm].push(entry); });  /* 시군 관서에만(일산 중복 방지) */
     });
     /* 정렬: 공식 경보 → 주의보 → 하천(위험수위 대비 높은 순) → 댐. 벽면 가독성 위해 최대 5행. */

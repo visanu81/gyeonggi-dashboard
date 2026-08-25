@@ -1058,7 +1058,7 @@ http://scripts.sil.org/OFL
     </sc-if>
 
     <!-- ===== MAIN GRID ===== -->
-    <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:28px;">
+    <div style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:28px;">
 
       <!-- COLUMN A -->
       <div style="display:grid;grid-template-rows:auto 1fr;gap:28px;min-height:0;">
@@ -1207,7 +1207,7 @@ http://scripts.sil.org/OFL
         </div>
 
         <div style="display:grid;grid-template-rows:auto 1fr;gap:28px;min-height:0;">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:20px;">
             <div style="background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:22px 26px;display:flex;flex-direction:column;gap:6px;">
               <div style="font-size:30px;font-weight:520;color:var(--dim,#8e9bb0);">산불위험</div>
               <div style="font-size:62px;font-weight:660;line-height:1.05;color:{{ fireColor }};">{{ fireLevel }}</div>
@@ -1915,20 +1915,22 @@ class Component extends DCLogic {
     var RCODE=((typeof window!=='undefined'&&window.REGION_CONF)||{}).riverCodes||{};
     (D.rivers||[]).forEach(function(rv){
       var sg=rv.sigun;
+      /* 댐 = api:'dam'(원천 플래그). 댐은 '위험수위 대비 %'가 무의미(상시만수위 유지가 정상)라
+         화면에서 저수율·유입·방류로 따로 표기하고, 침수판단(worst)에서는 제외한다. */
+      var isDam=(rv.api==='dam')||!!rv.dam_info, di=rv.dam_info||{};
+      /* ⚠ 반드시 이 entry(화면용 배열)를 넣을 것 — 원시 rv를 넣으면 이름 없는 '0.00m' 행이 된다.
+         2026-08-25 평택·송탄에서 실제 발생(코드 지정 관서만 원시 rv가 들어가고 있었다). */
+      var entry=[shortRiver(rv.name), nv(rv.value), nv(rv.danger), (isDam?'dam':''), (rv.level||'safe'),
+        nv(rv.delta_1h), nv(rv.warning), nv(di.storage_rate), nv(di.inflow),
+        nv(di.total_outflow!=null?di.total_outflow:di.outflow)];
       /* 코드로 지정된 관서에 먼저 넣는다. 지정 관서가 하나라도 있으면 시군 배분은 건너뛴다. */
       var _placed=false;
       NAMES.forEach(function(nm){ var cs=RCODE[nm];
-        if(cs && cs.indexOf(String(rv.code))>=0){ rivers[nm].push(rv); _placed=true; } });
+        if(cs && cs.indexOf(String(rv.code))>=0){ rivers[nm].push(entry); _placed=true; } });
       if(_placed) return;
       if(RCODE[sg]) return;   /* 그 시군은 코드로만 받는다 — 남의 하천이 섞이지 않게 */
       if(!sg){ var best=''; SIG.forEach(function(x){ if(String(rv.name||'').indexOf(x)>=0 && x.length>best.length) best=x; }); sg=best; }
       if(!sg) return;
-      /* 댐 = api:'dam'(원천 플래그). 댐은 '위험수위 대비 %'가 무의미(상시만수위 유지가 정상)라
-         화면에서 저수율·유입·방류로 따로 표기하고, 침수판단(worst)에서는 제외한다. */
-      var isDam=(rv.api==='dam')||!!rv.dam_info, di=rv.dam_info||{};
-      var entry=[shortRiver(rv.name), nv(rv.value), nv(rv.danger), (isDam?'dam':''), (rv.level||'safe'),
-        nv(rv.delta_1h), nv(rv.warning), nv(di.storage_rate), nv(di.inflow),
-        nv(di.total_outflow!=null?di.total_outflow:di.outflow)];
       NAMES.forEach(function(nm){ if(sig(nm)===sg && nm!=='일산') rivers[nm].push(entry); });  /* 시군 관서에만(일산 중복 방지) */
     });
     /* 정렬: 공식 경보 → 주의보 → 하천(위험수위 대비 높은 순) → 댐. 벽면 가독성 위해 최대 5행. */
