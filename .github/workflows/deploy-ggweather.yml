@@ -1,13 +1,19 @@
-name: Deploy 경기 전체 (ggweather)
+name: Deploy 통합 — 경기 전체판을 3개 사이트에
 
-# 경기도 31개 시군을 한 화면에 보는 사이트 → ggweather.visanu81.workers.dev
-# 운영(gyeonggi-dashboard, 경기북부)과 weather(경기남부)는 전혀 건드리지 않는다 —
-# Worker 이름이 다르면 완전히 별개 배포다.
+# ★ 2026-08-28 사장님 결정: 세 주소 모두 '경기 전체판' 하나로 통일한다.
+#   gyeonggi-dashboard(북부 주소) · weather(남부 주소) · ggweather(전체 주소)에
+#   같은 빌드를 배포하고, 접속 주소가 기본 권역을 정한다(region-all.js hostScope):
+#     - 북부 주소로 열면 지도는 북부부터, 상황실 벽면은 북부 11개만 순환
+#     - 남부 주소로 열면 남부부터(관서 23개 = 21개 시군 + 분당·송탄)
+#     - ggweather는 경기 전체(34개)
+#   사용자가 화면에서 권역을 바꾸면 그 선택(localStorage)이 우선한다.
 #
-# ★ 데이터를 새로 수집하지 않는다.
-#   경기북부 10개 + 경기남부 21개 = 경기도 31개 시군에 정확히 일치하므로(중복·누락 0),
-#   이미 받아 둔 data.js + data-south.js 를 tools/merge_all.py 로 합쳐 쓴다.
-#   새로 수집하면 회차마다 API 약 120회가 더 나가고 값이 세 벌로 갈린다.
+# 데이터를 새로 수집하지 않는다 — 이미 받아 둔 data.js(북부)+data-south.js(남부)를
+# tools/merge_all.py 로 합쳐 쓴다(경기북부 10 + 경기남부 21 = 경기 31개 시군, 호출 0회).
+#
+# 예전의 지역별 배포(cloudflare-deploy.yml=북부, deploy-weather.yml=남부)는
+# 이 워크플로로 대체됐다 — 그 둘은 수동 실행만 남기고 트리거를 껐다.
+# 다시 켜면 지역판이 전체판을 덮어써서 되돌아가니 주의.
 
 on:
   push:
@@ -17,14 +23,14 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: cloudflare-deploy-ggweather
+  group: cloudflare-deploy-unified
   cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    name: Deploy to ggweather
-    timeout-minutes: 10
+    name: Build once, deploy 3 sites
+    timeout-minutes: 12
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,9 +42,9 @@ jobs:
 
       - name: 원본 파일 확인
         run: |
-          for f in data.js data-south.js map-geo-all.js; do
+          for f in data.js data-south.js map-geo-all.js region-all.js; do
             if [ ! -s "$f" ]; then
-              echo "::error::$f 가 없거나 비어 있습니다. 경기 전체 사이트를 올릴 수 없습니다."
+              echo "::error::$f 가 없거나 비어 있습니다. 배포할 수 없습니다."
               exit 1
             fi
           done
@@ -50,31 +56,24 @@ jobs:
           python tools/merge_all.py
           test -s data-all.js
           # region-all.js·map-geo-all.js 는 저장소에 커밋된 것을 쓴다.
-          # 시군·관측소·하천 구성이 바뀔 때만 다시 만들면 되는 파일이라 매번 생성하지 않는다.
-          #   python tools/build_region_all.py            (node 필요)
-          #   python tools/build_map_geo.py --profile all --merge --out map-geo-all.js
-          test -s region-all.js
 
-      - name: 경기 전체 버전으로 교체
+      - name: 경기 전체판으로 교체
         run: |
           set -e
           mv data-all.js     data.js
           mv map-geo-all.js  map-geo.js
           mv region-all.js   region.js
           rm -f data-south.js map-geo-south.js region-south.js risk-zones-south.js
-          # 위험구역 — 경기 전체도 같은 구글시트를 그대로 본다(사장님 요청 2026-08-20).
-          #   화면이 관서마다 '그 이름의 탭'을 찾아 읽으므로, 시트에 탭이 있는 관서만
-          #   표시되고 없는 관서는 '등록된 위험구역 없음'이 된다 — 걸러낼 필요가 없다.
-          #   (없는 탭을 부르면 구글이 첫 탭을 돌려주는 함정이 있는데, 첫 탭과 같은 내용이면
-          #    건너뛰는 안전장치가 지도.html 에 이미 있다.)
-          # 다만 북부에 하드코딩된 표본(window.RISK)은 지운다 — 경기 전체에선 동두천
-          #   한 곳만 뜬 것처럼 보여 오해를 부른다. 시트에서 읽은 값이 이걸 덮어쓴다.
+          # 위험구역 — 세 사이트 모두 같은 구글시트를 본다. 시트에 탭이 있는 관서만
+          # 표시되고 없는 관서는 '등록된 위험구역 없음'. 북부 하드코딩 표본(window.RISK)은
+          # 지운다 — 시트에서 읽은 값이 이걸 덮어쓴다.
           grep -v '^window\.RISK *=' risk-zones.js > risk-zones.js.new
           echo 'window.RISK = [];' >> risk-zones.js.new
           mv risk-zones.js.new risk-zones.js
-          # 화면이 운영(북부) 주소로 data.js 를 직접 부르는 곳이 있다 → 이 사이트 주소로
-          grep -rl 'gyeonggi-dashboard\.visanu81\.workers\.dev' --include='*.html' --include='*.js' . \
-            | xargs -r sed -i 's|gyeonggi-dashboard\.visanu81\.workers\.dev|ggweather.visanu81.workers.dev|g'
+          # ★ 절대주소 → 상대경로. 같은 빌드가 세 주소에서 돌므로, 각 주소가
+          #   자기 자신의 data.js·이미지를 읽게 한다(교차 출처 fetch 차단 회피).
+          grep -rl 'https://gyeonggi-dashboard\.visanu81\.workers\.dev' --include='*.html' --include='*.js' . \
+            | xargs -r sed -i 's|https://gyeonggi-dashboard\.visanu81\.workers\.dev||g'
           # 화면에 박힌 지역 이름 (제작자 소속 '동두천소방서'는 건드리지 않는다)
           grep -rl '경기북부' --include='*.html' . | xargs -r sed -i 's|경기북부|경기도|g'
           grep -rl '동두천소방서 · 11개 소방관서' --include='*.html' . \
@@ -85,9 +84,9 @@ jobs:
       - name: 남은 북부 흔적 검사
         run: |
           # 제작자 크레딧(제작 : 소방위 한경승 · 동두천소방서)은 남아 있어야 정상이라 뺀다.
-          LEFT=$(grep -rn 'gyeonggi-dashboard\.visanu81\|경기북부\|11개 소방관서' \
+          LEFT=$(grep -rn 'gyeonggi-dashboard\.visanu81\|11개 소방관서' \
                    --include='*.html' --include='*.js' . \
-                 | grep -v '제작' | grep -v '^\./data-adapter\.js.*//' || true)
+                 | grep -v '제작' || true)
           if [ -n "$LEFT" ]; then
             echo "::warning::북부 흔적이 남아 있습니다"
             echo "$LEFT" | head -20
@@ -103,9 +102,14 @@ jobs:
       - name: Install Wrangler
         run: npm install -g wrangler@latest
 
-      - name: Deploy to ggweather
+      - name: Deploy ×3 (ggweather → weather → gyeonggi-dashboard)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        # --name 으로 별도 Worker 지정 → ggweather.visanu81.workers.dev
-        run: wrangler deploy --name ggweather 2>&1
+        # 같은 빌드를 이름만 바꿔 세 번 배포한다. 상황실 벽면이 걸린 북부 주소를
+        # 마지막에 배포해, 앞선 실패 시 벽면이 옛 판으로라도 남게 한다.
+        run: |
+          set -e
+          wrangler deploy --name ggweather 2>&1
+          wrangler deploy --name weather 2>&1
+          wrangler deploy --name gyeonggi-dashboard 2>&1

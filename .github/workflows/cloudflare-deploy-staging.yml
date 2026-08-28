@@ -1,8 +1,10 @@
 name: Deploy to Cloudflare Workers (테스트 2)
 
-# staging 브랜치에 push하면 테스트 버전(gyeonggi-dashboard-2)으로 배포.
-# 운영(gyeonggi-dashboard, main 브랜치)과 완전히 분리 — 운영에 영향 없음.
-# 여기서 확인하고 괜찮으면 staging → main 으로 합쳐 운영에 반영.
+# 테스트2(gyeonggi-dashboard-2) — 운영과 같은 '경기 전체판'을 빌드해 올린다.
+# ★ 데이터만 다르다: staging 저장소의 데이터는 오래됐으므로, 데이터 주소를
+#   운영(ggweather) 절대주소로 바꿔 테스트2가 항상 실시간 운영 데이터를 보게 한다.
+#   (script src는 교차 출처에서도 동작. fetch 갱신은 막힐 수 있으나 기존과 동일)
+# 접속 주소가 gyeonggi-dashboard-2 라서 hostScope에 따라 북부가 기본으로 뜬다.
 
 on:
   push:
@@ -17,9 +19,33 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     name: Deploy to gyeonggi-dashboard-2
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 경기 전체판 빌드
+        run: |
+          set -e
+          python tools/merge_all.py
+          test -s data-all.js
+          mv data-all.js     data.js
+          mv map-geo-all.js  map-geo.js
+          mv region-all.js   region.js
+          rm -f data-south.js map-geo-south.js region-south.js risk-zones-south.js
+          grep -v '^window\.RISK *=' risk-zones.js > risk-zones.js.new
+          echo 'window.RISK = [];' >> risk-zones.js.new
+          mv risk-zones.js.new risk-zones.js
+          # 데이터·이미지는 운영(ggweather)의 실시간 것을 본다
+          grep -rl 'gyeonggi-dashboard\.visanu81\.workers\.dev' --include='*.html' --include='*.js' .             | xargs -r sed -i 's|gyeonggi-dashboard\.visanu81\.workers\.dev|ggweather.visanu81.workers.dev|g'
+          grep -rl '경기북부' --include='*.html' . | xargs -r sed -i 's|경기북부|경기도|g'
+          grep -rl '동두천소방서 · 11개 소방관서' --include='*.html' .             | xargs -r sed -i 's|동두천소방서 · 11개 소방관서|경기도 · 34개 소방서|g'
+          grep -rl '11개 소방관서' --include='*.html' .             | xargs -r sed -i 's|11개 소방관서|34개 소방서|g; s|10개 시군|34개 소방서|g'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -29,10 +55,8 @@ jobs:
       - name: Install Wrangler
         run: npm install -g wrangler@latest
 
-      - name: Deploy to gyeonggi-dashboard-2 (테스트 버전)
+      - name: Deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          WRANGLER_LOG: debug
-        # --name 으로 운영과 다른 Worker 이름 지정 → 별도 주소(gyeonggi-dashboard-2...)
         run: wrangler deploy --name gyeonggi-dashboard-2 2>&1

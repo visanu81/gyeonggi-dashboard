@@ -73,6 +73,16 @@ window.REGION_CONF = {
   "경기북부",
   "경기남부"
  ],
+ "hostScope": {
+  "gyeonggi-dashboard": "경기북부",
+  "gyeonggi-dashboard-2": "경기북부",
+  "weather": "경기남부"
+ },
+ "hostHome": {
+  "gyeonggi-dashboard": "동두천",
+  "gyeonggi-dashboard-2": "동두천",
+  "weather": "수원"
+ },
  "order": [
   "수원",
   "성남",

@@ -16,11 +16,10 @@ name: Deploy 경기남부 (weather.visanu81.workers.dev)
 # main에 붙이면 서버가 5분마다 데이터를 푸시할 때마다 배포가 돌아 Actions 무료시간이
 # 순식간에 바닥난다. 그래서 서버가 '지금 올릴 만하다'고 판단할 때만 밀어 넣는
 # deploy-trigger 브랜치와, 그게 죽었을 때를 위한 3시간 안전망만 본다.
+# ⚠ 2026-08-28부터 통합 배포(deploy-ggweather.yml)가 세 사이트를 모두 올린다.
+# 이 워크플로를 자동으로 돌리면 '지역 전용판'이 전체판을 덮어써서 되돌아가므로
+# 트리거를 껐다. 비상시 수동 실행만 가능(그 경우에도 통합 배포를 다시 돌려 복구할 것).
 on:
-  push:
-    branches: [deploy-trigger]
-  schedule:
-    - cron: '24 */3 * * *'
   workflow_dispatch:
 
 concurrency:

@@ -54,8 +54,9 @@ h = h.replace("'김포'", "'연천'")
 #     (주입한 변환기만 바꿔선 소용없다 — 순환 표시·'n / 전체' 개수는 이 NAMES가 정한다)
 _names_old = ("const NAMES = ['고양','일산','파주','연천','의정부','양주','동두천',"
               "'포천','가평','남양주','구리'];")
-_names_new = ("const NAMES = ((typeof window!=='undefined'&&window.REGION_CONF&&window.REGION_CONF.order)"
-              " || ['고양','일산','파주','연천','의정부','양주','동두천','포천','가평','남양주','구리']);")
+# 관서 목록 = 권역 필터 적용. ?scope=경기북부(또는 북부) > 접속 주소의 hostScope > 전체.
+# 세 주소가 같은 전체판을 받아도 북부 주소의 벽면은 북부 11개만 순환한다(2026-08-28).
+_names_new = "const NAMES = (function(){ var RC=(typeof window!=='undefined'&&window.REGION_CONF)||{}; var base=RC.order||['고양','일산','파주','연천','의정부','양주','동두천','포천','가평','남양주','구리']; var sc=null; try{ sc=new URLSearchParams(location.search).get('scope'); }catch(e){} var g=RC.scopes||{}; try{ if(sc && !g[sc] && g['경기'+sc]) sc='경기'+sc; }catch(e){} try{ if(!sc) sc=(RC.hostScope||{})[location.hostname.split('.')[0]]||null; }catch(e){} if(sc && g[sc]) base=base.filter(function(n){ return g[sc].indexOf(n)>=0; }); return base; })();"
 assert _names_old in h, '화면 컴포넌트의 NAMES를 못 찾음 — 디자인 원본이 바뀌었는지 확인'
 h = h.replace(_names_old, _names_new, 1)
 print('패치: 화면 컴포넌트 NAMES → region.js 연동')
@@ -789,7 +790,8 @@ INJECT = r'''
   /* 관서 목록·행정명은 region.js(window.REGION_CONF)에서. 지역이 바뀌면 그 파일만 갈아끼운다.
      region.js가 없으면 지금까지 쓰던 경기북부 값으로 동작한다(하위호환). */
   var RC=(typeof window!=='undefined'&&window.REGION_CONF)||{};
-  var NAMES=RC.order||['고양','일산','파주','연천','의정부','양주','동두천','포천','가평','남양주','구리'];
+  /* 권역 필터 — 화면 컴포넌트의 NAMES와 반드시 같은 규칙일 것(둘이 다르면 데이터-화면이 어긋난다) */
+  var NAMES=(function(){ var RC=(typeof window!=='undefined'&&window.REGION_CONF)||{}; var base=RC.order||['고양','일산','파주','연천','의정부','양주','동두천','포천','가평','남양주','구리']; var sc=null; try{ sc=new URLSearchParams(location.search).get('scope'); }catch(e){} var g=RC.scopes||{}; try{ if(sc && !g[sc] && g['경기'+sc]) sc='경기'+sc; }catch(e){} try{ if(!sc) sc=(RC.hostScope||{})[location.hostname.split('.')[0]]||null; }catch(e){} if(sc && g[sc]) base=base.filter(function(n){ return g[sc].indexOf(n)>=0; }); return base; })();
   var ADMIN=RC.admin||{고양:'고양시',파주:'파주시',연천:'연천군',의정부:'의정부시',양주:'양주시',동두천:'동두천시',포천:'포천시',가평:'가평군',남양주:'남양주시',구리:'구리시'};
   /* SIG = 실제 시군(일산은 고양의 일부라 제외). 하천 표시명에서 '괄호 안이 시군인지' 판정용. */
   /* 관서명 → 데이터상의 시군명. 소방서가 시(市)를 나눠 맡는 곳(분당·송탄·일산)은

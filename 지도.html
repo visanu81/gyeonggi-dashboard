@@ -643,12 +643,17 @@ class Component extends DCLogic {
       pendingUpdate: null,
       autoApplied: null,
       openRiskTypes: {},
-      myStation: (function(){ var h=((window.REGION_CONF||{}).home)||'동두천'; try{ return (typeof localStorage!=='undefined' && localStorage.getItem('ggMyStation')) || h; }catch(e){ return h; } })(),
+      myStation: (function(){ var RC=(window.REGION_CONF||{}); var h=null;
+        try{ h=(RC.hostHome||{})[location.hostname.split('.')[0]]; }catch(e){}
+        h=h||RC.home||'동두천'; try{ return (typeof localStorage!=='undefined' && localStorage.getItem('ggMyStation')) || h; }catch(e){ return h; } })(),
       /* 마지막에 고른 권역을 기억한다. 저장된 값이 지금 지역에 없는 권역이면(예: 북부
          전용 사이트에서 옛 값이 남아 있으면) 전체로 되돌린다. */
-      scope: (function(){ var g=((window.REGION_CONF||{}).scopes)||null; if(!g) return '전체';
+      scope: (function(){ var RC=(window.REGION_CONF||{}), g=RC.scopes||null; if(!g) return '전체';
         try{ var v=(typeof localStorage!=='undefined') && localStorage.getItem('ggScope');
-          return (v && (v==='전체' || g[v])) ? v : '전체'; }catch(e){ return '전체'; } })(),
+          if(v && (v==='전체' || g[v])) return v; }catch(e){}
+        /* 저장된 선택이 없으면 접속 주소의 권역이 기본 — 북부 주소는 북부부터(hostScope) */
+        try{ var hs=(RC.hostScope||{})[location.hostname.split('.')[0]]; if(hs && g[hs]) return hs; }catch(e){}
+        return '전체'; })(),
       stationPickerOpen: false
     };
   }
