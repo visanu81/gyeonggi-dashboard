@@ -1,0 +1,80 @@
+name: 데이터 갱신 + Cloudflare 배포 (백업 · 수동)
+
+on:
+  # 평소 데이터 갱신은 네이버클라우드 서버(한국 IP, 하천 포함)가 담당.
+  # GitHub Actions 자동 cron은 중복이라 제거(사용량 절감).
+  # 서버 장애 시 백업용 — Actions 탭에서 'Run workflow'로 수동 실행 가능.
+  workflow_dispatch:
+
+# 동시 실행 방지 — 이전 실행이 끝나야 다음 시작
+concurrency:
+  group: data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh-and-deploy:
+    runs-on: ubuntu-latest
+    name: API 호출 → data.js 갱신 → Cloudflare 배포
+    timeout-minutes: 15   # 전체 job 무한 hang 방지 (정상은 5-8분)
+    permissions:
+      contents: write   # data.js·이미지 push 위해 write 권한
+
+    # 모든 step에 공통 env — git prompt 비활성화 (인증 prompt 시 hang 방지)
+    env:
+      GIT_TERMINAL_PROMPT: '0'
+      PYTHONUNBUFFERED: '1'   # print 실시간 flush — 진행상황 즉시 로그에 표시
+      TZ: 'Asia/Seoul'        # 한국 시간 — data.js의 updated 필드가 KST로 기록됨
+                              # (이게 없으면 UTC라 사장님 화면에 9시간 전 데이터로 보임)
+
+    steps:
+      - name: 1. Checkout (전체 히스토리)
+        uses: actions/checkout@v4
+        with:
+          # update_data.py가 git push하므로 fetch-depth: 0 + token 명시
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+
+      - name: 2. Python 3.11 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 3. pip 의존성 설치
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 4. git config (commit 시 작성자 필요)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # 원격 동기화 — 사장님 PC와의 충돌 가능성 줄이기
+          git pull --rebase --autostash origin main || git rebase --abort || true
+
+      - name: 5. 데이터 수집 + data.js·이미지 갱신
+        timeout-minutes: 8   # step 단독 timeout — 8분 넘으면 강제 kill
+        env:
+          DATA_GO_KR_KEY:    ${{ secrets.DATA_GO_KR_KEY }}
+          HRFCO_KEY:         ${{ secrets.HRFCO_KEY }}
+          SAFETY_DATA_KEY:   ${{ secrets.SAFETY_DATA_KEY }}
+          KMA_APIHUB_KEY:    ${{ secrets.KMA_APIHUB_KEY }}
+        run: |
+          # -u : unbuffered stdout (print가 즉시 로그에 표시됨)
+          python -u tools/update_data.py 2>&1
+        # update_data.py가 자체적으로 git add/commit/push 수행
+
+      - name: 6. Node.js 22 설치 (wrangler 요구사항)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 7. Wrangler 설치
+        run: npm install -g wrangler@latest
+
+      - name: 8. Cloudflare Workers 배포 (새 데이터 반영)
+        env:
+          CLOUDFLARE_API_TOKEN:  ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler deploy 2>&1
