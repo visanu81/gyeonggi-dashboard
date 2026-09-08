@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- 네이비 라운드 배경 (외곽) -->
+  <rect width="512" height="512" rx="96" fill="#1a3a5c"/>
+
+  <!-- 안쪽 라운드 — 살짝 밝은 톤으로 입체감 -->
+  <rect x="48" y="48" width="416" height="416" rx="64" fill="#234a72"/>
+
+  <!-- 구름 (옅은 회색-흰색) -->
+  <path d="M 130 230
+           Q 130 165 195 165
+           Q 220 128 270 140
+           Q 320 112 365 155
+           Q 428 158 428 220
+           Q 462 225 462 268
+           Q 462 312 415 318
+           L 155 318
+           Q 102 318 102 270
+           Q 102 228 130 230 Z"
+        fill="#e3e9f0"
+        stroke="#1a3a5c"
+        stroke-width="10"
+        stroke-linejoin="round"/>
+
+  <!-- 구름 내부 음영 (살짝 깊이감) -->
+  <path d="M 155 280
+           Q 155 250 195 250
+           Q 240 240 280 255
+           Q 330 245 380 270"
+        fill="none"
+        stroke="#b8c4d3"
+        stroke-width="6"
+        stroke-linecap="round"
+        opacity="0.5"/>
+
+  <!-- 번개 (노란 — 액센트) -->
+  <path d="M 260 298
+           L 198 408
+           L 252 408
+           L 222 470
+           L 322 358
+           L 268 358
+           L 308 298 Z"
+        fill="#f6c544"
+        stroke="#1a3a5c"
+        stroke-width="9"
+        stroke-linejoin="round"/>
+
+  <!-- 번개 하이라이트 (작은 광택) -->
+  <path d="M 268 312
+           L 234 372"
+        stroke="#fde08a"
+        stroke-width="4"
+        stroke-linecap="round"
+        opacity="0.8"/>
+</svg>

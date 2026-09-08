@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>상황판 사용설명서</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<!-- 지역 설정 — 관할·관서수·임진강 카드 유무를 여기서 읽는다. 남부 배포 시 자동 교체됨. -->
+<script src="region.js"></script>
+<style>
+:root{
+  --bg:#eef1f7; --surface:#ffffff; --surface2:#f3f7fc;
+  --border:#e4e9f2; --border2:#d3dbe9; --ink:#0f1b2d; --ink2:#4b5a74; --ink3:#8593aa;
+  --brand:#1d4ed8; --brandSoft:#e8eeff;
+  --safe:#0ea371; --safeSoft:#e5f7f0; --caution:#e0930a; --cautionSoft:#fdf2df;
+  --warn:#ef6c1a; --warnSoft:#ffece0; --severe:#d42a2f; --severeSoft:#fbe3e3;
+  --sh:0 1px 3px rgba(16,27,45,.06), 0 6px 18px -8px rgba(16,27,45,.14);
+}
+html[data-theme="dark"]{
+  --bg:#080d18; --surface:#111a2c; --surface2:#18233b;
+  --border:#26314c; --border2:#354364; --ink:#e9eef9; --ink2:#9fb0cf; --ink3:#6b7a99;
+  --brand:#60a5fa; --brandSoft:rgba(96,165,250,.14);
+  --safe:#34d399; --safeSoft:rgba(52,211,153,.13); --caution:#fbbf24; --cautionSoft:rgba(251,191,36,.13);
+  --warn:#fb923c; --warnSoft:rgba(251,146,60,.14); --severe:#ef4444; --severeSoft:rgba(239,68,68,.16);
+  --sh:0 1px 3px rgba(0,0,0,.4), 0 8px 22px -10px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Malgun Gothic',sans-serif;
+  font-size:15px;line-height:1.72;-webkit-text-size-adjust:100%}
+.wrap{max-width:920px;margin:0 auto;padding:20px 18px 72px}
+
+/* 본문(.wrap) 바깥에 있는 요소라 음수 여백을 주면 화면보다 넓어져 가로 스크롤이 생긴다.
+   본문과 같은 폭으로 가운데 정렬한다. */
+header.top{position:sticky;top:0;z-index:10;background:var(--bg);
+  border-bottom:1px solid var(--border);max-width:920px;margin:0 auto;padding:12px 18px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.back{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 13px;border-radius:9px;
+  border:1px solid var(--border2);background:var(--surface);color:var(--ink);
+  font-size:13px;font-weight:700;text-decoration:none}
+.back:hover{background:var(--surface2)}
+.top h1{margin:0;font-size:17px;font-weight:800;letter-spacing:-.3px}
+.top .sp{margin-left:auto;display:flex;gap:8px}
+.top button{height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--border2);
+  background:var(--surface);color:var(--ink2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.top button:hover{background:var(--surface2)}
+
+h2{margin:38px 0 12px;font-size:21px;font-weight:800;letter-spacing:-.4px;
+  padding-bottom:9px;border-bottom:2px solid var(--border2);scroll-margin-top:70px}
+h2 .u{font-size:13px;font-weight:700;color:var(--ink3);margin-left:8px}
+h3{margin:26px 0 9px;font-size:16px;font-weight:800;letter-spacing:-.2px}
+p{margin:0 0 11px}
+ul{margin:0 0 12px;padding-left:20px}
+li{margin:4px 0}
+code{background:var(--surface2);border:1px solid var(--border);border-radius:5px;
+  padding:1px 6px;font-size:13px;font-family:ui-monospace,Menlo,Consolas,monospace}
+
+.lead{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:16px 18px;box-shadow:var(--sh);margin-bottom:8px}
+.lead p:last-child{margin-bottom:0}
+
+/* 좁은 화면에서 표가 본문을 밀어내지 않도록 표만 따로 가로 스크롤시킨다.
+   (본문 자체가 좌우로 밀리면 글을 읽을 수가 없다) */
+.tw{margin:10px 0 16px;overflow-x:auto;border-radius:12px;box-shadow:var(--sh);
+  -webkit-overflow-scrolling:touch}
+table{width:100%;min-width:480px;border-collapse:collapse;margin:0;background:var(--surface);
+  border:1px solid var(--border);border-radius:12px;overflow:hidden}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:14px;vertical-align:top}
+th{background:var(--surface2);font-weight:800;color:var(--ink2);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+td.n{white-space:nowrap;font-weight:700}
+
+.pill{display:inline-block;padding:1px 9px;border-radius:999px;font-size:12.5px;font-weight:800;white-space:nowrap}
+.p-safe{background:var(--safeSoft);color:var(--safe)}
+.p-caution{background:var(--cautionSoft);color:var(--caution)}
+.p-warn{background:var(--warnSoft);color:var(--warn)}
+.p-severe{background:var(--severeSoft);color:var(--severe)}
+
+.note{border-left:4px solid var(--brand);background:var(--brandSoft);
+  border-radius:0 10px 10px 0;padding:12px 15px;margin:14px 0;font-size:14px}
+.note.warnbox{border-left-color:var(--warn);background:var(--warnSoft)}
+.note b{font-weight:800}
+.note p:last-child{margin-bottom:0}
+
+.toc{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:14px 18px;box-shadow:var(--sh);margin:18px 0 6px}
+.toc ol{margin:0;padding-left:20px}
+.toc a{color:var(--brand);text-decoration:none;font-weight:700}
+.toc a:hover{text-decoration:underline}
+
+.foot{margin-top:44px;padding-top:16px;border-top:1px solid var(--border);
+  color:var(--ink3);font-size:12.5px;line-height:1.7}
+
+@media print{
+  header.top{display:none}
+  body{background:#fff;color:#000;font-size:11pt}
+  .wrap{max-width:none;padding:0}
+  h2{page-break-after:avoid;border-bottom:1.5pt solid #999}
+  h3{page-break-after:avoid}
+  .tw{overflow:visible;box-shadow:none}
+  table{min-width:0}
+  table,.note,.lead,.toc{page-break-inside:avoid;box-shadow:none}
+  .toc{display:none}
+  a{color:#000;text-decoration:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="back" href="지도.html">← 상황판</a>
+  <h1 id="docTitle">상황판 사용설명서</h1>
+  <div class="sp">
+    <button onclick="window.print()">🖨 인쇄</button>
+    <button id="themeBtn">☾ 다크</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="lead">
+    <p><b id="leadWho">경기북부 기상·재난 상황판</b>의 두 화면 사용법입니다.</p>
+    <p><b>지도 상황판</b>은 평소에 보는 화면, <b>상황실 벽면판</b>은 대형 화면에 띄워두는 화면입니다.
+       데이터는 <b>5분마다 자동으로 갱신</b>되므로 새로고침할 필요가 없습니다.</p>
+  </div>
+
+  <div class="toc">
+    <ol>
+      <li><a href="#map">지도 상황판 <span style="color:var(--ink3);font-weight:600">— 평소 보는 화면</span></a></li>
+      <li><a href="#wall">상황실 벽면판 <span style="color:var(--ink3);font-weight:600">— 대형 화면용</span></a></li>
+      <li><a href="#rule">색·기호 한눈에 보기</a></li>
+      <li><a href="#judge">자동 판단 기준값</a></li>
+      <li><a href="#faq">알아두면 좋은 것</a></li>
+    </ol>
+  </div>
+
+  <!-- ============ 1. 지도 상황판 ============ -->
+  <h2 id="map">1. 지도 상황판 <span class="u">주소 뒤에 /지도</span></h2>
+
+  <p>관할 전체를 지도 한 장으로 보는 기본 화면입니다. 위에서부터 이런 순서입니다.</p>
+
+  <div class="tw"><table>
+    <tr><th style="width:150px">위치</th><th>내용</th></tr>
+    <tr><td class="n">맨 위 줄</td><td>내 관서 선택(📍), 현재 시각, 그리고 버튼들</td></tr>
+    <tr><td class="n">종합 상태 띠</td><td>지금 관할 전체가 <b>평상 / 주의 / 경계 / 심각</b> 중 어디인지</td></tr>
+    <tr><td class="n">숫자 5칸</td><td>발효특보 · 예비특보 · 재난문자 · 최고수위 · 최고체감온도</td></tr>
+    <tr><td class="n">관서 상황도</td><td>지도. <b>지역을 누르면 확대되고 상세가 열립니다</b></td></tr>
+    <tr><td class="n">기상특보</td><td>지금 발효 중인 특보와 해당 시군</td></tr>
+    <tr><td class="n">재난문자</td><td>관할 시군에 발송된 긴급재난문자</td></tr>
+    <tr><td class="n">하천 수위</td><td>위험에 가까운 순서로 정렬됨</td></tr>
+    <tr><td class="n">관서별 현재 기상</td><td>전 관서의 기온·강수·풍속·습도를 한 줄씩</td></tr>
+    <tr><td class="n">선택 관서 상세</td><td>실황 + 24시간 시간대별 예보표</td></tr>
+    <tr><td class="n">산불 / 미세먼지</td><td>권역별 산불위험, 시군별 PM10</td></tr>
+    <tr><td class="n">기상영상</td><td>특보발효도 · 레이더 · 위성 · 초단기 강수예측 (눌러서 확대)</td></tr>
+    <tr><td class="n">맨 아래</td><td>날씨해설(중기전망), 기상정보 전문</td></tr>
+  </table></div>
+
+  <h3>맨 위 버튼들</h3>
+  <div class="tw"><table>
+    <tr><th style="width:150px">버튼</th><th>하는 일</th></tr>
+    <tr><td class="n">📍 관서 이름</td><td>내 관서를 바꿉니다. 한 번 고르면 이 컴퓨터에 기억됩니다.</td></tr>
+    <tr><td class="n">🌧 호우</td><td>비 올 때 보는 전용 화면. 강수·수위만 크게 모아 보여줍니다.</td></tr>
+    <tr><td class="n">🖥 상황실</td><td>벽면판으로 이동. <b>띄운 뒤 F11</b>을 누르면 전체화면이 됩니다.</td></tr>
+    <tr><td class="n">📲 알림받기</td><td>텔레그램으로 특보·하천 알림을 받는 방법 안내</td></tr>
+    <tr><td class="n">▶ 시연 모드</td><td><b>교육·훈련용 가짜 상황</b>을 띄웁니다. 실제 상황이 아닙니다.</td></tr>
+    <tr><td class="n">🔔 경보음</td><td>경보 시 소리. 누르면 음소거되고 그 상태가 기억됩니다.</td></tr>
+    <tr><td class="n">☾ 다크</td><td>밝은 화면 / 어두운 화면 전환</td></tr>
+  </table></div>
+
+  <h3>지도 보는 법</h3>
+  <ul>
+    <li><b>지역 색</b> = 지금 발효 중인 <b>기상특보</b> 기준입니다. 강수량이 아닙니다.
+        <span class="pill p-severe">경보</span> <span class="pill p-warn">주의보</span>
+        <span class="pill p-safe">평상(옅은 색)</span></li>
+    <li><b>🌧️ 표시</b> = 지금 실제로 비가 오는 곳 (시간당 1mm 이상). 특보와는 별개입니다.</li>
+    <li><b>⚠ 숫자</b> = 그 관서에 등록된 <b>인명피해 우려지역</b> 개수</li>
+    <li><b>지역을 누르면</b> 그 관서로 확대되고, 위성지도 · 위험구역 위치 · 상세 기상이 열립니다.</li>
+  </ul>
+
+  <h3>하천 수위 보는 법</h3>
+  <ul>
+    <li>목록은 <b>위험에 가까운 순서</b>로 정렬됩니다. 맨 위가 가장 신경 쓸 곳입니다.</li>
+    <li><b>▲ +0.35m/h</b> 처럼 표시되는 건 <b>최근 1시간 동안의 수위 변화</b>입니다.
+        수치보다 <b>올라가는 속도</b>가 더 중요할 때가 많습니다.</li>
+    <li>단계는 한강홍수통제소 공식 기준입니다 →
+        <span class="pill p-safe">안전</span>
+        <span class="pill p-caution">주의 (관심수위 이상)</span>
+        <span class="pill p-severe">위험 (경계수위 이상)</span></li>
+  </ul>
+
+  <!-- ============ 2. 상황실 벽면판 ============ -->
+  <h2 id="wall">2. 상황실 벽면판 <span class="u">주소 뒤에 /상황실</span></h2>
+
+  <div class="note">
+    <p><b>쓰는 법</b> — 대형 화면(TV·모니터)에 띄우고 <b>F11</b>을 눌러 전체화면으로 둡니다.
+       관서가 <b>15초마다 자동으로 넘어가고</b>, 데이터는 5분마다 저절로 갱신됩니다.
+       하루 종일 켜두는 화면입니다.</p>
+  </div>
+
+  <h3>맨 위 줄 (상단바)</h3>
+  <div class="tw"><table>
+    <tr><th style="width:150px">칸</th><th>내용</th></tr>
+    <tr><td class="n">① 관서명</td><td>지금 보여주는 관서. 아래에 <code>6 / <span class="cnt">11</span></code>(몇 번째인지)과 다음 관서</td></tr>
+    <tr><td class="n">② 날씨</td><td>기온 · 하늘상태 · 체감온도. <b>LIVE</b> 옆 시각은 관측 시각</td></tr>
+    <tr class="imjin"><td class="n">③ 임진강 감시</td><td><b>관서가 넘어가도 안 바뀝니다.</b> 필승교 · 군남댐을 항상 표시</td></tr>
+    <tr><td class="n">④ 관서 상황단계</td><td>그 관서의 <b>평상 / 주의 / 경계 / 심각</b>과 이유</td></tr>
+    <tr><td class="n">⑤ 시계</td><td>현재 시각과 조작 버튼</td></tr>
+  </table></div>
+
+  <div class="note imjin">
+    <p><b>임진강 감시 칸을 왜 고정으로 두었나</b> — <b>필승교</b>는 북측 황강댐의 예고 없는 방류를
+       가장 먼저 감지하는 임진강 최상류 지점이고, <b>군남댐 방류량</b>은 곧바로 하류 임진강 수위로
+       이어집니다. 어느 관서 차례든 계속 봐야 하는 값이라 항상 띄워 둡니다.</p>
+  </div>
+
+  <h3>조작 버튼 (시계 칸 아래)</h3>
+  <div class="tw"><table>
+    <tr><th style="width:110px">버튼</th><th>하는 일</th></tr>
+    <tr><td class="n">❚❚ / ▶</td><td>자동 순환 <b>멈춤 / 다시 시작</b>. 한 관서를 오래 봐야 할 때 멈춥니다.</td></tr>
+    <tr><td class="n">‹ &nbsp; ›</td><td>이전 / 다음 관서로 직접 이동</td></tr>
+    <tr><td class="n">☀ / ☾</td><td>밝은 화면 / 어두운 화면 전환</td></tr>
+  </table></div>
+
+  <h3>가운데 카드들</h3>
+  <div class="tw"><table>
+    <tr><th style="width:170px">카드</th><th>내용</th></tr>
+    <tr><td class="n">현재 실황</td><td>기상청 AWS <b>실측값</b>. 강수·습도·실효습도·풍속/순간풍속·풍향과 누적강수(1·3·6·12시간)</td></tr>
+    <tr><td class="n">시간대별 예보</td><td>앞으로 12시간. 선은 기온, 점선은 체감, 막대는 강수</td></tr>
+    <tr><td class="n">기상특보</td><td>그 관서에 발효 중인 특보</td></tr>
+    <tr><td class="n">하천 수위 · 관할</td><td>관내 하천·댐. 막대의 눈금이 관심수위·경계수위 위치</td></tr>
+    <tr><td class="n"><b>출동 영향 판단</b></td><td>지금 기상값으로 <b>자동 판정</b>한 4가지 (아래 기준표 참고)</td></tr>
+    <tr><td class="n">재난문자</td><td>관할 시군에 발송된 문자</td></tr>
+    <tr><td class="n">산불 / 미세먼지 / 일출·일몰</td><td>산불위험 등급, PM10, 야간 활동 기준 시각</td></tr>
+    <tr><td class="n">관할 위험구역</td><td>등록된 인명피해 우려지역</td></tr>
+    <tr><td class="n">맨 아래 줄</td><td>전 관서 기온과 특보를 한눈에. 지금 보는 관서는 초록으로 강조</td></tr>
+  </table></div>
+
+  <div class="note warnbox">
+    <p><b>댐은 하천과 기준이 다릅니다.</b> 댐은 물을 가득 채워 두는 게 정상이라 '위험수위 대비 몇 %'가
+       의미 없습니다. 그래서 댐 카드는 <b>저수율 · 유입량 · 방류량</b>으로 보여주고,
+       아래 '침수·수난 출동' 판정에서도 <b>댐은 빼고</b> 계산합니다.</p>
+  </div>
+
+  <!-- ============ 3. 색·기호 ============ -->
+  <h2 id="rule">3. 색·기호 한눈에 보기</h2>
+
+  <h3>관서 상황단계</h3>
+  <p>지금 그 관서에 발효 중인 <b>기상특보</b>만으로 정해집니다.</p>
+  <div class="tw"><table>
+    <tr><th style="width:110px">단계</th><th>이럴 때 뜹니다</th></tr>
+    <tr><td class="n"><span class="pill p-safe">평상</span></td><td>발효 중인 특보 없음</td></tr>
+    <tr><td class="n"><span class="pill p-caution">주의</span></td><td><b>폭염 · 한파 · 건조 · 황사 · 오존</b> 특보 — 며칠씩 이어지는 종류</td></tr>
+    <tr><td class="n"><span class="pill p-warn">경계</span></td><td><b>호우 · 강풍 · 대설 · 태풍 · 풍랑</b> 등의 <b>주의보</b></td></tr>
+    <tr><td class="n"><span class="pill p-severe">심각</span></td><td>위 급성 재해의 <b>경보</b> — 화면 테두리가 붉게 깜빡입니다</td></tr>
+  </table></div>
+  <p style="font-size:13.5px;color:var(--ink2)">폭염경보가 떠도 '주의'에 머무는 이유는, 폭염처럼 며칠 이어지는 특보로
+     화면을 24시간 빨갛게 두면 정작 호우·강풍 때 눈에 안 들어오기 때문입니다.</p>
+
+  <h3>공통 색</h3>
+  <div class="tw"><table>
+    <tr><th style="width:120px">색</th><th>지도</th><th>하천</th><th>출동 영향 판단</th></tr>
+    <tr><td class="n"><span class="pill p-safe">초록·옅은색</span></td><td>특보 없음</td><td>안전</td><td>정상 · 평시 · 낮음</td></tr>
+    <tr><td class="n"><span class="pill p-caution">노랑</span></td><td>—</td><td>주의(관심수위↑)</td><td>주의 · 증가</td></tr>
+    <tr><td class="n"><span class="pill p-warn">주황</span></td><td>주의보</td><td>—</td><td>—</td></tr>
+    <tr><td class="n"><span class="pill p-severe">빨강</span></td><td>경보</td><td>위험(경계수위↑)</td><td>운용 제한 · 급증 경계 · 높음</td></tr>
+  </table></div>
+
+  <!-- ============ 4. 판단 기준값 ============ -->
+  <h2 id="judge">4. 자동 판단 기준값 <span class="u">출동 영향 판단</span></h2>
+
+  <p>벽면판의 <b>출동 영향 판단</b>은 사람이 입력하는 게 아니라 <b>지금 기상값으로 자동 계산</b>됩니다.
+     기준은 아래와 같습니다.</p>
+
+  <div class="tw"><table>
+    <tr>
+      <th style="width:180px">항목</th>
+      <th><span class="pill p-safe">낮은 단계</span></th>
+      <th><span class="pill p-caution">가운데</span></th>
+      <th><span class="pill p-severe">높은 단계</span></th>
+    </tr>
+    <tr>
+      <td class="n">🪜 고가·굴절 사다리차</td>
+      <td>정상<br><small>순간풍속 8m/s 이하</small></td>
+      <td>주의<br><small>순간풍속 8~10m/s</small></td>
+      <td>전개 제한<br><small>순간풍속 10m/s 초과</small></td>
+    </tr>
+    <tr>
+      <td class="n">🔥 산불·화재 확산</td>
+      <td>낮음</td>
+      <td>주의</td>
+      <td>높음</td>
+    </tr>
+    <tr>
+      <td class="n">🌡️ 온열질환 구급 수요</td>
+      <td>평시<br><small>체감 33° 미만</small></td>
+      <td>증가<br><small>체감 33~38°</small></td>
+      <td>급증 경계<br><small>체감 38° 이상</small></td>
+    </tr>
+    <tr>
+      <td class="n">🌊 침수·수난 출동</td>
+      <td>평시</td>
+      <td>주의<br><small>시간당 8mm 이상<br>또는 하천이 경계수위의 70% 이상</small></td>
+      <td>경계<br><small>시간당 20mm 이상<br>또는 하천이 경계수위의 88% 이상</small></td>
+    </tr>
+  </table></div>
+
+  <ul>
+    <li><b>산불·화재 확산</b>은 국립산림과학원이 발표하는 <b>권역별 산불위험지수</b>를 그대로 씁니다.
+        카드에 함께 적히는 실효습도·풍속·풍향은 <b>참고 정보</b>입니다.</li>
+    <li><b>침수·수난</b>의 '하천 %'는 관내 하천 중 <b>가장 위험한 한 곳</b> 기준입니다(댐 제외).</li>
+  </ul>
+
+  <div class="note">
+    <p><b>사다리차는 순간풍속으로 판정합니다.</b> 평균풍속이 아니라 순간적으로 가장 세게 분
+       바람이 전개 가부를 좌우하기 때문입니다. 다만 이 값도 <b>관측소</b> 기준이므로,
+       <b>최종 판단은 현장 풍속</b>으로 하시기 바랍니다.</p>
+  </div>
+
+  <h3>지도 화면은 기준이 조금 다릅니다</h3>
+  <p>같은 이름의 카드가 <b>지도 상황판</b>의 관서 상세에도 있는데, 사다리차 말고는
+     단계 기준이 다릅니다. 둘 다 보실 때 참고하십시오.</p>
+
+  <div class="tw"><table>
+    <tr><th style="width:170px">항목</th><th>상황실 벽면판</th><th>지도 상황판</th></tr>
+    <tr>
+      <td class="n">🪜 사다리차</td>
+      <td colspan="2" style="text-align:center;color:var(--safe);font-weight:800">같음 (순간풍속 8 · 10m/s)</td>
+    </tr>
+    <tr>
+      <td class="n">🌡️ 온열질환</td>
+      <td>3단계<br><small>평시 / 증가(33°) / 급증 경계(38°)</small></td>
+      <td>4단계<br><small>평시 / 관심(31°) / 증가(33°) / 급증(38°)</small></td>
+    </tr>
+    <tr>
+      <td class="n">🌊 침수·수난</td>
+      <td>주의 8mm · 70%<br>경계 20mm · 88%</td>
+      <td>주의 10mm · 50%<br>경계 30mm · 80%<br><small>하천이 '위험' 단계면 바로 경계</small></td>
+    </tr>
+    <tr>
+      <td class="n">🔥 산불·화재</td>
+      <td>3단계<br><small>낮음 / 주의 / 높음</small></td>
+      <td>산림청 등급 그대로<br><small>산불 자료가 없으면 실효습도로 대체 판정</small></td>
+    </tr>
+  </table></div>
+
+  <!-- ============ 5. FAQ ============ -->
+  <h2 id="faq">5. 알아두면 좋은 것</h2>
+
+  <h3>숫자가 <code>-</code> 로 나올 때</h3>
+  <p><b>자료가 없다</b>는 뜻입니다. <b>0이 아닙니다.</b> 관측소 고장이나 통신 장애로 값이 안 들어오면
+     0으로 채우지 않고 <code>-</code>를 찍습니다. 호우 상황에서 '자료 없음'을 '비 안 옴'으로
+     보여주는 것이 가장 위험한 오표시이기 때문입니다.</p>
+
+  <h3>실효습도가 뭔가요</h3>
+  <p>지금 습도가 아니라 <b>최근 며칠간의 건조 정도가 누적된 값</b>입니다.
+     낮을수록 나무·건축물이 말라 있다는 뜻이라 <b>산불과 화재 확산 위험</b>을 볼 때 씁니다.</p>
+
+  <h3>풍속과 순간풍속</h3>
+  <p><b>풍속</b>은 일정 시간 평균, <b>순간풍속</b>은 그 사이 가장 세게 분 순간의 값입니다.
+     구조물 파손이나 고가 전개 위험은 순간풍속이 좌우합니다.</p>
+
+  <h3>▶ 시연 모드를 켰는데 상황이 심각하게 나옵니다</h3>
+  <p>시연 모드는 <b>교육·훈련용 가짜 상황</b>입니다. 실제 상황이 아니니 끄고 보십시오.
+     같은 버튼을 다시 누르면 꺼집니다.</p>
+
+  <h3>화면이 안 바뀌는 것 같습니다</h3>
+  <p>데이터는 5분마다 갱신됩니다. 화면 맨 아래(또는 상단 LIVE 옆)의 <b>마지막 갱신 시각</b>을
+     확인해 보세요. 시각이 오래됐다면 새로고침(F5)해 보시고, 그래도 안 되면 알려주세요.</p>
+
+  <h3>위험구역(인명피해 우려지역)은 어디서 오나요</h3>
+  <p>관서별로 관리하는 <b>구글시트</b>를 30분마다 읽어옵니다. 시트를 고치면 화면에도 반영됩니다.</p>
+
+  <div class="foot">
+    데이터 · 기상청 / 행정안전부 / 한강홍수통제소 / 에어코리아 / 국립산림과학원<br>
+    제작 · 소방위 한경승 · 동두천소방서 &nbsp;|&nbsp; 도움 · 소방장 온재웅, 이국신 &nbsp;|&nbsp; 데이터 자동 갱신 5분
+  </div>
+</div>
+
+<script>
+(function(){
+  var C = window.REGION_CONF || {};
+
+  // 지역 이름 반영 (경기북부 / 경기남부)
+  if (C.label) {
+    document.title = C.label + ' 상황판 사용설명서';
+    var w = document.getElementById('leadWho');
+    if (w) w.textContent = C.label + ' 기상·재난 상황판';
+  }
+
+  // 관서 개수 — 지역마다 다르다(북부 11, 남부 21). 예시에 숫자를 박아두면 남부에서 틀린다.
+  if (C.order && C.order.length) {
+    var cs = document.querySelectorAll('.cnt');
+    for (var j = 0; j < cs.length; j++) cs[j].textContent = C.order.length;
+  }
+
+  // 임진강 감시 칸은 그 지역에 감시지점이 지정된 경우에만 설명한다.
+  // (경기남부처럼 topRivers가 비어 있으면 화면에 그 칸 자체가 없다)
+  var hasTop = !!(C.topRivers && C.topRivers.length);
+  if (!hasTop) {
+    var rows = document.querySelectorAll('.imjin');
+    for (var i = 0; i < rows.length; i++) rows[i].style.display = 'none';
+  }
+
+  // 밝기 — 상황판과 같은 저장소(ggTheme)를 공유해 화면끼리 설정이 따라다닌다
+  var btn = document.getElementById('themeBtn');
+  function apply(t){
+    document.documentElement.setAttribute('data-theme', t);
+    if (btn) btn.textContent = (t === 'dark') ? '☀ 라이트' : '☾ 다크';
+  }
+  var saved = 'light';
+  try { saved = localStorage.getItem('ggTheme') || 'light'; } catch(e){}
+  apply(saved);
+  if (btn) btn.onclick = function(){
+    var next = (document.documentElement.getAttribute('data-theme') === 'dark') ? 'light' : 'dark';
+    try { localStorage.setItem('ggTheme', next); } catch(e){}
+    apply(next);
+  };
+})();
+</script>
+</body>
+</html>

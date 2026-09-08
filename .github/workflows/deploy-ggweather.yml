@@ -1,0 +1,111 @@
+name: Deploy 경기 전체 (ggweather)
+
+# 경기도 31개 시군을 한 화면에 보는 사이트 → ggweather.visanu81.workers.dev
+# 운영(gyeonggi-dashboard, 경기북부)과 weather(경기남부)는 전혀 건드리지 않는다 —
+# Worker 이름이 다르면 완전히 별개 배포다.
+#
+# ★ 데이터를 새로 수집하지 않는다.
+#   경기북부 10개 + 경기남부 21개 = 경기도 31개 시군에 정확히 일치하므로(중복·누락 0),
+#   이미 받아 둔 data.js + data-south.js 를 tools/merge_all.py 로 합쳐 쓴다.
+#   새로 수집하면 회차마다 API 약 120회가 더 나가고 값이 세 벌로 갈린다.
+
+on:
+  push:
+    branches: [deploy-trigger]
+  schedule:
+    - cron: '29 */3 * * *'        # 3시간 안전망 (서버 트리거 장애 대비)
+  workflow_dispatch:
+
+concurrency:
+  group: cloudflare-deploy-ggweather
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to ggweather
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 원본 파일 확인
+        run: |
+          for f in data.js data-south.js map-geo-all.js; do
+            if [ ! -s "$f" ]; then
+              echo "::error::$f 가 없거나 비어 있습니다. 경기 전체 사이트를 올릴 수 없습니다."
+              exit 1
+            fi
+          done
+          echo "원본 확인 완료"
+
+      - name: 경기 전체 데이터 생성 (수집 아님 — 두 데이터 합치기)
+        run: |
+          set -e
+          python tools/merge_all.py
+          test -s data-all.js
+          # region-all.js·map-geo-all.js 는 저장소에 커밋된 것을 쓴다.
+          # 시군·관측소·하천 구성이 바뀔 때만 다시 만들면 되는 파일이라 매번 생성하지 않는다.
+          #   python tools/build_region_all.py            (node 필요)
+          #   python tools/build_map_geo.py --profile all --merge --out map-geo-all.js
+          test -s region-all.js
+
+      - name: 경기 전체 버전으로 교체
+        run: |
+          set -e
+          mv data-all.js     data.js
+          mv map-geo-all.js  map-geo.js
+          mv region-all.js   region.js
+          rm -f data-south.js map-geo-south.js region-south.js risk-zones-south.js
+          # 위험구역 — 경기 전체도 같은 구글시트를 그대로 본다(사장님 요청 2026-08-20).
+          #   화면이 관서마다 '그 이름의 탭'을 찾아 읽으므로, 시트에 탭이 있는 관서만
+          #   표시되고 없는 관서는 '등록된 위험구역 없음'이 된다 — 걸러낼 필요가 없다.
+          #   (없는 탭을 부르면 구글이 첫 탭을 돌려주는 함정이 있는데, 첫 탭과 같은 내용이면
+          #    건너뛰는 안전장치가 지도.html 에 이미 있다.)
+          # 다만 북부에 하드코딩된 표본(window.RISK)은 지운다 — 경기 전체에선 동두천
+          #   한 곳만 뜬 것처럼 보여 오해를 부른다. 시트에서 읽은 값이 이걸 덮어쓴다.
+          grep -v '^window\.RISK *=' risk-zones.js > risk-zones.js.new
+          echo 'window.RISK = [];' >> risk-zones.js.new
+          mv risk-zones.js.new risk-zones.js
+          # 화면이 운영(북부) 주소로 data.js 를 직접 부르는 곳이 있다 → 이 사이트 주소로
+          grep -rl 'gyeonggi-dashboard\.visanu81\.workers\.dev' --include='*.html' --include='*.js' . \
+            | xargs -r sed -i 's|gyeonggi-dashboard\.visanu81\.workers\.dev|ggweather.visanu81.workers.dev|g'
+          # 화면에 박힌 지역 이름 (제작자 소속 '동두천소방서'는 건드리지 않는다)
+          grep -rl '경기북부' --include='*.html' . | xargs -r sed -i 's|경기북부|경기도|g'
+          grep -rl '동두천소방서 · 11개 소방관서' --include='*.html' . \
+            | xargs -r sed -i 's|동두천소방서 · 11개 소방관서|경기도 · 34개 소방서|g'
+          grep -rl '11개 소방관서' --include='*.html' . \
+            | xargs -r sed -i 's|11개 소방관서|34개 소방서|g; s|10개 시군|34개 소방서|g'
+
+      - name: 남은 북부 흔적 검사
+        run: |
+          # 제작자 크레딧(제작 : 소방위 한경승 · 동두천소방서)은 남아 있어야 정상이라 뺀다.
+          LEFT=$(grep -rn 'gyeonggi-dashboard\.visanu81\|경기북부\|11개 소방관서' \
+                   --include='*.html' --include='*.js' . \
+                 | grep -v '제작' | grep -v '^\./data-adapter\.js.*//' || true)
+          if [ -n "$LEFT" ]; then
+            echo "::warning::북부 흔적이 남아 있습니다"
+            echo "$LEFT" | head -20
+          else
+            echo "북부 흔적 없음"
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Wrangler
+        run: npm install -g wrangler@latest
+
+      - name: Deploy to ggweather
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        # --name 으로 별도 Worker 지정 → ggweather.visanu81.workers.dev
+        run: wrangler deploy --name ggweather 2>&1
