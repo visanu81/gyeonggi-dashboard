@@ -1,0 +1,30 @@
+# Cloudflare 응답 헤더 설정 (Workers Static Assets)
+# 자주 바뀌는 파일은 캐시 안 함 → 새로고침만 해도 항상 최신 화면.
+# (이전엔 index.html이 캐시되어 사장님이 옛날 화면을 봄)
+
+# HTML 진입점 — 절대 캐시 안 함
+/
+  Cache-Control: no-store, must-revalidate
+
+/index.html
+  Cache-Control: no-store, must-revalidate
+
+# 데이터·매니페스트 — 캐시 안 함 (5분마다 갱신)
+# Access-Control-Allow-Origin: 테스트 버전(gyeonggi-dashboard-2)이 운영 데이터를 읽게 허용
+/data.js
+  Cache-Control: no-store, must-revalidate
+  Access-Control-Allow-Origin: *
+
+/manifest.json
+  Cache-Control: no-cache, must-revalidate
+
+# 기상 이미지 — 짧게 캐시 (2분, 5분마다 갱신되니)
+/images/*
+  Cache-Control: public, max-age=120, must-revalidate
+
+# 아이콘·서비스워커 — 거의 안 바뀜, 길게 캐시
+/icon.svg
+  Cache-Control: public, max-age=3600
+
+/service-worker.js
+  Cache-Control: no-cache, must-revalidate
