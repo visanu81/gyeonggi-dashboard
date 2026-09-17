@@ -23,6 +23,19 @@
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('service-worker.js').catch(function(){});});}</script>
 <!-- 지역 설정(시군 목록·배치·중점 관서). 남부 배포 시 region-south.js로 교체된다. -->
 <script src="region.js"></script>
+<style data-dash-sheet>
+  /* 배치 편집기(dash_layout.js) — 섹션·카드 표시/순서. 인라인 style 은 런타임이 다시 쓰므로 시트로 건다. */
+  [data-dash-main]{display:flex;flex-direction:column;}
+  section[data-dash="ribbon"]{display:var(--ds-ribbon-d,block)!important;order:var(--ds-ribbon-o,1);}
+  section[data-dash="hero"]{display:var(--ds-hero-d,grid)!important;order:var(--ds-hero-o,2);}
+  section[data-dash="stations"]{display:var(--ds-stations-d,block)!important;order:var(--ds-stations-o,3);}
+  section[data-dash="trio"]{display:var(--ds-trio-d,grid)!important;order:var(--ds-trio-o,4);}
+  section[data-dash="imgs"]{display:var(--ds-imgs-d,block)!important;order:var(--ds-imgs-o,5);}
+  [data-dash="warn"]{display:var(--ds-warn-d,flex)!important;} [data-dash="msg"]{display:var(--ds-msg-d,flex)!important;}
+  [data-dash="river"]{display:var(--ds-river-d,flex)!important;} [data-dash="hourly"]{display:var(--ds-hourly-d,block)!important;}
+  [data-dash="fire"]{display:var(--ds-fire-d,block)!important;} [data-dash="pm"]{display:var(--ds-pm-d,flex)!important;}
+</style>
+<script src="dash_layout.js"></script>
 <!-- 테스트2는 운영의 실시간 data.js를 직접 참조 (document.write는 dc-runtime 파싱과 충돌하므로 정적 로드) -->
 <script src="https://gyeonggi-dashboard.visanu81.workers.dev/data.js"></script>
 <script src="data-adapter.js"></script>
@@ -161,8 +174,10 @@
       </div>
   </header>
 
+  <!-- 배치 편집(dash_layout.js): 섹션 순서(order)·표시(display)를 CSS 변수로 받는 컨테이너 -->
+  <div data-dash-main style="display:flex; flex-direction:column;">
   <!-- ============ ALERT RIBBON ============ -->
-  <section style="padding:16px 22px 0;">
+  <section data-dash="ribbon" style="padding:16px 22px 0;">
     <div onClick="{{openWarnAll}}" style="position:relative; overflow:hidden; display:flex; align-items:center; gap:18px; flex-wrap:wrap; padding:16px 20px; border-radius:16px; cursor:pointer; background:{{ribbonBg}}; border:1px solid {{ribbonBorder}}; box-shadow:var(--sh2);">
       <div style="position:absolute; left:0; top:0; bottom:0; width:6px; background:{{ribbonAccent}};"></div>
       <sc-if value="{{ribbonPulse}}" hint-placeholder-val="{{false}}">
@@ -192,10 +207,9 @@
       </div>
     </div>
   </section>
-  </div>
 
   <!-- ============ HERO : MAP + 특보 + 수위 ============ -->
-  <section style="padding:16px 22px 0; display:grid; grid-template-columns:{{heroCols}}; gap:16px; align-items:stretch;">
+  <section data-dash="hero" style="padding:16px 22px 0; display:grid; grid-template-columns:{{heroCols}}; gap:16px; align-items:stretch;">
 
     <!-- MAP CARD -->
     <div style="{{mapCardStyle}}">
@@ -297,7 +311,7 @@
 
       <!-- 특보 CARD -->
       <sc-if value="{{noFocus}}" hint-placeholder-val="{{true}}">
-      <div style="background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--sh2); display:flex; flex-direction:column; overflow:hidden;">
+      <div data-dash="warn" style="background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--sh2); display:flex; flex-direction:column; overflow:hidden;">
         <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px 11px; border-bottom:1px solid var(--border);">
           <div style="display:flex; align-items:center; gap:8px;"><span style="width:9px; height:9px; border-radius:3px; background:{{warnDot}};"></span><span style="font-size:14px; font-weight:800; color:var(--ink);">기상특보</span></div>
           <span style="font-size:11px; font-weight:700; color:var(--ink2); background:var(--surface2); border:1px solid var(--border); padding:3px 9px; border-radius:999px;">발효 {{warnCount}} · 예비 {{prelimCount}}</span>
@@ -346,7 +360,7 @@
 
       <!-- 재난문자 CARD -->
       <sc-if value="{{noFocus}}" hint-placeholder-val="{{true}}">
-      <div style="background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--sh2); display:flex; flex-direction:column; overflow:hidden; flex:0 0 auto;">
+      <div data-dash="msg" style="background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--sh2); display:flex; flex-direction:column; overflow:hidden; flex:0 0 auto;">
         <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px 11px; border-bottom:1px solid var(--border);">
           <div style="display:flex; align-items:center; gap:8px;"><span style="width:9px; height:9px; border-radius:3px; background:{{warnDot}};"></span><span style="font-size:14px; font-weight:800; color:var(--ink);">재난문자</span></div>
           <span style="font-size:11px; font-weight:700; color:var(--ink2); background:var(--surface2); border:1px solid var(--border); padding:3px 9px; border-radius:999px;">{{msgCount}}건</span>
@@ -376,7 +390,7 @@
 
       <!-- 수위 CARD -->
       <sc-if value="{{noFocus}}" hint-placeholder-val="{{true}}">
-      <div style="{{riverCardStyle}}">
+      <div data-dash="river" style="{{riverCardStyle}}">
         <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px 11px; border-bottom:1px solid var(--border);">
           <div style="display:flex; align-items:center; gap:8px;"><span style="width:9px; height:9px; border-radius:3px; background:var(--cyan);"></span><span style="font-size:14px; font-weight:800; color:var(--ink);">하천 수위 · 홍수 위험</span></div>
           <span style="font-size:11px; font-weight:700; color:var(--ink3);">위험 근접순</span>
@@ -424,7 +438,7 @@
   </section>
 
   <!-- ============ 관서별 상세 ============ -->
-  <section style="padding:22px 22px 0;">
+  <section data-dash="stations" style="padding:22px 22px 0;">
     <div style="display:flex; align-items:center; gap:9px; margin-bottom:13px;">
       <div style="width:4px; height:18px; border-radius:2px; background:var(--brand);"></div>
       <h2 style="font-size:15.5px; font-weight:800; color:var(--ink); letter-spacing:-.3px;">관서별 현재 기상</h2>
@@ -456,8 +470,8 @@
        align-items는 stretch(기본)로 둔다 — start면 오른쪽 열이 '내용 높이'만 차지해
        왼쪽 날씨 카드보다 짧아지고 아래가 빈다. stretch면 두 열이 같은 높이가 되고,
        남는 높이는 미세먼지 카드(flex:1)가 흡수한다. -->
-  <section style="padding:22px 22px 0; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr)); gap:16px;">
-    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); overflow:hidden;">
+  <section data-dash="trio" style="padding:22px 22px 0; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr)); gap:16px;">
+    <div data-dash="hourly" style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); overflow:hidden;">
       <div style="display:flex; align-items:center; justify-content:space-between; padding:15px 18px 8px; flex-wrap:wrap; gap:8px;">
         <div style="display:flex; align-items:center; gap:9px;">
           <div style="width:4px; height:18px; border-radius:2px; background:var(--brand);"></div>
@@ -477,7 +491,7 @@
     <!-- 오른쪽 절반: 산불 위험도 + 미세먼지 (위아래) -->
     <div style="display:flex; flex-direction:column; gap:16px;">
 
-    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); overflow:hidden;">
+    <div data-dash="fire" style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); overflow:hidden;">
       <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px 11px; border-bottom:1px solid var(--border);">
         <div style="display:flex; align-items:center; gap:8px;"><span style="width:9px; height:9px; border-radius:3px; background:var(--warn);"></span><span style="font-size:14px; font-weight:800; color:var(--ink);">산불 위험도</span></div>
         <span style="font-size:11px; color:var(--ink3); font-weight:600;">국립산림과학원</span>
@@ -498,7 +512,7 @@
     <!-- 미세먼지 카드가 남는 높이를 흡수한다(flex:1) → 오른쪽 열이 왼쪽 날씨 카드와 같은 높이가 된다.
          min-height:0 이 있어야 이 카드가 내용보다 작게 줄어들 수 있고(=목록이 안쪽에서 스크롤),
          없으면 반대로 이 카드가 행 높이를 밀어올려 왼쪽이 늘어난다. -->
-    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); overflow:hidden; display:flex; flex-direction:column; flex:1 1 0; min-height:0;">
+    <div data-dash="pm" style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); overflow:hidden; display:flex; flex-direction:column; flex:1 1 0; min-height:0;">
       <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px 11px; border-bottom:1px solid var(--border); flex-shrink:0;">
         <div style="display:flex; align-items:center; gap:8px;"><span style="width:9px; height:9px; border-radius:3px; background:var(--cyan);"></span><span style="font-size:14px; font-weight:800; color:var(--ink);">미세먼지 PM10</span></div>
         <span style="font-size:11px; color:var(--ink3); font-weight:600;">에어코리아</span>
@@ -518,7 +532,7 @@
   </section>
 
   <!-- ============ 기상영상 ============ -->
-  <section style="padding:22px 22px 0;">
+  <section data-dash="imgs" style="padding:22px 22px 0;">
     <div style="display:flex; align-items:center; gap:9px; margin-bottom:13px;">
       <div style="width:4px; height:18px; border-radius:2px; background:var(--brand);"></div>
       <h2 style="font-size:15.5px; font-weight:800; color:var(--ink); letter-spacing:-.3px;">기상영상</h2>
@@ -544,6 +558,7 @@
     </div>
     {{weatherText}}
   </section>
+  </div>
 
   <!-- ============ FOOTER ============ -->
   <footer style="margin:26px 22px 0; padding-top:16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;">
@@ -1762,11 +1777,12 @@ class Component extends DCLogic {
       chip(feelsMax?feelsMax+'°':'-', '최고체감', 'var(--ink2)', 'var(--surface)', 'var(--border)')
     ];
     // layout
-    const heroCols = wide ? 'minmax(0,1.6fr) minmax(330px,1fr)' : 'minmax(0,1fr)';   // 모바일: 컬럼이 화면폭에 맞게 줄어들도록(min 0). '1fr'은 내용에 밀려 화면 넘침
+    /* 지도 열 비율 = 배치 편집기의 '지도 크기'(--ds-map: 1/1.35/1.8) × 1.6. 변수가 없으면 예전과 같은 1.6fr */
+    const heroCols = wide ? 'var(--ds-hero-cols, minmax(0,1.6fr) minmax(330px,1fr))' : 'minmax(0,1fr)';   // 모바일: 컬럼이 화면폭에 맞게 줄어들도록(min 0). '1fr'은 내용에 밀려 화면 넘침
     const rightDisplay = 'flex';
     const rightCols = 'none';
     // 수위 카드: 데스크톱(2열)에서만 flex-채움. 모바일(단일 열)은 자연 높이(flex:1 붕괴로 사라지던 버그 방지)
-    const riverCardStyle = 'background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--sh2); display:flex; flex-direction:column; overflow:hidden;' + (wide ? ' flex:1 1 0; min-height:0;' : '');
+    const riverCardStyle = 'background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--sh2); display:flex; flex-direction:column; overflow:hidden;' + (wide ? ' flex:1 1 0; min-height:0;' : '') + '';
     const riverBodyStyle = 'padding:6px 8px; display:flex; flex-direction:column;' + (wide ? ' flex:1 1 0; min-height:0; overflow:auto;' : '');
     // map scale
     const mapScale = st.mapScale;
