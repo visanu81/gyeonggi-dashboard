@@ -666,7 +666,9 @@ class Component extends DCLogic {
     let st=this.state.myStation||RC.home;
     if(list.length && list.indexOf(st)<0) st=list[0];
     try{ if(typeof localStorage!=='undefined'){ localStorage.setItem('ggScope', sc); localStorage.setItem('ggMyStation', st); } }catch(e){}
-    this.setState({scope:sc, myStation:st, stationPickerOpen:false, focus:null});
+    /* 권역을 골라도 창은 열어 둔다 — 이어서 관서까지 고르는 흐름(2026-09-17 사장님 지시).
+       창은 관서를 눌렀을 때(setMyStation)만 닫힌다. */
+    this.setState({scope:sc, myStation:st, stationPickerOpen:true, focus:null});
   }
   toggleStationPicker(){ this.setState({stationPickerOpen:!this.state.stationPickerOpen}); }
   componentDidMount(){
