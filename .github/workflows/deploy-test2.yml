@@ -1,0 +1,36 @@
+name: Deploy Test2 (deploy2 → gyeonggi-dashboard-2)
+
+# deploy2 브랜치에 push하면 테스트2(gyeonggi-dashboard-2)로 배포.
+# 어제 디스크 사고를 일으킨 거대 staging 브랜치를 피해 만든 깨끗한 배포 통로.
+# 운영(main, gyeonggi-dashboard)과 완전 분리 — 운영에 영향 없음.
+
+on:
+  push:
+    branches: [deploy2]
+  workflow_dispatch:
+
+concurrency:
+  group: cloudflare-deploy-test2
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to gyeonggi-dashboard-2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Wrangler
+        run: npm install -g wrangler@latest
+
+      - name: Deploy to gyeonggi-dashboard-2 (테스트 버전)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler deploy --name gyeonggi-dashboard-2 2>&1
