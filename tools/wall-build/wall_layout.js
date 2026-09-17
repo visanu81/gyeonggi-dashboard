@@ -23,7 +23,7 @@
     { id: 'river',  name: '하천 수위',       min: [3, 4], noHide: true },
     { id: 'impact', name: '출동 영향 판단',  min: [3, 5] },
     { id: 'msg',    name: '재난문자',        min: [3, 5], noHide: true },
-    { id: 'idx',    name: '산불·미세먼지·일출', min: [3, 3] },
+    { id: 'idx',    name: '산불·미세먼지·일출', min: [3, 3], disp: 'grid' },   /* 칩 3개 가로 3등분 — flex 로 두면 폭이 내용만큼만 */
     { id: 'ultra',  name: '6시간 강수예측',  min: [3, 4] },
     /* 2026-09-18 추가 — 기본 숨김. 자리가 겹치므로 켜기 전에 다른 카드를 줄여 자리를 내야 한다 */
     { id: 'radar',  name: '레이더 영상',     min: [3, 5] },
@@ -32,13 +32,13 @@
   ];
   /* 기본 배치 = 지금 화면과 같은 모양을 12×24 로 옮긴 것(실측 튜닝). */
   var DEFAULT = {
-    obs:    { c: 1, r: 1,  cs: 4, rs: 7 },
-    hourly: { c: 1, r: 8, cs: 4, rs: 17 },
+    obs:    { c: 1, r: 1,  cs: 4, rs: 8 },
+    hourly: { c: 1, r: 9, cs: 4, rs: 16 },
     warn:   { c: 5, r: 1,  cs: 4, rs: 6 },
     river:  { c: 5, r: 7,  cs: 4, rs: 6 },
     impact: { c: 5, r: 13, cs: 4, rs: 12 },
-    msg:    { c: 9, r: 1,  cs: 4, rs: 11 },
-    idx:    { c: 9, r: 12, cs: 4, rs: 5 },
+    msg:    { c: 9, r: 1,  cs: 4, rs: 10 },
+    idx:    { c: 9, r: 11, cs: 4, rs: 6 },
     ultra:  { c: 9, r: 17, cs: 4, rs: 8 },
     radar:  { c: 9, r: 17, cs: 4, rs: 8, hide: true },
     typhoon:{ c: 9, r: 17, cs: 4, rs: 8, hide: true },
@@ -127,7 +127,7 @@
     CARDS.forEach(function (k) { var p = L[k.id], pre = '--wl-' + k.id + '-';
       st.setProperty(pre + 'c', p.c); st.setProperty(pre + 'r', p.r);
       st.setProperty(pre + 'cs', p.cs); st.setProperty(pre + 'rs', p.rs);
-      st.setProperty(pre + 'd', p.hide ? 'none' : 'flex'); st.setProperty(pre + 'fz', p.fz); });
+      st.setProperty(pre + 'd', p.hide ? 'none' : (k.disp || 'flex')); st.setProperty(pre + 'fz', p.fz); });
     window.WALL_LAYOUT = L;
   }
   apply(LAYOUT);

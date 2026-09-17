@@ -32,7 +32,7 @@
     { id: 'river',  name: '하천 수위',       min: [3, 4], noHide: true },
     { id: 'impact', name: '출동 영향 판단',  min: [3, 5] },
     { id: 'msg',    name: '재난문자',        min: [3, 5], noHide: true },
-    { id: 'idx',    name: '산불·미세먼지·일출', min: [3, 3] },
+    { id: 'idx',    name: '산불·미세먼지·일출', min: [3, 3], disp: 'grid' },   /* 칩 3개 가로 3등분 — flex 로 두면 폭이 내용만큼만 */
     { id: 'ultra',  name: '6시간 강수예측',  min: [3, 4] },
     /* 2026-09-18 추가 — 기본 숨김. 자리가 겹치므로 켜기 전에 다른 카드를 줄여 자리를 내야 한다 */
     { id: 'radar',  name: '레이더 영상',     min: [3, 5] },
@@ -41,13 +41,13 @@
   ];
   /* 기본 배치 = 지금 화면과 같은 모양을 12×24 로 옮긴 것(실측 튜닝). */
   var DEFAULT = {
-    obs:    { c: 1, r: 1,  cs: 4, rs: 7 },
-    hourly: { c: 1, r: 8, cs: 4, rs: 17 },
+    obs:    { c: 1, r: 1,  cs: 4, rs: 8 },
+    hourly: { c: 1, r: 9, cs: 4, rs: 16 },
     warn:   { c: 5, r: 1,  cs: 4, rs: 6 },
     river:  { c: 5, r: 7,  cs: 4, rs: 6 },
     impact: { c: 5, r: 13, cs: 4, rs: 12 },
-    msg:    { c: 9, r: 1,  cs: 4, rs: 11 },
-    idx:    { c: 9, r: 12, cs: 4, rs: 5 },
+    msg:    { c: 9, r: 1,  cs: 4, rs: 10 },
+    idx:    { c: 9, r: 11, cs: 4, rs: 6 },
     ultra:  { c: 9, r: 17, cs: 4, rs: 8 },
     radar:  { c: 9, r: 17, cs: 4, rs: 8, hide: true },
     typhoon:{ c: 9, r: 17, cs: 4, rs: 8, hide: true },
@@ -136,7 +136,7 @@
     CARDS.forEach(function (k) { var p = L[k.id], pre = '--wl-' + k.id + '-';
       st.setProperty(pre + 'c', p.c); st.setProperty(pre + 'r', p.r);
       st.setProperty(pre + 'cs', p.cs); st.setProperty(pre + 'rs', p.rs);
-      st.setProperty(pre + 'd', p.hide ? 'none' : 'flex'); st.setProperty(pre + 'fz', p.fz); });
+      st.setProperty(pre + 'd', p.hide ? 'none' : (k.disp || 'flex')); st.setProperty(pre + 'fz', p.fz); });
     window.WALL_LAYOUT = L;
   }
   apply(LAYOUT);
@@ -1366,7 +1366,7 @@ http://scripts.sil.org/OFL
       <!-- COLUMN A -->
       <div style="display:contents;">
 
-        <div data-card="obs" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:20px;grid-column:var(--wl-obs-c,1)/span var(--wl-obs-cs,4);grid-row:var(--wl-obs-r,1)/span var(--wl-obs-rs,7);display:var(--wl-obs-d,flex);--fz:var(--wl-obs-fz,1);min-height:0;min-width:0;overflow:hidden;">
+        <div data-card="obs" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:20px;grid-column:var(--wl-obs-c,1)/span var(--wl-obs-cs,4);grid-row:var(--wl-obs-r,1)/span var(--wl-obs-rs,8);display:var(--wl-obs-d,flex);--fz:var(--wl-obs-fz,1);min-height:0;min-width:0;overflow:hidden;">
           <div style="display:flex;align-items:baseline;justify-content:space-between;">
             <div style="font-size:calc(40px*var(--fz,1));font-weight:660;letter-spacing:-.01em;">현재 실황</div>
             <div style="font-size:calc(30px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">{{ obsTime }} 관측 · 기상청 AWS</div>
@@ -1409,7 +1409,7 @@ http://scripts.sil.org/OFL
           </div>
         </div>
 
-        <div data-card="hourly" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:18px;min-height:0;grid-column:var(--wl-hourly-c,1)/span var(--wl-hourly-cs,4);grid-row:var(--wl-hourly-r,8)/span var(--wl-hourly-rs,17);display:var(--wl-hourly-d,flex);--fz:var(--wl-hourly-fz,1);min-height:0;min-width:0;overflow:hidden;">
+        <div data-card="hourly" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:18px;min-height:0;grid-column:var(--wl-hourly-c,1)/span var(--wl-hourly-cs,4);grid-row:var(--wl-hourly-r,9)/span var(--wl-hourly-rs,16);display:var(--wl-hourly-d,flex);--fz:var(--wl-hourly-fz,1);min-height:0;min-width:0;overflow:hidden;">
           <div style="display:flex;align-items:baseline;justify-content:space-between;">
             <div style="font-size:calc(40px*var(--fz,1));font-weight:660;">시간대별 예보 · 12시간</div>
             <div style="font-size:calc(30px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">최고 {{ tMax }}° · 최저 {{ tMin }}° · 강수확률 {{ pop }}%</div>
@@ -1487,7 +1487,7 @@ http://scripts.sil.org/OFL
       <!-- COLUMN C -->
       <div style="display:contents;">
 
-        <div data-card="msg" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;grid-column:var(--wl-msg-c,9)/span var(--wl-msg-cs,4);grid-row:var(--wl-msg-r,1)/span var(--wl-msg-rs,11);display:var(--wl-msg-d,flex);--fz:var(--wl-msg-fz,1);min-height:0;min-width:0;overflow:hidden;">
+        <div data-card="msg" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;grid-column:var(--wl-msg-c,9)/span var(--wl-msg-cs,4);grid-row:var(--wl-msg-r,1)/span var(--wl-msg-rs,10);display:var(--wl-msg-d,flex);--fz:var(--wl-msg-fz,1);min-height:0;min-width:0;overflow:hidden;">
           <div style="display:flex;align-items:baseline;justify-content:space-between;">
             <div style="font-size:calc(40px*var(--fz,1));font-weight:660;">재난문자 · 관할 시군</div>
             <div style="font-size:calc(30px*var(--fz,1));font-weight:570;color:var(--acc,#ff7a2f);">{{ msgCount }}건</div>
@@ -1510,7 +1510,7 @@ http://scripts.sil.org/OFL
         </div>
 
         <div style="display:contents;">
-          <div data-card="idx" style="margin:14px;grid-column:var(--wl-idx-c,9)/span var(--wl-idx-cs,4);grid-row:var(--wl-idx-r,12)/span var(--wl-idx-rs,5);display:var(--wl-idx-d,flex);--fz:var(--wl-idx-fz,1);min-height:0;min-width:0;overflow:hidden;display:var(--wl-idx-d,grid);grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;">
+          <div data-card="idx" style="margin:14px;grid-column:var(--wl-idx-c,9)/span var(--wl-idx-cs,4);grid-row:var(--wl-idx-r,11)/span var(--wl-idx-rs,6);display:var(--wl-idx-d,grid);--fz:var(--wl-idx-fz,1);min-height:0;min-width:0;overflow:hidden;display:var(--wl-idx-d,grid);grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;">
             <div style="background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:22px 26px;display:flex;flex-direction:column;gap:6px;">
               <div style="font-size:calc(30px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">산불위험</div>
               <div style="font-size:calc(62px*var(--fz,1));font-weight:660;line-height:1.05;color:{{ fireColor }};">{{ fireLevel }}</div>
@@ -1851,7 +1851,7 @@ class Component extends DCLogic {
     const cell=(o,i)=>{
       const wet=(o.rain||0)>0, hi=(o.pop||0)>=60;
       return R('div',{key:i,style:{flex:'1 1 0',minWidth:0,display:'flex',flexDirection:'column',
-        alignItems:'center',justifyContent:'center',gap:'6px',padding:'10px 4px',borderRadius:'14px',
+        alignItems:'center',justifyContent:'space-evenly',gap:'6px',padding:'10px 4px',borderRadius:'14px',
         background:(wet?'rgba(84,170,255,.10)':'transparent')}},
         R('div',{style:{fontSize:'27px',fontWeight:570,color:DIM,whiteSpace:'nowrap'}}, o.time||'-'),
         R('div',{style:{fontSize:'46px',fontWeight:660,lineHeight:1.2,whiteSpace:'nowrap',

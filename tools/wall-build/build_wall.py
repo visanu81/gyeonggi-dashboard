@@ -320,7 +320,7 @@ ULTRA = r"""ultraEl(rows){
     const cell=(o,i)=>{
       const wet=(o.rain||0)>0, hi=(o.pop||0)>=60;
       return R('div',{key:i,style:{flex:'1 1 0',minWidth:0,display:'flex',flexDirection:'column',
-        alignItems:'center',justifyContent:'center',gap:'6px',padding:'10px 4px',borderRadius:'14px',
+        alignItems:'center',justifyContent:'space-evenly',gap:'6px',padding:'10px 4px',borderRadius:'14px',
         background:(wet?'rgba(84,170,255,.10)':'transparent')}},
         R('div',{style:{fontSize:'27px',fontWeight:700,color:DIM,whiteSpace:'nowrap'}}, o.time||'-'),
         R('div',{style:{fontSize:'46px',fontWeight:800,lineHeight:1.2,whiteSpace:'nowrap',
@@ -1107,11 +1107,9 @@ patch(_ULTRA_CLOSE,
 # ══════════════════════════════════════════════════════════════════════════
 def _card_style(cid, extra=''):
     # var() 폴백값 = wall_layout.js 의 DEFAULT 와 같은 값(스크립트가 안 떠도 기본 모양)
-    d = {'obs':(1,1,4,7),'hourly':(1,8,4,17),'warn':(5,1,4,6),'river':(5,7,4,6),
-         'impact':(5,13,4,12),'msg':(9,1,4,11),'idx':(9,12,4,5),'ultra':(9,17,4,8),
-         'radar':(9,17,4,8),'typhoon':(9,17,4,8),'tide':(9,17,4,8)}[cid]
+    d = {'obs':(1,1,4,8),'hourly':(1,9,4,16),'warn':(5,1,4,6),'river':(5,7,4,6),'impact':(5,13,4,12),'msg':(9,1,4,10),'idx':(9,11,4,6),'ultra':(9,17,4,8),'radar':(9,17,4,8),'typhoon':(9,17,4,8),'tide':(9,17,4,8)}[cid]
     # 새 카드 3장은 기본 숨김 — 편집기에서 켠다(폴백 display:none)
-    disp = 'none' if cid in ('radar','typhoon','tide') else 'flex'
+    disp = 'none' if cid in ('radar','typhoon','tide') else ('grid' if cid == 'idx' else 'flex')
     return (f'grid-column:var(--wl-{cid}-c,{d[0]})/span var(--wl-{cid}-cs,{d[2]});'
             f'grid-row:var(--wl-{cid}-r,{d[1]})/span var(--wl-{cid}-rs,{d[3]});'
             f'display:var(--wl-{cid}-d,{disp});--fz:var(--wl-{cid}-fz,1);'
