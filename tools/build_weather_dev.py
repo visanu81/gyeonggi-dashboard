@@ -81,9 +81,16 @@ def sh(*args):
 
 
 def main():
+    # 폴더 자체는 지우지 않는다 — 배포 셸이 그 안에 서 있으면 Windows 가 잠근다.
+    # 내용물만 비운다(같은 이유로 deploy/ 도 파일 단위로 정리).
     if WORK.exists():
-        shutil.rmtree(WORK)
-    SITE.mkdir(parents=True)
+        for child in WORK.iterdir():
+            if child.is_dir():
+                for sub in child.iterdir():
+                    shutil.rmtree(sub) if sub.is_dir() else sub.unlink()
+            else:
+                child.unlink()
+    SITE.mkdir(parents=True, exist_ok=True)
 
     # 1) 코드는 작업 트리에서, 데이터만 origin/main(최신)에서
     for f in ROOT.iterdir():
@@ -147,7 +154,7 @@ def main():
             n_files += 1
 
     # 4) 배포 폴더 조립: 루트 = 안내, /new/ = 작업 화면
-    PUB.mkdir(parents=True)
+    PUB.mkdir(parents=True, exist_ok=True)
     for name in PAGES:
         (PUB / name).write_text(NOTICE, encoding='utf-8')
     shutil.copytree(SITE, PUB / DEV_DIR)

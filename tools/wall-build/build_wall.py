@@ -1014,6 +1014,85 @@ INJECT = r'''
 })();
 </script>
 '''
+
+# ══════════════════════════════════════════════════════════════════════════
+# (L) 카드 배치 편집기 — 2026-09-17 사장님 지시("내 입맛대로 넣고 빼고 배치")
+#     고정 3열 격자 → 12열×24행 자유 격자. 카드 8개가 각각 CSS 변수(--wl-<id>-*)로
+#     자리·크기·표시·글자배율을 받는다. 변수는 tools/wall-build/wall_layout.js 가
+#     :root 에 쓴다(React 마운트 전). 화면 코드는 변수만 읽으므로 리렌더와 무관.
+#     ⚠ 이 블록은 카드 내용을 건드리는 모든 패치 '뒤'에 있어야 한다(앵커가 최종 형태).
+# ══════════════════════════════════════════════════════════════════════════
+def _card_style(cid, extra=''):
+    # var() 폴백값 = wall_layout.js 의 DEFAULT 와 같은 값(스크립트가 안 떠도 기본 모양)
+    d = {'obs':(1,1,4,7),'hourly':(1,8,4,17),'warn':(5,1,4,6),'river':(5,7,4,6),
+         'impact':(5,13,4,12),'msg':(9,1,4,11),'idx':(9,12,4,5),'ultra':(9,17,4,8)}[cid]
+    return ('grid-column:var(--wl-%s-c,%d)/span var(--wl-%s-cs,%d);'
+            'grid-row:var(--wl-%s-r,%d)/span var(--wl-%s-rs,%d);'
+            'display:var(--wl-%s-d,flex);--fz:var(--wl-%s-fz,1);'
+            'min-height:0;min-width:0;overflow:hidden;%s'
+            % (cid, d[0], cid, d[2], cid, d[1], cid, d[3], cid, cid, extra))
+
+# (L1) 메인 격자: 3열 → 12×24 (행 고정·minmax(0,…) 필수 — auto-rows 는 스냅 기준이 흔들린다)
+patch('<div style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:28px;">',
+      '<div data-wall-grid style="flex:1;min-height:0;display:grid;'
+      'grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(24,minmax(0,1fr));'
+      'gap:0;margin:-14px;">',
+      '메인 격자 12×24')
+# (L2) 열 래퍼 4개를 녹인다(display:contents) — 카드가 격자 직속 자식이 된다.
+#      같은 문자열이 두 곳(열A·열C 안쪽)이라 patch 를 두 번 부른다(각각 첫 남은 것을 잡음).
+patch('<div style="display:grid;grid-template-rows:auto 1fr;gap:28px;min-height:0;">', '<div style="display:contents;">', '열A 래퍼 녹임')
+patch('<div style="display:grid;grid-template-rows:1fr 1fr 1.15fr;gap:28px;min-height:0;">', '<div style="display:contents;">', '열B 래퍼 녹임')
+patch('<div style="display:grid;grid-template-rows:minmax(0,1.55fr) minmax(600px,1fr);gap:28px;min-height:0;">', '<div style="display:contents;">', '열C 래퍼 녹임')
+patch('<div style="display:grid;grid-template-rows:auto 1fr;gap:28px;min-height:0;">', '<div style="display:contents;">', '열C 안쪽 래퍼 녹임')
+
+# (L3) 카드 8개 — 제목으로 특정해 여는 태그에 data-card 와 격자 변수를 박는다.
+#      카드 여는 태그는 서로 비슷해 '여는 태그 + 헤더 + 제목' 세 줄을 한 덩어리로 잡는다.
+import re as _re
+def _tag_card(cid, title_html, open_tag_re):
+    global h
+    pat = _re.compile(r'(' + open_tag_re + r')(\s*<div style="display:flex;align-items:baseline;justify-content:space-between;">\s*<div style="font-size:40px;font-weight:\d+;[^"]*">' + _re.escape(title_html) + r'</div>)')
+    m = pat.search(h); assert m, '카드 앵커 없음: ' + cid
+    tag = m.group(1)
+    # 여는 태그의 style="…" 앞에 격자 스타일을 주입. 원래 display:flex 는 변수로 대체됨(뒤에 오는 값이 이김 → 앞에 넣는다)
+    new_tag = tag.replace('style="', 'data-card="%s" style="' % cid, 1)
+    new_tag = new_tag[:-2] + _card_style(cid) + '">'          # style 끝에 붙여 원본 display 를 덮는다
+    h = h[:m.start(1)] + new_tag + h[m.end(1):]
+_PANEL = r'<div style="background:var\(--panel,#151b26\);border:2px solid var\(--line,#28313f\);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:\d+px;(?:min-height:0;)?">'
+_tag_card('obs',    '현재 실황',            _PANEL)
+_tag_card('hourly', '시간대별 예보 · 12시간', _PANEL)
+_tag_card('warn',   '기상특보',             r'<div style="background:var\(--panel,#151b26\);border:3px solid \{\{ warnBorder \}\};border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;">')
+_tag_card('river',  '하천 수위 · 관할',      _PANEL)
+_tag_card('impact', '출동 영향 판단',        _PANEL)
+_tag_card('msg',    '재난문자 · 관할 시군',   _PANEL)
+_tag_card('ultra',  '6시간 강수예측',        _PANEL)
+# 지표 칩 3개(산불·미세먼지·일출)는 제목이 없는 서브그리드 — 그 그리드 자체를 카드로 삼는다
+patch('<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:20px;">',
+      '<div data-card="idx" style="' + _card_style('idx', 'display:var(--wl-idx-d,grid);grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;') + '">',
+      '지표 칩 묶음 → idx 카드')
+assert h.count('data-card="') == 8, 'data-card 가 8개가 아님: %d' % h.count('data-card="')
+# 카드 사이 간격: 격자 gap 대신 카드 margin (N칸 = 정확히 N/24 이 되도록)
+h = _re.sub(r'(data-card="[a-z]+" style=")', r'\1margin:14px;', h)
+
+# (L4) 글자 배율 — 카드 안의 font-size:Npx → calc(Npx*var(--fz,1)). 카드 밖(상단바·레일)은 제외.
+# 전역 치환이지만 상단바·레일은 --fz 를 안 받으므로(폴백 1) 값이 안 변한다.
+_n_fz = len(_re.findall(r'font-size:(\d+)px', h))
+h = _re.sub(r'font-size:(\d+)px', r'font-size:calc(\1px*var(--fz,1))', h)
+print('패치: 글자 배율 변수화 %d곳' % _n_fz)
+
+# (L5) 편집 중 순환 정지 훅 — 컴포넌트 밖 스크립트가 setState 를 못 부르므로 이벤트로 받는다.
+patch("    this.fit(); window.addEventListener('resize', this._fit = ()=>this.fit());",
+      "    this.fit(); window.addEventListener('resize', this._fit = ()=>this.fit());\n"
+      "    /* 배치 편집기(wall_layout.js)가 켜지면 순환을 멈추고, 끄면 편집 전 상태로 복원 */\n"
+      "    window.addEventListener('wall:edit', this._edit = (e)=>{ if(e.detail.on){ this._wasPlaying=this.state.playing; this.setState({playing:false}); } else { this.setState({playing:this._wasPlaying!==false}); } });",
+      '편집 순환정지 훅')
+
+# (L6) 편집기 스크립트 삽입 — region.js 다음(REGION_CONF 필요), 화면 마운트 전.
+import pathlib as _pl
+_wl = (_pl.Path(__file__).parent / 'wall_layout.js').read_text(encoding='utf-8')
+patch('<script src="./region.js"></script>',
+      '<script src="./region.js"></script>\n<script>\n' + _wl + '\n</script>',
+      '배치 편집기 삽입')
+
 h = h.replace('</body>', INJECT + '\n</body>', 1)
 
 # ── 전역 후처리 ────────────────────────────────────────────
