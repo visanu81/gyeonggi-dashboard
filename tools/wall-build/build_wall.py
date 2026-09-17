@@ -955,7 +955,9 @@ INJECT = r'''
       });
     });
     return { stations:stations, rivers:rivers, msgs:msgs, warns:warnsByStation(D.warnings),
-             keyRivers:keyRivers, ultra:ultra, updated:D.updated };
+             keyRivers:keyRivers, ultra:ultra, updated:D.updated,
+             /* 새 카드 3장(레이더·태풍·물때, 2026-09-18) 원시 데이터 통과 */
+             kmaImages:(D.kma_images||{}), typhoon:(D.typhoon||[]), tide:(D.tide||null) };
   }
   /* ── 위험구역: 구글시트 관서별 탭 (지도.html loadRiskSheet 포팅, name/type/note만) ── */
   function parseCSV(txt){ var lines=txt.replace(/\r/g,'').split('\n').filter(function(l){return l.length;});
@@ -1016,6 +1018,87 @@ INJECT = r'''
 '''
 
 # ══════════════════════════════════════════════════════════════════════════
+# (N) 새 카드 3장 — 레이더 · 태풍 · 물때(파주)  (2026-09-18 사장님 지시 "새 카드 추가")
+#     수집은 이미 되는데 벽면에 없던 데이터. 편집기 기본은 '숨김' → 원하는 상황실만 켠다.
+#     자료 없으면 '자료 없음' (지어내지 않는다).
+# ══════════════════════════════════════════════════════════════════════════
+NEWCARD_EL = r"""radarEl(){
+    const R = window.React.createElement, DIM='var(--dim,#8e9bb0)';
+    const ki=(EXT().kmaImages)||{}, ok=ki.radar && ki.radar.ok;
+    if(!ok) return R('div',{style:{flex:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'38px',fontWeight:700,color:DIM}},'레이더 영상 없음');
+    /* 이미지 주소는 data.js 를 받는 곳과 같은 폴더 — 5분마다 ts 가 바뀌어 캐시가 갈린다 */
+    return R('div',{style:{flex:1,minHeight:0,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',borderRadius:'16px',background:'var(--panel2,#1b2230)'}},
+      R('img',{src:'images/kma_radar.png?t='+encodeURIComponent(ki.radar.ts||''),alt:'레이더 합성',
+        style:{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',display:'block'}}));
+  }
+  typhoonEl(){
+    const R = window.React.createElement, DIM='var(--dim,#8e9bb0)', GREEN='var(--cGreen,#2ad19a)', RED='var(--cRed,#ff5a5a)', AMBER='var(--cAmber,#ffb020)';
+    const list=(EXT().typhoon)||[];
+    if(!list.length) return R('div',{style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'12px'}},
+      R('div',{style:{fontSize:'64px',fontWeight:800,color:GREEN}},'활동 태풍 없음'),
+      R('div',{style:{fontSize:'28px',fontWeight:600,color:DIM}},'기상청 태풍정보'));
+    const rows=list.slice(0,2).map((t,i)=>{
+      const near=!!t.near_kr, col=near?RED:(String(t.eff)==='4'?DIM:AMBER), n=t.now||{};
+      return R('div',{key:i,style:{display:'flex',flexDirection:'column',gap:'8px',padding:'14px 20px',borderRadius:'16px',background:'var(--panel2,#1b2230)',borderLeft:'12px solid '+col}},
+        R('div',{style:{display:'flex',alignItems:'baseline',gap:'16px'}},
+          R('div',{style:{fontSize:'44px',fontWeight:800,whiteSpace:'nowrap'}},'제'+(t.seq||'?')+'호 '+(t.name||'')),
+          R('div',{style:{fontSize:'32px',fontWeight:700,color:col,whiteSpace:'nowrap'}}, t.eff_txt||'')),
+        R('div',{style:{display:'flex',gap:'26px',fontSize:'30px',fontWeight:600,color:DIM,flexWrap:'wrap'}},
+          R('span',null,'중심기압 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.ps!=null?n.ps+'hPa':'-'))),
+          R('span',null,'최대풍속 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.ws!=null?n.ws+'m/s':'-'))),
+          R('span',null,'이동 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.dir||'-')+' '+(n.sp!=null?n.sp+'km/h':''))),
+          R('span',null,'위치 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.lat!=null?(n.lat+'N '+n.lon+'E'):'-')))));
+    });
+    return R('div',{style:{flex:1,minHeight:0,display:'flex',flexDirection:'column',gap:'14px',justifyContent:'center'}},rows);
+  }
+  tideEl(){
+    const R = window.React.createElement, DIM='var(--dim,#8e9bb0)', BLUE='#54aaff';
+    const td=(EXT().tide)||null;
+    if(!td || !td.events || !td.events.length) return R('div',{style:{flex:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'38px',fontWeight:700,color:DIM}},'물때 자료 없음');
+    const now=new Date(), hm=now.getHours()*60+now.getMinutes();
+    const toMin=s=>{ const m=String(s||'').match(/^(\d+):(\d+)$/); return m?(+m[1]*60+ +m[2]):null; };
+    /* 다음 고조/저조 하나를 강조 — 파주 두포리 시각(dupo) 기준 */
+    let nextIdx=-1; td.events.forEach((e,i)=>{ const mm=toMin(e.dupo); if(nextIdx<0 && mm!=null && mm>=hm) nextIdx=i; });
+    const cells=td.events.map((e,i)=>{
+      const hi=e.kind==='high', isNext=i===nextIdx;
+      return R('div',{key:i,style:{flex:'1 1 0',minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'6px',padding:'12px 6px',borderRadius:'14px',
+        background:isNext?'rgba(84,170,255,.14)':'transparent',border:isNext?'3px solid '+BLUE:'3px solid transparent'}},
+        R('div',{style:{fontSize:'28px',fontWeight:700,color:hi?BLUE:DIM,whiteSpace:'nowrap'}}, hi?'만조':'간조'),
+        R('div',{style:{fontSize:'50px',fontWeight:800,lineHeight:1.1,whiteSpace:'nowrap'}}, e.dupo||'-'),
+        R('div',{style:{fontSize:'26px',fontWeight:600,color:DIM,whiteSpace:'nowrap'}}, (e.cm!=null?Math.round(e.cm)+'cm':'-')));
+    });
+    return R('div',{style:{flex:1,minHeight:0,display:'flex',flexDirection:'column',gap:'10px'}},
+      R('div',{style:{display:'flex',alignItems:'stretch',gap:'6px',flex:1}},cells),
+      R('div',{style:{fontSize:'24px',fontWeight:600,color:DIM,textAlign:'right'}},
+        (td.target||'')+' · '+(td.station||'')+' +'+(td.shift_min!=null?Math.round(td.shift_min/60):2)+'h · 물때 '+(td.spring||'-')));
+  }"""
+patch('  // 특보는 실황값에서 파생',
+      '  ' + NEWCARD_EL + '\n\n  // 특보는 실황값에서 파생',
+      '새 카드 3장 렌더러 주입')
+patch("      ultraEl: this.ultraEl((EXT().ultra||{})[s.name]),",
+      "      ultraEl: this.ultraEl((EXT().ultra||{})[s.name]),\n"
+      "      radarEl: this.radarEl(), typhoonEl: this.typhoonEl(), tideEl: this.tideEl(),\n"
+      "      radarTs: (((EXT().kmaImages||{}).radar||{}).ts||'').slice(11,16),",
+      '새 카드 값 바인딩')
+# INJECT 원시 데이터 통과는 INJECT 문자열 원문에 직접 넣었다 — INJECT 는 이 시점엔 아직 h 에 없다.
+# 마크업: 6시간 카드 뒤에 3장 추가 (같은 카드 껍데기)
+def _card_html(title, sub, body):
+    return ('          <div style="background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;">\n'
+            '            <div style="display:flex;align-items:baseline;justify-content:space-between;">\n'
+            '              <div style="font-size:40px;font-weight:800;">' + title + '</div>\n'
+            '              <div style="font-size:28px;font-weight:700;color:var(--dim,#8e9bb0);">' + sub + '</div>\n'
+            '            </div>\n'
+            '            <div style="flex:1;min-height:0;display:flex;">' + body + '</div>\n'
+            '          </div>\n')
+_ULTRA_CLOSE = '            <div style="flex:1;min-height:0;display:flex;">{{ ultraEl }}</div>\n          </div>\n'
+patch(_ULTRA_CLOSE,
+      _ULTRA_CLOSE
+      + _card_html('레이더 영상', '기상청 합성 · {{ radarTs }}', '{{ radarEl }}')
+      + _card_html('태풍 현황', '기상청 태풍정보', '{{ typhoonEl }}')
+      + _card_html('물때 · 파주 두포리', '국립해양조사원 · 강화대교 +2h', '{{ tideEl }}'),
+      '새 카드 3장 마크업')
+
+# ══════════════════════════════════════════════════════════════════════════
 # (L) 카드 배치 편집기 — 2026-09-17 사장님 지시("내 입맛대로 넣고 빼고 배치")
 #     고정 3열 격자 → 12열×24행 자유 격자. 카드 8개가 각각 CSS 변수(--wl-<id>-*)로
 #     자리·크기·표시·글자배율을 받는다. 변수는 tools/wall-build/wall_layout.js 가
@@ -1025,12 +1108,14 @@ INJECT = r'''
 def _card_style(cid, extra=''):
     # var() 폴백값 = wall_layout.js 의 DEFAULT 와 같은 값(스크립트가 안 떠도 기본 모양)
     d = {'obs':(1,1,4,7),'hourly':(1,8,4,17),'warn':(5,1,4,6),'river':(5,7,4,6),
-         'impact':(5,13,4,12),'msg':(9,1,4,11),'idx':(9,12,4,5),'ultra':(9,17,4,8)}[cid]
-    return ('grid-column:var(--wl-%s-c,%d)/span var(--wl-%s-cs,%d);'
-            'grid-row:var(--wl-%s-r,%d)/span var(--wl-%s-rs,%d);'
-            'display:var(--wl-%s-d,flex);--fz:var(--wl-%s-fz,1);'
-            'min-height:0;min-width:0;overflow:hidden;%s'
-            % (cid, d[0], cid, d[2], cid, d[1], cid, d[3], cid, cid, extra))
+         'impact':(5,13,4,12),'msg':(9,1,4,11),'idx':(9,12,4,5),'ultra':(9,17,4,8),
+         'radar':(9,17,4,8),'typhoon':(9,17,4,8),'tide':(9,17,4,8)}[cid]
+    # 새 카드 3장은 기본 숨김 — 편집기에서 켠다(폴백 display:none)
+    disp = 'none' if cid in ('radar','typhoon','tide') else 'flex'
+    return (f'grid-column:var(--wl-{cid}-c,{d[0]})/span var(--wl-{cid}-cs,{d[2]});'
+            f'grid-row:var(--wl-{cid}-r,{d[1]})/span var(--wl-{cid}-rs,{d[3]});'
+            f'display:var(--wl-{cid}-d,{disp});--fz:var(--wl-{cid}-fz,1);'
+            f'min-height:0;min-width:0;overflow:hidden;{extra}')
 
 # (L1) 메인 격자: 3열 → 12×24 (행 고정·minmax(0,…) 필수 — auto-rows 는 스냅 기준이 흔들린다)
 patch('<div style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:28px;">',
@@ -1065,11 +1150,14 @@ _tag_card('river',  '하천 수위 · 관할',      _PANEL)
 _tag_card('impact', '출동 영향 판단',        _PANEL)
 _tag_card('msg',    '재난문자 · 관할 시군',   _PANEL)
 _tag_card('ultra',  '6시간 강수예측',        _PANEL)
+_tag_card('radar',  '레이더 영상',           _PANEL)
+_tag_card('typhoon','태풍 현황',             _PANEL)
+_tag_card('tide',   '물때 · 파주 두포리',     _PANEL)
 # 지표 칩 3개(산불·미세먼지·일출)는 제목이 없는 서브그리드 — 그 그리드 자체를 카드로 삼는다
 patch('<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:20px;">',
       '<div data-card="idx" style="' + _card_style('idx', 'display:var(--wl-idx-d,grid);grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;') + '">',
       '지표 칩 묶음 → idx 카드')
-assert h.count('data-card="') == 8, 'data-card 가 8개가 아님: %d' % h.count('data-card="')
+assert h.count('data-card="') == 11, 'data-card 가 11개가 아님: %d' % h.count('data-card="')
 # 카드 사이 간격: 격자 gap 대신 카드 margin (N칸 = 정확히 N/24 이 되도록)
 h = _re.sub(r'(data-card="[a-z]+" style=")', r'\1margin:14px;', h)
 

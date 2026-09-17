@@ -33,7 +33,11 @@
     { id: 'impact', name: '출동 영향 판단',  min: [3, 5] },
     { id: 'msg',    name: '재난문자',        min: [3, 5], noHide: true },
     { id: 'idx',    name: '산불·미세먼지·일출', min: [3, 3] },
-    { id: 'ultra',  name: '6시간 강수예측',  min: [3, 4] }
+    { id: 'ultra',  name: '6시간 강수예측',  min: [3, 4] },
+    /* 2026-09-18 추가 — 기본 숨김. 자리가 겹치므로 켜기 전에 다른 카드를 줄여 자리를 내야 한다 */
+    { id: 'radar',  name: '레이더 영상',     min: [3, 5] },
+    { id: 'typhoon',name: '태풍 현황',       min: [4, 4] },
+    { id: 'tide',   name: '물때 (파주)',      min: [3, 4] }
   ];
   /* 기본 배치 = 지금 화면과 같은 모양을 12×24 로 옮긴 것(실측 튜닝). */
   var DEFAULT = {
@@ -44,7 +48,10 @@
     impact: { c: 5, r: 13, cs: 4, rs: 12 },
     msg:    { c: 9, r: 1,  cs: 4, rs: 11 },
     idx:    { c: 9, r: 12, cs: 4, rs: 5 },
-    ultra:  { c: 9, r: 17, cs: 4, rs: 8 }
+    ultra:  { c: 9, r: 17, cs: 4, rs: 8 },
+    radar:  { c: 9, r: 17, cs: 4, rs: 8, hide: true },
+    typhoon:{ c: 9, r: 17, cs: 4, rs: 8, hide: true },
+    tide:   { c: 9, r: 17, cs: 4, rs: 8, hide: true }
   };
   var BY_ID = {}; CARDS.forEach(function (k) { BY_ID[k.id] = k; });
 
@@ -120,7 +127,7 @@
     catch (e) { console.warn('[wall] 저장 실패 — 이 PC는 배치를 기억하지 못합니다. 바로가기 주소에 ?layout= 코드를 넣으세요.'); return false; }
   }
   function isDefault(L) { return CARDS.every(function (k) { var a = L[k.id], b = DEFAULT[k.id];
-    return a.c === b.c && a.r === b.r && a.cs === b.cs && a.rs === b.rs && !a.hide && a.fz === 1; }); }
+    return a.c === b.c && a.r === b.r && a.cs === b.cs && a.rs === b.rs && !!a.hide === !!b.hide && a.fz === 1; }); }
 
   /* ── 적용: :root 변수 (React 마운트 전에 한 번, 편집 중엔 매 변경마다) ── */
   var LAYOUT = load();
@@ -1528,6 +1535,27 @@ http://scripts.sil.org/OFL
             </div>
             <div style="flex:1;min-height:0;display:flex;">{{ ultraEl }}</div>
           </div>
+          <div data-card="radar" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;grid-column:var(--wl-radar-c,9)/span var(--wl-radar-cs,4);grid-row:var(--wl-radar-r,17)/span var(--wl-radar-rs,8);display:var(--wl-radar-d,none);--fz:var(--wl-radar-fz,1);min-height:0;min-width:0;overflow:hidden;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;">
+              <div style="font-size:calc(40px*var(--fz,1));font-weight:660;">레이더 영상</div>
+              <div style="font-size:calc(28px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);">기상청 합성 · {{ radarTs }}</div>
+            </div>
+            <div style="flex:1;min-height:0;display:flex;">{{ radarEl }}</div>
+          </div>
+          <div data-card="typhoon" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;grid-column:var(--wl-typhoon-c,9)/span var(--wl-typhoon-cs,4);grid-row:var(--wl-typhoon-r,17)/span var(--wl-typhoon-rs,8);display:var(--wl-typhoon-d,none);--fz:var(--wl-typhoon-fz,1);min-height:0;min-width:0;overflow:hidden;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;">
+              <div style="font-size:calc(40px*var(--fz,1));font-weight:660;">태풍 현황</div>
+              <div style="font-size:calc(28px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);">기상청 태풍정보</div>
+            </div>
+            <div style="flex:1;min-height:0;display:flex;">{{ typhoonEl }}</div>
+          </div>
+          <div data-card="tide" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;grid-column:var(--wl-tide-c,9)/span var(--wl-tide-cs,4);grid-row:var(--wl-tide-r,17)/span var(--wl-tide-rs,8);display:var(--wl-tide-d,none);--fz:var(--wl-tide-fz,1);min-height:0;min-width:0;overflow:hidden;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;">
+              <div style="font-size:calc(40px*var(--fz,1));font-weight:660;">물때 · 파주 두포리</div>
+              <div style="font-size:calc(28px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);">국립해양조사원 · 강화대교 +2h</div>
+            </div>
+            <div style="flex:1;min-height:0;display:flex;">{{ tideEl }}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1843,6 +1871,57 @@ class Component extends DCLogic {
       rows.map(cell));
   }
 
+  radarEl(){
+    const R = window.React.createElement, DIM='var(--dim,#8e9bb0)';
+    const ki=(EXT().kmaImages)||{}, ok=ki.radar && ki.radar.ok;
+    if(!ok) return R('div',{style:{flex:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'38px',fontWeight:570,color:DIM}},'레이더 영상 없음');
+    /* 이미지 주소는 data.js 를 받는 곳과 같은 폴더 — 5분마다 ts 가 바뀌어 캐시가 갈린다 */
+    return R('div',{style:{flex:1,minHeight:0,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',borderRadius:'16px',background:'var(--panel2,#1b2230)'}},
+      R('img',{src:'images/kma_radar.png?t='+encodeURIComponent(ki.radar.ts||''),alt:'레이더 합성',
+        style:{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',display:'block'}}));
+  }
+  typhoonEl(){
+    const R = window.React.createElement, DIM='var(--dim,#8e9bb0)', GREEN='var(--cGreen,#2ad19a)', RED='var(--cRed,#ff5a5a)', AMBER='var(--cAmber,#ffb020)';
+    const list=(EXT().typhoon)||[];
+    if(!list.length) return R('div',{style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'12px'}},
+      R('div',{style:{fontSize:'64px',fontWeight:660,color:GREEN}},'활동 태풍 없음'),
+      R('div',{style:{fontSize:'28px',fontWeight:520,color:DIM}},'기상청 태풍정보'));
+    const rows=list.slice(0,2).map((t,i)=>{
+      const near=!!t.near_kr, col=near?RED:(String(t.eff)==='4'?DIM:AMBER), n=t.now||{};
+      return R('div',{key:i,style:{display:'flex',flexDirection:'column',gap:'8px',padding:'14px 20px',borderRadius:'16px',background:'var(--panel2,#1b2230)',borderLeft:'12px solid '+col}},
+        R('div',{style:{display:'flex',alignItems:'baseline',gap:'16px'}},
+          R('div',{style:{fontSize:'44px',fontWeight:660,whiteSpace:'nowrap'}},'제'+(t.seq||'?')+'호 '+(t.name||'')),
+          R('div',{style:{fontSize:'32px',fontWeight:570,color:col,whiteSpace:'nowrap'}}, t.eff_txt||'')),
+        R('div',{style:{display:'flex',gap:'26px',fontSize:'30px',fontWeight:520,color:DIM,flexWrap:'wrap'}},
+          R('span',null,'중심기압 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.ps!=null?n.ps+'hPa':'-'))),
+          R('span',null,'최대풍속 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.ws!=null?n.ws+'m/s':'-'))),
+          R('span',null,'이동 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.dir||'-')+' '+(n.sp!=null?n.sp+'km/h':''))),
+          R('span',null,'위치 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.lat!=null?(n.lat+'N '+n.lon+'E'):'-')))));
+    });
+    return R('div',{style:{flex:1,minHeight:0,display:'flex',flexDirection:'column',gap:'14px',justifyContent:'center'}},rows);
+  }
+  tideEl(){
+    const R = window.React.createElement, DIM='var(--dim,#8e9bb0)', BLUE='var(--cBlue,#54aaff)';
+    const td=(EXT().tide)||null;
+    if(!td || !td.events || !td.events.length) return R('div',{style:{flex:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'38px',fontWeight:570,color:DIM}},'물때 자료 없음');
+    const now=new Date(), hm=now.getHours()*60+now.getMinutes();
+    const toMin=s=>{ const m=String(s||'').match(/^(\d+):(\d+)$/); return m?(+m[1]*60+ +m[2]):null; };
+    /* 다음 고조/저조 하나를 강조 — 파주 두포리 시각(dupo) 기준 */
+    let nextIdx=-1; td.events.forEach((e,i)=>{ const mm=toMin(e.dupo); if(nextIdx<0 && mm!=null && mm>=hm) nextIdx=i; });
+    const cells=td.events.map((e,i)=>{
+      const hi=e.kind==='high', isNext=i===nextIdx;
+      return R('div',{key:i,style:{flex:'1 1 0',minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'6px',padding:'12px 6px',borderRadius:'14px',
+        background:isNext?'rgba(84,170,255,.14)':'transparent',border:isNext?'3px solid '+BLUE:'3px solid transparent'}},
+        R('div',{style:{fontSize:'28px',fontWeight:570,color:hi?BLUE:DIM,whiteSpace:'nowrap'}}, hi?'만조':'간조'),
+        R('div',{style:{fontSize:'50px',fontWeight:660,lineHeight:1.1,whiteSpace:'nowrap'}}, e.dupo||'-'),
+        R('div',{style:{fontSize:'26px',fontWeight:520,color:DIM,whiteSpace:'nowrap'}}, (e.cm!=null?Math.round(e.cm)+'cm':'-')));
+    });
+    return R('div',{style:{flex:1,minHeight:0,display:'flex',flexDirection:'column',gap:'10px'}},
+      R('div',{style:{display:'flex',alignItems:'stretch',gap:'6px',flex:1}},cells),
+      R('div',{style:{fontSize:'24px',fontWeight:520,color:DIM,textAlign:'right'}},
+        (td.target||'')+' · '+(td.station||'')+' +'+(td.shift_min!=null?Math.round(td.shift_min/60):2)+'h · 물때 '+(td.spring||'-')));
+  }
+
   // 특보는 실황값에서 파생 — 상황단계·배너·레일이 모두 이 결과를 공유한다
   warnsOf(s){ const _e=EXT(); if(_e.warns) return _e.warns[s.name]||[];
     const h = this.state.now.getHours(), hh = n => String((n+24)%24).padStart(2,'0');
@@ -2078,6 +2157,8 @@ class Component extends DCLogic {
       msgs: msgs.slice(0,3), noMsg: msgs.length === 0, msgCount: msgs.length,
       risks: risks.slice(0,3), noRisk: risks.length === 0, riskCount: risks.length,
       ultraEl: this.ultraEl((EXT().ultra||{})[s.name]),
+      radarEl: this.radarEl(), typhoonEl: this.typhoonEl(), tideEl: this.tideEl(),
+      radarTs: (((EXT().kmaImages||{}).radar||{}).ts||'').slice(11,16),
       ultraSum: (function(a){ if(!a||!a.length) return '\u2014';
         var t=a.reduce(function(x,o){ return x+(o.rain||0); },0);
         var p=a.reduce(function(x,o){ return Math.max(x,o.pop||0); },0);
@@ -2278,7 +2359,9 @@ class Component extends DCLogic {
       });
     });
     return { stations:stations, rivers:rivers, msgs:msgs, warns:warnsByStation(D.warnings),
-             keyRivers:keyRivers, ultra:ultra, updated:D.updated };
+             keyRivers:keyRivers, ultra:ultra, updated:D.updated,
+             /* 새 카드 3장(레이더·태풍·물때, 2026-09-18) 원시 데이터 통과 */
+             kmaImages:(D.kma_images||{}), typhoon:(D.typhoon||[]), tide:(D.tide||null) };
   }
   /* ── 위험구역: 구글시트 관서별 탭 (지도.html loadRiskSheet 포팅, name/type/note만) ── */
   function parseCSV(txt){ var lines=txt.replace(/\r/g,'').split('\n').filter(function(l){return l.length;});

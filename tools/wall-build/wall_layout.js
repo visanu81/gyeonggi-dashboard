@@ -24,7 +24,11 @@
     { id: 'impact', name: '출동 영향 판단',  min: [3, 5] },
     { id: 'msg',    name: '재난문자',        min: [3, 5], noHide: true },
     { id: 'idx',    name: '산불·미세먼지·일출', min: [3, 3] },
-    { id: 'ultra',  name: '6시간 강수예측',  min: [3, 4] }
+    { id: 'ultra',  name: '6시간 강수예측',  min: [3, 4] },
+    /* 2026-09-18 추가 — 기본 숨김. 자리가 겹치므로 켜기 전에 다른 카드를 줄여 자리를 내야 한다 */
+    { id: 'radar',  name: '레이더 영상',     min: [3, 5] },
+    { id: 'typhoon',name: '태풍 현황',       min: [4, 4] },
+    { id: 'tide',   name: '물때 (파주)',      min: [3, 4] }
   ];
   /* 기본 배치 = 지금 화면과 같은 모양을 12×24 로 옮긴 것(실측 튜닝). */
   var DEFAULT = {
@@ -35,7 +39,10 @@
     impact: { c: 5, r: 13, cs: 4, rs: 12 },
     msg:    { c: 9, r: 1,  cs: 4, rs: 11 },
     idx:    { c: 9, r: 12, cs: 4, rs: 5 },
-    ultra:  { c: 9, r: 17, cs: 4, rs: 8 }
+    ultra:  { c: 9, r: 17, cs: 4, rs: 8 },
+    radar:  { c: 9, r: 17, cs: 4, rs: 8, hide: true },
+    typhoon:{ c: 9, r: 17, cs: 4, rs: 8, hide: true },
+    tide:   { c: 9, r: 17, cs: 4, rs: 8, hide: true }
   };
   var BY_ID = {}; CARDS.forEach(function (k) { BY_ID[k.id] = k; });
 
@@ -111,7 +118,7 @@
     catch (e) { console.warn('[wall] 저장 실패 — 이 PC는 배치를 기억하지 못합니다. 바로가기 주소에 ?layout= 코드를 넣으세요.'); return false; }
   }
   function isDefault(L) { return CARDS.every(function (k) { var a = L[k.id], b = DEFAULT[k.id];
-    return a.c === b.c && a.r === b.r && a.cs === b.cs && a.rs === b.rs && !a.hide && a.fz === 1; }); }
+    return a.c === b.c && a.r === b.r && a.cs === b.cs && a.rs === b.rs && !!a.hide === !!b.hide && a.fz === 1; }); }
 
   /* ── 적용: :root 변수 (React 마운트 전에 한 번, 편집 중엔 매 변경마다) ── */
   var LAYOUT = load();
