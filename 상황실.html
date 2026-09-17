@@ -1826,6 +1826,10 @@ class Component extends DCLogic {
        읽도록 바꿔, 관서가 늘어도 코드를 안 고치게 했다. */
   var ALIAS=((typeof window!=='undefined'&&window.REGION_CONF)||{}).alias||{'일산':'고양'};
   var SIG=NAMES.filter(function(n){ return !ALIAS[n]; });
+  /* 이름에서 시군명을 떼어낼 땐 '권역으로 거른 목록'이 아니라 전체 시군을 기준으로 한다.
+     NAMES가 선택 권역만 담게 된 뒤(2026-09-17), 남부를 고르면 임진강 지점의 '연천'이
+     안 떼어져 '연천 필승교'가 상단 카드 칸을 넘쳤다. */
+  var SIG_ALL=(RC.order||NAMES).filter(function(n){ return !ALIAS[n]; });
   function nv(x){ return (x==null||x===''||isNaN(x))?null:+x; }
   function sig(nm){ return ALIAS[nm]||nm; }
   /* 표시명: 괄호 안(예 '임진강 (연천 임진교)'→'연천 임진교'). 단 괄호가 시군뿐이면
@@ -1838,7 +1842,7 @@ class Component extends DCLogic {
   /* 상단바 감시카드용 짧은 이름 — '임진강 (연천 필승교)' → '필승교'.
      칸이 좁아 시군명까지 넣으면 넘친다. 어차피 고정 지점이라 어디인지 다 안다. */
   function keyName(nm){ var s=shortRiver(nm).split(' ');
-    if(s.length>1 && SIG.indexOf(s[0])>=0) s.shift();
+    if(s.length>1 && SIG_ALL.indexOf(s[0])>=0) s.shift();
     return s.join(' '); }
   var ICON={'맑음':'☀️','구름많음':'⛅','구름조금':'🌤️','흐림':'☁️','비':'🌧️','소나기':'🌦️','빗방울':'🌧️','비/눈':'🌨️','눈':'❄️','눈날림':'🌨️','진눈깨비':'🌨️','뇌우':'⛈️'};
   function wicon(w){ return ICON[w]||'☁️'; }
