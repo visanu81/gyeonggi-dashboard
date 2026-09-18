@@ -195,16 +195,19 @@ def groups_from_profile(key, geo):
     """생성 프로파일(tools/profiles/<key>.json)의 시군을 경계자료에서 이름으로 찾는다.
     시 하위 구('수원시 장안구' 식으로 name 이 따로 있는 경우)는 시로 묶는다."""
     prof = json.loads((ROOT / 'tools' / 'profiles' / f'{key}.json').read_text(encoding='utf-8'))
-    prefix = next(k for k, v in KOSTAT_SIDO.items() if v == prof['label'])
+    prefixes = tuple(prof.get('kostat') or [next(k for k, v in KOSTAT_SIDO.items() if v == prof['label'])])
     admin = prof['admin']                      # 시군 → '춘천시'
+    alias = prof.get('map_alias') or {}        # 이름이 바뀐 곳(미추홀구←남구·청주←청원군)
+    anyp = set(prof.get('map_any_prefix') or [])   # 소속이 바뀐 곳(군위군: 경북→대구)
     groups = {}
     for f in geo['features']:
         code = str(f['properties']['code'])
         name = f['properties']['name']
-        if not code.startswith(prefix):
+        if not (code.startswith(prefixes) or name in anyp):
             continue
         for area, adm in admin.items():
-            if name == adm or name.startswith(adm):
+            names = alias.get(area) or [adm]
+            if any(name == n or name.startswith(n) for n in names):
                 groups.setdefault(area, []).append(code)
                 break
     missing = [a for a in admin if a not in groups]

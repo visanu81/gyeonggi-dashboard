@@ -130,10 +130,13 @@ def build_sido_sites():
         shutil.copy(ROOT / f'region-{key}.js', sub / 'region.js')
         shutil.copy(ROOT / f'map-geo-{key}.js', sub / 'map-geo.js')
         _drop_profile_files(sub)
+        admins = list(prof['admin'].values())
+        n = len(prof['regions'])
+        cnt = (f'{n}개 ' + ('구·군' if any(a.endswith('군') for a in admins) else '구'))             if any(a.endswith('구') for a in admins) else f'{n}개 시군'
         for f in sub.glob('*.html'):
             body = f.read_text(encoding='utf-8')
-            body = body.replace('경기도 · 34개 소방서', f'{wide} · {len(prof["regions"])}개 시군')
-            body = body.replace('34개 소방서', f'{len(prof["regions"])}개 시군').replace('경기도', wide)
+            body = body.replace('경기도 · 34개 소방서', f'{wide} · {cnt}')
+            body = body.replace('34개 소방서', cnt).replace('경기도', wide)
             f.write_text(body, encoding='utf-8')
         out.append((key, wide, wide))
         print(f'  · 시도판 {wide}: 데이터={src}, 시군 {len(prof["regions"])}곳')

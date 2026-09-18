@@ -200,11 +200,19 @@ GUN_NAMES = set(P.get('gun_names') or ['연천', '가평', '양평']) & SIGUN_SE
 SIDO_WORDS = list(P.get('sido_words') or ['경기'])          # 주소·발신처가 이 말로 시작하면 우리 시도
 WIDE_LABEL = P.get('wide_label', '경기도')                   # 시도 전역 발표의 표시명
 WRN_STN = int(P.get('wrn_stn', 109))                        # 기상청 특보 API stnId (109 수도권·105 강원…)
-WRN_PREFIX = P.get('wrn_prefix', 'L101')                    # 시도 육상 특보구역 코드 접두
+_wp = P.get('wrn_prefix', 'L101')
+WRN_PREFIX = tuple(_wp) if isinstance(_wp, (list, tuple)) else _wp   # 시도 육상 특보구역 코드 접두(통합시는 둘)
 PM_SIDO = P.get('pm_sido', '경기')                           # 에어코리아 sidoName
 # 발신처 '경기도 광주시'·'경기북부 동두천시'·'강원특별자치도 춘천시' 에서 시군을 뽑는 정규식
 _SIDO_SIGUN_RE = _re.compile('(?:' + '|'.join(_re.escape(w) for w in SIDO_WORDS)
-                             + r')(?:특별자치도|특별자치시|광역시|특별시|도|북부|남부)*\s*([가-힣]+?)(시|군)')
+                             + r')(?:특별자치도|특별자치시|광역시|특별시|도|북부|남부)*\s*([가-힣]+?)(시|군|구)')
+UNIT_ALIAS = P.get('unit_alias') or {}                      # 새 이름 → 프로파일 단위 (인천 제물포구→중구)
+
+
+def _unit_from_match(m):
+    """정규식 결과 → 프로파일 단위명. 시·군은 접미사를 뗀 이름('춘천'), 구는 붙인 이름('남동구')."""
+    name = m.group(1) if m.group(2) in ('시', '군') else m.group(1) + m.group(2)
+    return UNIT_ALIAS.get(name, name)
 
 
 
@@ -2532,7 +2540,7 @@ def fetch_messages():
             return True
         m = _SIDO_SIGUN_RE.search(s)
         if m:
-            return m.group(1) in north_sigun   # 특정 시군이면 북부만
+            return _unit_from_match(m) in north_sigun   # 특정 시군이면 관할만
         return True   # 시군명 없는 경기 전역
 
     try:
@@ -2570,7 +2578,7 @@ def fetch_messages():
             m = _SIDO_SIGUN_RE.search(rcptn)
             if m:
                 sender = m.group(1) + m.group(2)
-                region = m.group(1)
+                region = _unit_from_match(m)
             else:
                 # "경기도", "경기북부" 등 도 전역
                 sender = WIDE_LABEL

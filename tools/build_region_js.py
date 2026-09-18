@@ -37,7 +37,7 @@ def build_pos(cent, order):
     지도.html 의 배치:  x = 8 + (열 + (행%2)*0.5) * 88,  y = 16 + 행 * 76"""
     n = len(order)
     cols = 5 if n <= 15 else (6 if n <= 24 else 7)
-    rows = math.ceil(n / cols)
+    rows = max(1, math.ceil(n / cols))
     base, extra = divmod(n, rows)
     row_sizes = [base + (1 if i < extra else 0) for i in range(rows)]
     by_lat = sorted(order, key=lambda a: cent[a][1])          # cy 작을수록 북쪽
@@ -73,7 +73,7 @@ def build(key):
     prof = json.loads((ROOT / 'tools' / 'profiles' / f'{key}.json').read_text(encoding='utf-8'))
     cent = load_map(key)
     wide = prof['wide_label']
-    order = [a for a in prof['region_order'] if a != wide]
+    order = list(prof['region_order'][1:])          # [0]은 시도 전역 이름(세종은 단위 이름과 같다)
     missing = [a for a in order if a not in cent]
     if missing:
         raise SystemExit(f'지도에 없는 시군: {missing}')
@@ -84,15 +84,21 @@ def build(key):
         for m in members:
             fire_group[m] = g
     label = prof['label']
+    admins = list(prof['admin'].values())
+    if any(a.endswith('구') for a in admins):
+        count_text = f'{len(order)}개 ' + ('구·군' if any(a.endswith('군') for a in admins) else '구')
+    else:
+        count_text = f'{len(order)}개 시군'
     conf = {
         'key': key,
         'label': wide,
         'office': wide,
         'home': prof['home'],
-        'countText': f'{len(order)}개 시군',
+        'countText': count_text,
         'dataHost': f"https://{prof['host']}",
-        'wideNames': [wide, label, prof['full'], f'{label}북부', f'{label}중부', f'{label}남부',
-                      f'{label}영동', f'{label}영서', f'{label}산지'],
+        'wideNames': sorted({wide, label, prof['full'], *prof.get('wide_names', []),
+                             f'{label}북부', f'{label}중부', f'{label}남부', f'{label}동부', f'{label}서부',
+                             f'{label}영동', f'{label}영서', f'{label}산지', f'{label}내륙'}),
         'order': order,
         'warnOrder': [wide] + order,
         'pos': pos,

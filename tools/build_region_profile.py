@@ -247,7 +247,8 @@ def build_regions(sigun_map, aws_by_area):
             src = f'관측소 {len(st)}곳 평균'
         else:
             out.append({'name': area, 'nx': None, 'ny': None,
-                        'sgg': prefixes[0][:5].ljust(5, '0') + '00000', 'src': '없음'})
+                        'sgg': (prefixes[0][:5].ljust(5, '0') + '00000') if prefixes else '',
+                        'src': '없음'})
             continue
         nx, ny = to_grid(lat, lon)
         out.append({'name': area, 'nx': nx, 'ny': ny,
@@ -256,7 +257,8 @@ def build_regions(sigun_map, aws_by_area):
     return out
 
 
-def build_rivers(sigun_map, inventory, per_sigun=3, sido_word='경기'):
+def build_rivers(sigun_map, inventory, per_sigun=3, sido_word='경기', sigun=None, alias=None):
+    alias = alias or {}
     """시군별 수위관측소. warning=attwl(관심), danger=almwl(경계) — 임의값 아님.
 
     선정 기준: ①홍수예보지점(fstnyn=Y) 우선 ②기준수위 둘 다 있는 곳
@@ -268,14 +270,24 @@ def build_rivers(sigun_map, inventory, per_sigun=3, sido_word='경기'):
       addr은 '경기'가 들어가는지 정도만(광주광역시 배제) 본다.
       obsnm을 '앞에서부터' 맞추므로 '양주시('가 '남양주시('에 걸리지도 않는다.
     """
+    words = [sido_word] if isinstance(sido_word, str) else list(sido_word)
     out = {}
     for area in sigun_map:
+        admin = (sigun or {}).get(area, {}).get('admin', '')
         cands = []
         for c in inventory:
             obsnm = (c.get('obsnm') or '').strip()
-            if not (obsnm.startswith(f'{area}시(') or obsnm.startswith(f'{area}군(')):
+            addr = (c.get('addr') or '').strip()
+            toks = addr.split()
+            # 시군: 관측소명 접두('안양시(')로. 구(광역시): 관측소명이 '부산시(…)'라 주소의 구로 잡는다.
+            by_name = obsnm.startswith(f'{area}시(') or obsnm.startswith(f'{area}군(') or \
+                (admin and obsnm.startswith(f'{admin}('))
+            # 주소의 시군구 토큰이 이 단위면 통과(광역시 관측소명은 '부산시(…)'라 이름으로 못 잡는다)
+            tok_unit = unit_of(toks[1])[0] if len(toks) > 1 else None
+            by_addr = tok_unit is not None and (tok_unit == area or alias.get(toks[1]) == area or alias.get(tok_unit) == area)
+            if not (by_name or by_addr):
                 continue
-            if sido_word not in (c.get('addr') or '') + obsnm:
+            if not any(w in addr + obsnm for w in words):
                 continue
             att, alm = c.get('attwl'), c.get('almwl')
             try:
@@ -352,6 +364,7 @@ def check_rivers(stations, key, hours=24):
 
 
 def add_nearby_rivers(rivers, regions, inventory, radius_km=12.0, sido_word='경기'):
+    words = [sido_word] if isinstance(sido_word, str) else list(sido_word)
     """자체 관측소가 없는 시군에 '인근' 관측소를 붙인다.
 
     과천·시흥·군포·의왕·하남은 관내에 한강홍수통제소 수위관측소가 아예 없다.
@@ -368,7 +381,7 @@ def add_nearby_rivers(rivers, regions, inventory, radius_km=12.0, sido_word='경
             continue
         best = None
         for c in inventory:
-            if sido_word not in (c.get('addr') or ''):
+            if not any(w in (c.get('addr') or '') for w in words):
                 continue
             y, x = dms_to_deg(c.get('lat')), dms_to_deg(c.get('lon'))
             if y is None or x is None:
@@ -635,73 +648,199 @@ def verify_north():
 
 
 # ════════════════════════════════════════════════════════════════
-# 시도 단위 자동 생성 (전국 확장 1단계, 2026-09-18 사장님 결정: 강원 시범 → 전국)
+# 시도 단위 자동 생성 (전국 확장, 2026-09-18 사장님 결정: 강원 시범 → 전국, 시군구 단위)
 #
 # 경기북부·남부는 시군 목록·특보구역·산불 표기·키워드를 사람이 적었다. 시도가 17개면
 # 그 방식은 반드시 빠지거나 틀린다. 여기서는 '시도 한 줄'만 적으면 나머지를 원장에서
 # 기계로 뽑는다:
-#   · 시군 목록    ← 기상청 AWS 지점원장의 법정동코드(앞 2자리=시도)·주소
-#   · 특보구역코드 ← 기상청 API허브 wrn_reg.php (지금 유효한 코드만 — 2026-05-31 개편 반영)
-#   · 산불 시군표기 ← 시군 행정명(춘천시…) 그대로. 구가 있는 시는 산불 API 표기를 대조해 보강
-#   · 하천·댐      ← 한강홍수통제소 원장(전국) — 댐은 warning=홍수기제한수위, danger=계획홍수위
-#   · 미세먼지     ← PM_STATION_TABLE (측정소정보 API 활용신청 전까지는 표)
+#   · 단위(시군/구) 목록 ← 기상청 AWS 지점원장의 법정동코드(앞 2자리=시도)·주소
+#                         도는 시·군(시 밑의 구는 시로 묶음), 광역시는 구·군. 세종은 통째로 하나.
+#   · 특보구역코드    ← 기상청 API허브 wrn_reg.php (지금 유효한 코드만 — 2026-05-31 개편 반영)
+#                      시도 아래 모든 구역(세부·권역 포함)을 담는다. 시군에 못 붙는 권역은 권역명으로.
+#   · 산불 시군표기   ← 산림청 산불위험 API 가 실제로 쓰는 표기와 대조
+#   · 하천·댐        ← 한강홍수통제소 원장(전국). 댐은 warning=홍수기제한수위, danger=계획홍수위
+#   · 미세먼지       ← 에어코리아 측정소정보(MsrstnInfoInqireSvc, 2026-09-18 승인) 주소로 자동 매핑
+#   · 관측소 없는 단위 ← 통계청 경계 중심좌표로 격자를 정하고, 가장 가까운 이웃의 AWS 를 빌린다
 # 결과는 tools/profiles/<key>.json 으로 저장하고 region_profiles.py 가 읽는다.
 # ════════════════════════════════════════════════════════════════
+def _sido(key, label, full, law, kostat, wrn_up, wrn_stn, pm_sido, words, home, **extra):
+    d = {'key': key, 'label': label, 'full': full, 'law': law,
+         'kostat': [kostat] if isinstance(kostat, str) else list(kostat),
+         'wrn_up': [wrn_up] if isinstance(wrn_up, str) else list(wrn_up),
+         'wrn_stn': wrn_stn,
+         'pm_sido': [pm_sido] if isinstance(pm_sido, str) else list(pm_sido),
+         'sido_words': list(words), 'home': home}
+    d.update(extra)
+    return d
+
+
+# law = 법정동코드 앞 2자리(AWS 원장), kostat = 통계청 시군구코드 앞 2자리(지도 경계) — 둘은 다르다.
+# wrn_stn = 기상청 특보 API stnId(담당 지방기상청): 109 수도권 · 105 강원 · 131 충북 · 133 대전(충남·세종)
+#           · 146 전북 · 156 광주(전남) · 143 대구(경북) · 159 부산(경남·울산) · 184 제주
+# sido_words = 주소·발신처·산불 doname 이 이 말로 시작하면 우리 시도 (옛 이름·새 이름 다 적는다)
 SIDO = {
-    'gangwon': {
-        'key': 'gangwon', 'label': '강원', 'full': '강원특별자치도', 'law': '51',
-        'wrn_up': 'L1020000', 'wrn_stn': 105, 'pm_sido': '강원', 'sido_words': ['강원'],
-        'home': '춘천', 'home_office': '춘천소방서',
-    },
+    'seoul':     _sido('seoul', '서울', '서울특별시', '11', '11', 'L1100000', 109, '서울', ['서울'], '중구'),
+    'busan':     _sido('busan', '부산', '부산광역시', '26', '21', 'L1150000', 159, '부산', ['부산'], '연제구'),
+    'daegu':     _sido('daegu', '대구', '대구광역시', '27', '22', 'L1140000', 143, '대구', ['대구'], '중구',
+                       map_any_prefix=['군위군']),          # 2023 경북→대구 편입, 2013 경계자료엔 경북 밑
+    # 인천: 2026-07 개편(중구·동구→제물포구·영종구, 서구→서해구·검단구)이 2013 경계자료에 없어
+    #       지도는 옛 단위(중구·동구·서구)로 그리고, 새 이름은 unit_alias 로 옛 단위에 붙인다.
+    #       ⚠ 경계자료가 갱신되면 units·unit_alias 를 걷어내고 자동 발견으로 돌릴 것.
+    'incheon':   _sido('incheon', '인천', '인천광역시', '28', '23', ['L1110000', 'L1014000'], 109,
+                       '인천', ['인천'], '남동구',   # 서해5도(옹진)는 별도 상위구역(L1014000)
+                       units={
+                           '중구': {'admin': '중구', 'prefixes': ['28125', '28155'], 'kind': 'gu'},
+                           '동구': {'admin': '동구', 'prefixes': ['28140'], 'kind': 'gu'},
+                           '미추홀구': {'admin': '미추홀구', 'prefixes': ['28177'], 'kind': 'gu'},
+                           '연수구': {'admin': '연수구', 'prefixes': ['28185'], 'kind': 'gu'},
+                           '남동구': {'admin': '남동구', 'prefixes': ['28200'], 'kind': 'gu'},
+                           '부평구': {'admin': '부평구', 'prefixes': ['28237'], 'kind': 'gu'},
+                           '계양구': {'admin': '계양구', 'prefixes': ['28245'], 'kind': 'gu'},
+                           '서구': {'admin': '서구', 'prefixes': ['28260', '28275', '28290'], 'kind': 'gu'},
+                           '강화': {'admin': '강화군', 'prefixes': ['2871'], 'kind': 'sigun'},
+                           '옹진': {'admin': '옹진군', 'prefixes': ['2872'], 'kind': 'sigun'},
+                       },
+                       map_alias={'미추홀구': ['남구']},
+                       unit_alias={'제물포구': '중구', '영종구': '중구', '서해구': '서구', '검단구': '서구'}),
+    'daejeon':   _sido('daejeon', '대전', '대전광역시', '30', '25', 'L1120000', 133, '대전', ['대전'], '서구'),
+    'ulsan':     _sido('ulsan', '울산', '울산광역시', '31', '26', 'L1160000', 159, '울산', ['울산'], '남구'),
+    'sejong':    _sido('sejong', '세종', '세종특별자치시', '36', '29', 'L1170000', 133, '세종', ['세종'], '세종',
+                       units={'세종': {'admin': '세종특별자치시', 'prefixes': ['3611']}},
+                       map_alias={'세종': ['세종특별자치시', '세종시']}),
+    'chungbuk':  _sido('chungbuk', '충북', '충청북도', '43', '33', 'L1040000', 131, '충북', ['충북', '충청북도'], '청주',
+                       map_alias={'청주': ['청주시', '청원군']}),   # 2014 통합, 2013 경계자료엔 따로
+    'chungnam':  _sido('chungnam', '충남', '충청남도', '44', '34', 'L1030000', 133, '충남', ['충남', '충청남도'], '홍성'),
+    'jeonbuk':   _sido('jeonbuk', '전북', '전북특별자치도', '52', '35', 'L1060000', 146, '전북', ['전북', '전라북도'], '전주'),
+    # 2026 광주·전남 통합 — 법정동 '12' 하나로 묶였지만 특보구역은 광주(L113)·전남(L105) 둘, 지도도 둘, 미세먼지도 둘
+    'jngj':      _sido('jngj', '전남광주', '전남광주통합특별시', '12', ['24', '36'], ['L1050000', 'L1130000', 'L1052400'], 156,   # 흑산도.홍도 별도 상위구역
+                       ['광주', '전남'], ['전남광주', '전라남도', '전남', '광주광역시'], '서구', wide='전남광주'),
+    'gyeongbuk': _sido('gyeongbuk', '경북', '경상북도', '47', '37', ['L1070000', 'L1600000'], 143, '경북', ['경북', '경상북도'], '안동',   # 울릉도.독도는 별도 상위구역
+                       map_exclude=['군위군']),           # 2023 대구로 편입
+    'gyeongnam': _sido('gyeongnam', '경남', '경상남도', '48', '38', 'L1080000', 159, '경남', ['경남', '경상남도'], '창원'),
+    'jeju':      _sido('jeju', '제주', '제주특별자치도', '50', '39', 'L1090000', 184, '제주', ['제주'], '제주'),
+    'gangwon':   _sido('gangwon', '강원', '강원특별자치도', '51', '32', 'L1020000', 105, '강원', ['강원'], '춘천'),
 }
-# 법정동코드 앞 2자리 → 시도 (참고용; 새 시도를 등록할 때 law 값을 여기서 고른다)
-LAW_SIDO = {'11': '서울', '26': '부산', '27': '대구', '28': '인천', '29': '광주', '30': '대전',
-            '31': '울산', '36': '세종', '41': '경기', '43': '충북', '44': '충남', '46': '전남',
-            '47': '경북', '48': '경남', '50': '제주', '51': '강원', '52': '전북'}
+# 법정동코드 앞 2자리 → 시도 (참고용). 경기(41)는 손으로 쓴 north·south 프로파일이 정본.
+LAW_SIDO = {'11': '서울', '12': '전남광주', '26': '부산', '27': '대구', '28': '인천', '30': '대전',
+            '31': '울산', '36': '세종', '41': '경기', '43': '충북', '44': '충남', '47': '경북',
+            '48': '경남', '50': '제주', '51': '강원', '52': '전북'}
 
 _ADMIN_SUFFIX = re.compile(r'(특별자치시|특별자치도|특별시|광역시|시|군)$')
+_GEO_CACHE = ROOT / '.tmp' / 'skorea_municipalities.json'   # build_map_geo.py 와 같은 파일
+
+
+def resolve_unit(sd, name):
+    """새 이름(제물포구)을 프로파일 단위(중구)로. 별칭이 없으면 그대로."""
+    return (sd.get('unit_alias') or {}).get(name, name)
+
+
+def unit_of(token):
+    """주소의 시군구 토큰 → (단위명, 행정명, 종류).
+    '춘천시'→('춘천','춘천시','sigun')  '고양시덕양구'→('고양','고양시','sigun')
+    '해운대구'→('해운대구','해운대구','gu')  '기장군'→('기장','기장군','sigun')  '조치원읍'→(None,…)"""
+    m = re.match(r'^(.+?(?:시|군))(.*구)?$', token)
+    if m:
+        admin = m.group(1)
+        return _ADMIN_SUFFIX.sub('', admin), admin, 'sigun'
+    if token.endswith('구') and len(token) >= 2:
+        return token, token, 'gu'
+    return None, None, None
+
+
+def _load_geo():
+    return json.loads(_GEO_CACHE.read_text(encoding='utf-8')) if _GEO_CACHE.exists() else {'features': []}
+
+
+def units_from_geo(sd):
+    """통계청 경계자료(2013)에서 이 시도의 단위 전수 → {단위: {'admin','kind'}}.
+    AWS 원장만 보면 관측소 없는 구(부산 동구·연제구·수영구)가 통째로 빠진다 — 그래서 경계자료가 기준.
+    map_alias 의 원본 이름(청원군→청주)은 단위로 세지 않고, map_exclude(경북의 군위군)는 뺀다."""
+    alias_src = {n for lst in (sd.get('map_alias') or {}).values() for n in lst}
+    excl = set(sd.get('map_exclude') or [])
+    anyp = set(sd.get('map_any_prefix') or [])
+    out = {}
+    for f in _load_geo()['features']:
+        code, fname = str(f['properties']['code']), f['properties']['name']
+        if not (any(code.startswith(k) for k in sd['kostat']) or fname in anyp):
+            continue
+        if fname in excl:
+            continue
+        # 별칭으로 다른 단위에 묶이는 이름(청원군·세종시·남구←미추홀구)은 그 단위 이름으로
+        target = next((u for u, lst in (sd.get('map_alias') or {}).items() if fname in lst), None)
+        if target:
+            adm = (sd.get('units') or {}).get(target, {}).get('admin') or target
+            out.setdefault(target, {'admin': adm, 'kind': 'gu' if adm.endswith('구') else 'sigun'})
+            continue
+        if fname in alias_src:
+            continue
+        name, admin, kind = unit_of(fname)
+        if name:
+            out.setdefault(name, {'admin': admin, 'kind': kind})
+    return out
 
 
 def sigun_from_inventory(sd, inventory):
-    """AWS 지점원장에서 시군 목록을 뽑는다 → {시군: {'admin': '춘천시', 'prefixes': ['5111']}}.
+    """단위 목록 → {단위: {'admin': '춘천시', 'prefixes': ['5111'], 'kind': 'sigun'}}.
 
-    접두사는 4자리로 둔다 — 5자리면 나중에 구가 신설될 때(화성 만세구) 그 구 지점을
-    통째로 놓친다(경기에서 실제로 겪음). 4자리가 시군 사이에서 겹치면 예외를 낸다.
+    단위 전수는 경계자료(units_from_geo)에서, 법정동 접두사는 AWS 원장에서. 원장에만 있는
+    단위(경계자료 이후 신설)는 추가한다. 시군은 4자리 접두사(구 신설을 자동으로 따라오게 —
+    화성 만세구 사례), 4자리가 겹치는 곳(충북 영동 43740·증평 43745)만 5자리, 구는 5자리.
     """
-    groups = {}
+    if sd.get('units'):
+        return {n: dict(v, kind=v.get('kind', 'sigun')) for n, v in sd['units'].items()}
+    units = units_from_geo(sd)
+    codes = {}
     for r in inventory:
         if not r['law'].startswith(sd['law']):
             continue
         toks = r['addr'].replace('(산지)', '').split()
         if len(toks) < 2:
             continue
-        admin = toks[1]
-        if sd.get('unit') == 'gu':
-            # 특별시·광역시: 구가 단위('부산광역시 해운대구' → 해운대)
-            if not admin.endswith('구'):
-                continue
-            name = admin[:-1]
-        else:
-            # 도: 시·군이 단위. '고양시덕양구'처럼 구가 붙어 오면 시까지만 자른다
-            m = re.match(r'^(.+?(?:시|군))(.*구)?$', admin)
-            if not m:
-                continue
-            admin = m.group(1)
-            name = _ADMIN_SUFFIX.sub('', admin)
+        name, admin, kind = unit_of(toks[1])
         if not name:
             continue
-        g = groups.setdefault(name, {'admin': admin, 'codes': set()})
-        g['codes'].add(r['law'][:4])
+        units.setdefault(name, {'admin': admin, 'kind': kind})
+        codes.setdefault(name, set()).add(r['law'][:5])
+    # 접두사 길이 결정
+    four = {}
+    for name, cs in codes.items():
+        for c in cs:
+            four.setdefault(c[:4], set()).add(name)
     out = {}
-    used = {}
-    for name in sorted(groups):
-        prefixes = sorted(groups[name]['codes'])
-        for pre in prefixes:
-            if pre in used and used[pre] != name:
-                raise SystemExit(f'법정동 접두사 {pre} 가 {used[pre]}·{name} 에 겹친다 — 5자리로 나눠야 함')
-            used[pre] = name
-        out[name] = {'admin': groups[name]['admin'], 'prefixes': prefixes}
+    for name in sorted(units):
+        cs = sorted(codes.get(name, ()))
+        if units[name]['kind'] == 'gu':
+            prefixes = cs
+        else:
+            prefixes = sorted({c[:4] if len(four.get(c[:4], ())) == 1 else c for c in cs})
+        out[name] = {'admin': units[name]['admin'], 'prefixes': prefixes, 'kind': units[name]['kind']}
     return out
+
+
+def geo_centroids(sd, sigun):
+    """통계청 경계자료(2013)에서 단위별 중심 위경도. 관측소가 없는 단위의 격자·이웃 계산용.
+    이름으로 찾는다(시 밑의 구는 시로 묶음). map_alias / map_any_prefix 로 이름·소속 변경을 흡수."""
+    geo = _load_geo()
+    alias = sd.get('map_alias') or {}
+    anyp = set(sd.get('map_any_prefix') or [])
+    pts = {}
+    for f in geo['features']:
+        code = str(f['properties']['code'])
+        fname = f['properties']['name']
+        in_sido = any(code.startswith(k) for k in sd['kostat'])
+        for area, info in sigun.items():
+            names = alias.get(area) or [info['admin']]
+            hit = any(fname == n or fname.startswith(n) for n in names)
+            if not hit or not (in_sido or fname in anyp):
+                continue
+            g = f['geometry']
+            rings = [g['coordinates'][0]] if g['type'] == 'Polygon' else [p[0] for p in g['coordinates']]
+            for ring in rings:
+                for lon, lat in ring:
+                    pts.setdefault(area, [0.0, 0.0, 0])
+                    pts[area][0] += lat; pts[area][1] += lon; pts[area][2] += 1
+            break
+    return {a: (v[0] / v[2], v[1] / v[2]) for a, v in pts.items() if v[2]}
 
 
 def fetch_wrn_regions(refresh=False):
@@ -729,24 +868,36 @@ def fetch_wrn_regions(refresh=False):
 
 
 def build_reg_map(sd, sigun, wrn_rows, now=None):
-    """시군 → 지금 유효한 특보구역 코드. 평지·산지처럼 나뉜 구역은 모두 그 시군에 붙인다."""
+    """시도 아래 지금 유효한 특보구역 코드 전부 → 단위. 세부구역(강릉시평지·산지)은 그 시군에,
+    시군에 안 붙는 권역(서울동북권 등)은 권역명 그대로 — 어느 쪽이든 '관할'로 잡힌다."""
     now = now or datetime.now().strftime('%Y%m%d%H%M')
     reg_map = {}
-    # 1단: 시도 바로 아래(시군) → 2단: 그 시군 아래 세부구역(강릉시평지·강릉시산지 등).
-    #   특보는 세부구역 코드로 발표되기도 하므로 세부구역을 빠뜨리면 그 특보가 관할 밖으로 새어 나간다.
-    parents = {sd['wrn_up']}
-    for _ in range(2):
+    parents = set(sd['wrn_up'])
+    for _ in range(3):
+        new = {}
         for r in wrn_rows:
             if r['up'] not in parents or r['id'] in reg_map or not (r['st'] <= now <= r['ed']):
                 continue
+            target = None
             for name, info in sigun.items():
                 if r['name'].startswith(info['admin']) or r['name'].startswith(name):
-                    reg_map[r['id']] = name
+                    target = name
                     break
-        parents = set(reg_map)
-    wide = next((r for r in wrn_rows if r['id'] == sd['wrn_up']), None)
-    reg_map[sd['wrn_up']] = f"{(wide or {}).get('ko', sd['label'])}(전체)"
-    return reg_map, (wide or {}).get('ko', sd['label'])
+            if target is None and r['up'] in reg_map and not reg_map[r['up']].endswith('(전체)'):
+                target = reg_map[r['up']]          # 세부구역은 부모 단위를 물려받는다
+            new[r['id']] = target or r['ko']
+        if not new:
+            break
+        reg_map.update(new)
+        parents = set(new)
+    wide_names = []
+    for up in sd['wrn_up']:
+        wide = next((r for r in wrn_rows if r['id'] == up), None)
+        ko = (wide or {}).get('ko', sd['label'])
+        reg_map[up] = f'{ko}(전체)'
+        wide_names.append(ko)
+    wide_label = sd.get('wide') or wide_names[0]      # 화면·정렬용 시도 전역 이름(통합시는 명시)
+    return reg_map, wide_label, wide_names
 
 
 def fetch_fire_sigun_names(sd, refresh=False):
@@ -772,14 +923,21 @@ def fetch_fire_sigun_names(sd, refresh=False):
                    if any(str(it.get('doname', '')).startswith(w) for w in sd['sido_words'])})
 
 
-def build_fire_sigun_map(sigun, fire_names):
-    """산불 API 표기('춘천시'·'수원시장안구') → 시군. 행정명 그대로 + API 표기 중 접두 일치."""
+def build_fire_sigun_map(sigun, fire_names, sd=None):
+    """산불 API 표기('춘천시'·'수원시장안구'·'해운대구') → 단위. 행정명 그대로 + API 표기 중 접두 일치.
+    새 이름(제물포구)은 unit_alias 로 옛 단위에."""
     m = {info['admin']: name for name, info in sigun.items()}
+    alias = (sd or {}).get('unit_alias') or {}
     for fn in fire_names:
-        for name, info in sigun.items():
-            if fn.startswith(info['admin']) or fn.startswith(name):
-                m[fn] = name
+        for new, old in alias.items():
+            if fn.startswith(new):
+                m[fn] = old
                 break
+        else:
+            for name, info in sigun.items():
+                if fn.startswith(info['admin']) or fn.startswith(name):
+                    m[fn] = name
+                    break
     return m
 
 
@@ -801,10 +959,10 @@ def build_dams(sd, sigun, dam_inv):
         if not d or not d.get('dmobscd'):
             continue
         addr = (d.get('addr') or '')
-        if not any(w in addr for w in sd['sido_words']):
+        if not any(addr.startswith(w) for w in sd['sido_words']):
             continue
         toks = addr.split()
-        area = _ADMIN_SUFFIX.sub('', toks[1]) if len(toks) > 1 else ''
+        area = resolve_unit(sd, unit_of(toks[1])[0]) if len(toks) > 1 else None
         if area not in sigun:
             continue
 
@@ -824,24 +982,82 @@ def _bridge(obsnm):
     return m.group(1) if m else (obsnm or '')
 
 
+def fetch_msrstn_list(refresh=False):
+    """에어코리아 측정소정보 — 전국 측정소 주소·종류 (2026-09-18 사장님이 활용신청·승인)."""
+    key = ENV.get('DATA_GO_KR_KEY', '')
+
+    def _get():
+        r = requests.get('https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc/getMsrstnList',
+                         params={'serviceKey': key, 'returnType': 'json', 'numOfRows': 2000,
+                                 'pageNo': 1}, timeout=60)
+        r.raise_for_status()
+        if 'response' not in r.text[:200]:
+            raise RuntimeError('측정소정보 응답 이상: ' + r.text[:120])
+        return r.text
+
+    js = json.loads(_cached('airkorea_msrstn.json', _get, refresh))
+    return js['response']['body'].get('items', [])
+
+
+def build_pm_auto(sd, sigun, msrstn, live_names, centers=None):
+    """단위별 대표 측정소 — 측정소 주소의 시군구로 붙이고, 도시대기 > 그 외, 같은 급이면 단위
+    중심(대표 관측소)에 가까운 곳. 실시간 목록에 있는 것만(폐소 방지)."""
+    rank = {'도시대기': 0, '교외대기': 1, '도로변대기': 2, '국가배경농도': 3}
+    centers = centers or {}
+    cands = {}
+    for it in msrstn:
+        addr = (it.get('addr') or '').strip()
+        if not any(addr.startswith(w) for w in sd['sido_words']):
+            continue
+        toks = addr.split()
+        if sd.get('units') and len(sd['units']) == 1:
+            area = next(iter(sd['units']))               # 세종처럼 단위가 하나
+        else:
+            area = resolve_unit(sd, unit_of(toks[1])[0]) if len(toks) > 1 else None
+        if area not in sigun or it.get('stationName') not in live_names:
+            continue
+        dist = 0.0
+        try:
+            la, lo = centers.get(area, (None, None))
+            if la is not None:
+                dist = _km(la, lo, float(it.get('dmX')), float(it.get('dmY')))
+        except (TypeError, ValueError):
+            dist = 999.0
+        cands.setdefault(area, []).append((rank.get(it.get('mangName'), 5), round(dist, 2), it['stationName']))
+    return {a: sorted(v)[0][2] for a, v in cands.items()}
+
+
 def build_sido(key, with_cctv=True, refresh=False):
     sd = SIDO[key]
+    words = sd['sido_words']
     inv = fetch_aws_inventory(refresh)
     sigun = sigun_from_inventory(sd, inv)
-    print(f'[{sd["label"]}] 시군 {len(sigun)}곳: {", ".join(sigun)}')
+    print(f'[{sd["label"]}] 단위 {len(sigun)}곳: {", ".join(sigun)}')
     sigun_map = {n: i['prefixes'] for n, i in sigun.items()}
     aws = build_aws(sigun_map, inv)
     regs = build_regions(sigun_map, aws)
+    cent = geo_centroids(sd, sigun)
+    aws_fallback = {}
     for r in regs:
         r['admin'] = sigun[r['name']]['admin']
-    empty = [r['name'] for r in regs if r['nx'] is None]
-    if empty:
-        raise SystemExit(f'격자를 못 정한 시군: {empty}')
+        if r['nx'] is None:
+            # 관측소가 없는 단위(서울 일부 구 등) — 경계 중심으로 격자를 정하고 이웃 AWS 를 빌린다
+            if r['name'] not in cent:
+                raise SystemExit(f'{r["name"]}: 관측소도 경계자료도 없다')
+            r['lat'], r['lon'] = round(cent[r['name']][0], 5), round(cent[r['name']][1], 5)
+            r['nx'], r['ny'] = to_grid(r['lat'], r['lon'])
+            r['src'] = '경계 중심'
+            near = [(_km(r['lat'], r['lon'], o['lat'], o['lon']), o['name'])
+                    for o in regs if o.get('lat') and o['name'] != r['name'] and aws.get(o['name'])]
+            if near:
+                aws_fallback[r['name']] = min(near)[1]
+    if aws_fallback:
+        print(f'  관측소 없는 단위 → 이웃 AWS 대용: {aws_fallback}')
 
     riv_inv = fetch_river_inventory(refresh)
-    word = sd['sido_words'][0]
-    rivers = add_nearby_rivers(build_rivers(sigun_map, riv_inv, sido_word=word), regs, riv_inv,
-                               sido_word=word)
+    rivers = add_nearby_rivers(build_rivers(sigun_map, riv_inv, sido_word=words, sigun=sigun,
+                                            alias=sd.get('unit_alias')), regs, riv_inv,
+                               sido_word=words)
     dams = build_dams(sd, sigun, fetch_dam_inventory(refresh))
 
     # 하천 이름(WAMIS) — 표기를 경기와 같게 '하천명 (시군 다리명)' 으로
@@ -856,56 +1072,81 @@ def build_sido(key, with_cctv=True, refresh=False):
             rn = names_cache[st['code']]
             label = f"{rn} ({area} {_bridge(st['obsnm'])})" if rn else f"{area} {_bridge(st['obsnm'])}"
             if st.get('nearby'):
-                near_area = _ADMIN_SUFFIX.sub('', (st.get('addr') or '').split()[1]) if len((st.get('addr') or '').split()) > 1 else ''
-                label = f"{rn or ''} ({area} 인근 · {near_area} {_bridge(st['obsnm'])})".strip()
+                toks = (st.get('addr') or '').split()
+                near_area = (unit_of(toks[1])[0] or '') if len(toks) > 1 else ''
+                tail = f"{area} 인근 · {near_area} {_bridge(st['obsnm'])}".replace('  ', ' ')
+                label = f"{rn} ({tail})" if rn else tail
             river_stations.append({'code': st['code'], 'name': label, 'sigun': area,
                                    'warning': st['warning'], 'danger': st['danger'],
                                    'has_cctv': False, 'api': 'waterlevel',
                                    **({'nearby': True} if st.get('nearby') else {})})
     river_stations += dams
     codes = sorted({st['code'] for st in river_stations})
-    print(f'하천 {len(river_stations) - len(dams)}곳 + 댐 {len(dams)}곳 — 상세·CCTV 조회 중…')
+    print(f'하천 {len(river_stations) - len(dams)}곳 + 댐 {len(dams)}곳 — 상세{"·CCTV" if with_cctv else ""} 조회 중…')
     meta = build_river_meta(codes, riv_inv, fetch_dam_inventory(), with_cctv=with_cctv)
     for st in river_stations:
         st['has_cctv'] = bool(meta.get(st['code'], {}).get('cctv'))
-    print(f'  → CCTV 있는 곳 {sum(1 for m in meta.values() if m.get("cctv"))}/{len(codes)}곳')
+    if with_cctv:
+        print(f'  → CCTV 있는 곳 {sum(1 for m in meta.values() if m.get("cctv"))}/{len(codes)}곳')
 
+    # 미세먼지 — 측정소정보(주소)로 자동, 실시간 목록에 있는 것만
+    pm = {}
     try:
-        pm, pm_missing = build_pm(key, fetch_pm_stations(refresh, sd['pm_sido']))
-        if pm_missing:
-            print(f'[경고] 실시간 목록에 없는 측정소(제외됨): {pm_missing}', file=sys.stderr)
+        live = set()
+        for s in sd['pm_sido']:
+            for attempt in range(3):                    # 에어코리아 실시간 API 는 504 가 잦다
+                try:
+                    live |= set(fetch_pm_stations(refresh, s))
+                    break
+                except Exception as e:
+                    print(f'  실시간 측정소 목록({s}) {attempt + 1}회 실패: {type(e).__name__}', file=sys.stderr)
+                    time.sleep(3)
+        if not live:
+            raise RuntimeError('실시간 측정소 목록을 못 받았다 — 나중에 다시 생성할 것')
+        pm = build_pm_auto(sd, sigun, fetch_msrstn_list(refresh), live,
+                           {r['name']: (r.get('lat'), r.get('lon')) for r in regs})
+        table = PM_STATION_TABLE.get(key, {})
+        for a, s in table.items():                    # 손으로 고른 표가 있으면 그것을 우선
+            if s in live:
+                pm[a] = s
     except Exception as e:
-        print(f'[경고] 미세먼지 측정소 조회 실패: {type(e).__name__} {e}', file=sys.stderr)
-        pm = {}
+        print(f'[경고] 미세먼지 측정소 자동 매핑 실패: {type(e).__name__}', file=sys.stderr)
+    pm_missing = [a for a in sigun if a not in pm]
+    if pm_missing:
+        print(f'  미세먼지 측정소 없는 단위: {pm_missing}')
 
     wrn_rows = fetch_wrn_regions(refresh)
-    reg_map, wide_label = build_reg_map(sd, sigun, wrn_rows)
-    fire_map = build_fire_sigun_map(sigun, fetch_fire_sigun_names(sd, refresh))
-    river_words = sorted({n.split(' (')[0] for n in names_cache.values() if n} | {n for n in names_cache.values() if n})
+    reg_map, wide_label, wide_names = build_reg_map(sd, sigun, wrn_rows)
+    fire_map = build_fire_sigun_map(sigun, fetch_fire_sigun_names(sd, refresh), sd)
+    river_words = sorted({n for n in names_cache.values() if n})
     order = [r['name'] for r in sorted(regs, key=lambda r: (-r['lat'], r['lon']))]   # 북→남, 서→동
     gun = [n for n, i in sigun.items() if i['admin'].endswith('군')]
 
     out = {
         'key': key, 'label': sd['label'], 'title': f"{sd['label']} 기상·재난 상황판",
-        'full': sd['full'], 'home': sd['home'], 'home_office': sd['home_office'],
+        'full': sd['full'], 'home': sd['home'], 'home_office': f"{sd['home']}소방서",
         'host': 'weather.visanu81.workers.dev',
         'data_file': f'data-{key}.js', 'map_file': f'map-geo-{key}.js',
         'combined_file': f'상황판-{key}.html',
         'notify': False, 'tide': False, 'share_images_from': 'data.js',
-        'wrn_stn': sd['wrn_stn'], 'wrn_prefix': sd['wrn_up'][:4], 'wide_label': wide_label,
-        'pm_sido': sd['pm_sido'], 'sido_words': sd['sido_words'],
+        'wrn_stn': sd['wrn_stn'], 'wrn_prefix': [u[:4] for u in sd['wrn_up']],
+        'wide_label': wide_label, 'wide_names': wide_names,
+        'pm_sido': sd['pm_sido'], 'sido_words': words,
+        'kostat': sd['kostat'], 'map_alias': sd.get('map_alias') or {},
+        'unit_alias': sd.get('unit_alias') or {},
+        'map_any_prefix': sd.get('map_any_prefix') or [],
         'regions': [{k: r[k] for k in ('name', 'nx', 'ny', 'sgg', 'lat', 'lon', 'admin')} for r in regs],
         'pm_stations': pm,
         'aws_stations': {a: [[r['stn'], r['name']] for r in st] for a, st in aws.items()},
-        'aws_fallback': {},
+        'aws_fallback': aws_fallback,
         'river_stations': river_stations,
         'river_meta': meta,
-        'keywords': [sd['label'], sd['full'], wide_label] + list(sigun),
+        'keywords': [sd['label'], sd['full']] + wide_names + list(sigun) + list((sd.get('unit_alias') or {})),
         'reg_map': reg_map,
         'region_order': [wide_label] + order,
         'fire_sigun_map': fire_map,
         'fire_groups': build_fire_groups(regs),
-        'flood_keywords': sorted(set(list(sigun) + river_words + [sd['label'], wide_label])),
+        'flood_keywords': sorted(set(list(sigun) + river_words + [sd['label']] + wide_names)),
         'exclude_prefix': '',
         'gun_names': gun,
         'admin': {n: i['admin'] for n, i in sigun.items()},
@@ -915,7 +1156,9 @@ def build_sido(key, with_cctv=True, refresh=False):
     path.parent.mkdir(exist_ok=True)
     path.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding='utf-8')
     print(f'생성 완료 → {path}')
-    print(f'  특보구역 {len(reg_map)}코드 · 산불표기 {len(fire_map)} · 미세먼지 {len(pm)}/{len(sigun)} · 하천 {len(river_stations)}')
+    n_riv_units = len({s['sigun'] for s in river_stations})
+    print(f'  특보구역 {len(reg_map)}코드 · 산불표기 {len(fire_map)} · 미세먼지 {len(pm)}/{len(sigun)}'
+          f' · 하천 {len(river_stations)}(단위 {n_riv_units}/{len(sigun)})')
     return out
 
 
@@ -931,7 +1174,7 @@ def build(profile):
         if pm_missing:
             print(f'[경고] 실시간 목록에 없는 측정소(제외됨): {pm_missing}', file=sys.stderr)
     except Exception as e:
-        print(f'[경고] 미세먼지 측정소 조회 실패: {type(e).__name__} {e}', file=sys.stderr)
+        print(f'[경고] 미세먼지 측정소 조회 실패: {type(e).__name__}', file=sys.stderr)
         pm, pm_missing = {}, {}
     # 하천 상세정보 + CCTV — 화면의 하천 상세가 4단계 눈금을 그리는 데 쓴다.
     codes = sorted({st['code'] for lst in rivers.values() for st in lst})
@@ -953,7 +1196,7 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('--verify', action='store_true', help='경기북부 운영값 재현 검증')
     ap.add_argument('--build', choices=['north', 'south'], help='프로파일 생성')
-    ap.add_argument('--sido', choices=sorted(SIDO), help='시도 단위 자동 생성 → tools/profiles/<key>.json')
+    ap.add_argument('--sido', choices=sorted(SIDO) + ['all'], help='시도 단위 자동 생성 → tools/profiles/<key>.json (all=전부)')
     ap.add_argument('--no-cctv', action='store_true', help='CCTV 유무 조회 생략(빠른 시험용)')
     ap.add_argument('--refresh', action='store_true', help='원장 캐시 무시하고 새로 받기')
     ap.add_argument('--check-rivers', action='store_true',
@@ -963,7 +1206,10 @@ if __name__ == '__main__':
         for f in ('stn_aws_inf.txt', 'hrfco_wl_info.json', 'airkorea_gg.json'):
             (CACHE / f).unlink(missing_ok=True)
     if a.sido:
-        out = build_sido(a.sido, with_cctv=not a.no_cctv, refresh=a.refresh)
+        keys = sorted(SIDO) if a.sido == 'all' else [a.sido]
+        for k in keys:
+            print(f'\n───── {k} ─────')
+            out = build_sido(k, with_cctv=not a.no_cctv, refresh=a.refresh)
         if a.check_rivers:
             print('\n=== 수위관측소 현실성 검사 (최근 24시간) ===')
             uniq = [{'code': s['code'], 'obsnm': s['name'], 'warning': s['warning']}
