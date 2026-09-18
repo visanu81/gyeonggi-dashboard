@@ -363,3 +363,29 @@ def get(name):
         raise SystemExit(f'알 수 없는 지역 프로파일: {name} (가능: {", ".join(PROFILES)})')
     return PROFILES[name]
 
+# ══════════════════════════════════════════════════════════════
+# 생성 프로파일 — tools/profiles/<key>.json (전국 확장, 2026-09-18)
+#   build_region_profile.py --sido <key> 가 원장에서 기계로 만든다. 손으로 고치지 말 것.
+#   손으로 쓴 north·south 와 키가 겹치면 예외 — 어느 쪽이 정본인지 헷갈리면 안 된다.
+# ══════════════════════════════════════════════════════════════
+import json as _json
+import pathlib as _pl
+
+_PROFILE_DIR = _pl.Path(__file__).resolve().parent / 'profiles'
+
+
+def _from_generated(j):
+    prof = dict(j)
+    prof['aws_stations'] = {a: [tuple(x) for x in lst] for a, lst in j['aws_stations'].items()}
+    prof['flood_keywords'] = set(j['flood_keywords'])
+    prof['regions'] = [{'name': r['name'], 'nx': r['nx'], 'ny': r['ny'], 'sgg': r['sgg']}
+                       for r in j['regions']]
+    return prof
+
+
+if _PROFILE_DIR.is_dir():
+    for _f in sorted(_PROFILE_DIR.glob('*.json')):
+        _j = _json.loads(_f.read_text(encoding='utf-8'))
+        if _j.get('key') in PROFILES:
+            raise SystemExit(f'프로파일 키 충돌: {_j.get("key")} ({_f.name})')
+        PROFILES[_j['key']] = _from_generated(_j)

@@ -80,6 +80,88 @@ def sh(*args):
     return r.stdout
 
 
+def _profile_keys():
+    prof_dir = ROOT / 'tools' / 'profiles'
+    keys = [f.stem for f in prof_dir.glob('*.json')] if prof_dir.is_dir() else []
+    return keys + ['north', 'south', 'all']
+
+
+def _drop_profile_files(folder):
+    """다른 시도의 원본 파일(data-<key>.js·region-<key>.js·map-geo-<key>.js·상황판-<key>.html)을 치운다.
+    ⚠ 접두사로 지우면 안 된다 — data-adapter.js 가 같이 날아가 화면이 샘플 데이터로 돈다(실제로 겪음)."""
+    names = set()
+    for k in _profile_keys():
+        names.update({f'data-{k}.js', f'region-{k}.js', f'map-geo-{k}.js', f'risk-zones-{k}.js',
+                      f'상황판-{k}.html'})
+    for f in list(folder.iterdir()):
+        if f.is_file() and f.name in names:
+            f.unlink()
+
+
+def build_sido_sites():
+    """/new/<시도>/ 하위 사이트를 SITE 안에 만든다. 돌아온 값: [(key, 표시명, 폴더명)]"""
+    import json
+    out = []
+    prof_dir = ROOT / 'tools' / 'profiles'
+    if not prof_dir.is_dir():
+        return out
+    for pf in sorted(prof_dir.glob('*.json')):
+        prof = json.loads(pf.read_text(encoding='utf-8'))
+        key, wide = prof['key'], prof['wide_label']
+        need = [f'data-{key}.js', f'region-{key}.js', f'map-geo-{key}.js']
+        missing = [n for n in need if not (ROOT / n).exists()]
+        if missing:
+            print(f'  · {wide}: 파일 없음 {missing} — 건너뜀')
+            continue
+        sub = SITE / wide
+        sub.mkdir()
+        for f in SITE.iterdir():
+            if f.is_file() and f.suffix in ('.html', '.js', '.json', '.svg'):
+                shutil.copy(f, sub / f.name)
+        if (SITE / 'images').is_dir():
+            shutil.copytree(SITE / 'images', sub / 'images')
+        # 데이터는 서버(origin/main)에 있으면 그것, 없으면 로컬 수집본
+        try:
+            (sub / 'data.js').write_bytes(sh('git', 'show', f'origin/main:data-{key}.js'))
+            src = '서버'
+        except SystemExit:
+            shutil.copy(ROOT / f'data-{key}.js', sub / 'data.js')
+            src = '로컬 수집본'
+        shutil.copy(ROOT / f'region-{key}.js', sub / 'region.js')
+        shutil.copy(ROOT / f'map-geo-{key}.js', sub / 'map-geo.js')
+        _drop_profile_files(sub)
+        for f in sub.glob('*.html'):
+            body = f.read_text(encoding='utf-8')
+            body = body.replace('경기도 · 34개 소방서', f'{wide} · {len(prof["regions"])}개 시군')
+            body = body.replace('34개 소방서', f'{len(prof["regions"])}개 시군').replace('경기도', wide)
+            f.write_text(body, encoding='utf-8')
+        out.append((key, wide, wide))
+        print(f'  · 시도판 {wide}: 데이터={src}, 시군 {len(prof["regions"])}곳')
+    return out
+
+
+def landing_html(sidos):
+    rows = ''.join(
+        f'<a class="row" href="./{folder}/지도.html"><b>{wide}</b><span>지도 · 상황실 · 호우</span></a>'
+        for key, wide, folder in sidos)
+    return f"""<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>전국 기상·재난 상황판 — 시도 선택</title>
+<style>
+  body{{margin:0;background:#0b1220;color:#f3f6fc;font-family:'Pretendard Variable',Pretendard,'맑은 고딕',system-ui,sans-serif;}}
+  .wrap{{max-width:560px;margin:40px auto;padding:0 16px;}}
+  h1{{font-size:22px;margin:0 0 6px;}} p{{color:#93a5c4;font-size:14px;margin:0 0 22px;}}
+  a.row{{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;margin:8px 0;
+        background:#141e33;border:1px solid #28313f;border-radius:14px;color:#f3f6fc;text-decoration:none;}}
+  a.row span{{color:#93a5c4;font-size:13px;}} a.row.gg b{{color:#ffb020;}}
+</style></head><body><div class="wrap">
+<h1>전국 기상·재난 상황판</h1><p>시도를 고르세요. (작업 중 — 강원부터)</p>
+<a class="row gg" href="./지도.html"><b>경기도</b><span>34개 소방서 · 운영과 같은 데이터</span></a>
+{rows}
+</div></body></html>
+"""
+
+
 def main():
     # 폴더 자체는 지우지 않는다 — 배포 셸이 그 안에 서 있으면 Windows 가 잠근다.
     # 내용물만 비운다(같은 이유로 deploy/ 도 파일 단위로 정리).
@@ -99,6 +181,12 @@ def main():
     if (ROOT / 'images').is_dir():
         shutil.copytree(ROOT / 'images', SITE / 'images')
     sh('git', 'fetch', 'origin', 'main', '-q')
+    # 기상청 이미지(레이더·위성·특보발효도·강수예측)도 서버가 올린 최신 것으로 — 작업 트리 것은 옛날이다
+    for img in (SITE / 'images').glob('*.png'):
+        try:
+            img.write_bytes(sh('git', 'show', f'origin/main:images/{img.name}'))
+        except SystemExit:
+            pass
     for name in ('data.js', 'data-south.js'):
         (SITE / name).write_bytes(sh('git', 'show', f'origin/main:{name}'))
 
@@ -153,11 +241,18 @@ def main():
             f.write_text(t, encoding='utf-8')
             n_files += 1
 
+    # 3-b) 시도판 — 생성 프로파일(tools/profiles/*.json)마다 /new/<시도>/ 하위 사이트 (전국 확장 1단계)
+    #      경기 전체판 코드를 그대로 복사하고 데이터·지도·화면설정 세 파일만 그 시도 것으로 갈아끼운다.
+    #      데이터는 서버가 아직 그 시도를 수집하지 않으면 작업 트리의 로컬 수집본을 쓴다.
+    sidos = build_sido_sites()
+    _drop_profile_files(SITE)      # 경기 전체판에는 다른 시도 파일이 필요 없다
+
     # 4) 배포 폴더 조립: 루트 = 안내, /new/ = 작업 화면
     PUB.mkdir(parents=True, exist_ok=True)
     for name in PAGES:
         (PUB / name).write_text(NOTICE, encoding='utf-8')
     shutil.copytree(SITE, PUB / DEV_DIR)
+    (PUB / DEV_DIR / '전국.html').write_text(landing_html(sidos), encoding='utf-8')
     (DEPLOY / 'wrangler.toml').write_text(WRANGLER, encoding='utf-8')
 
     left = []

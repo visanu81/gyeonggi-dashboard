@@ -192,7 +192,19 @@ PM_STATIONS = P['pm_stations']
 # 이 상황판이 담당하는 시군 집합 — 특보·재난문자·산불통계 필터의 공통 기준.
 SIGUN_SET = {r['name'] for r in REGIONS}
 # 시(市)가 아니라 군(郡)인 곳 — 재난문자 발신처 표기('연천군' vs '파주시')에 쓴다.
-GUN_NAMES = {'연천', '가평', '양평'} & SIGUN_SET
+GUN_NAMES = set(P.get('gun_names') or ['연천', '가평', '양평']) & SIGUN_SET
+# ── 시도 상수 (전국 확장 1단계, 2026-09-18) ─────────────────────────────
+# 경기 전용으로 박혀 있던 값들. 손으로 쓴 경기 프로파일에는 이 키가 없으므로 기본값이
+# 경기 값이다 — 운영(북부·남부) 동작은 한 글자도 안 바뀐다. 생성 프로파일(tools/profiles/*.json)은
+# 자기 시도 값을 들고 온다.
+SIDO_WORDS = list(P.get('sido_words') or ['경기'])          # 주소·발신처가 이 말로 시작하면 우리 시도
+WIDE_LABEL = P.get('wide_label', '경기도')                   # 시도 전역 발표의 표시명
+WRN_STN = int(P.get('wrn_stn', 109))                        # 기상청 특보 API stnId (109 수도권·105 강원…)
+WRN_PREFIX = P.get('wrn_prefix', 'L101')                    # 시도 육상 특보구역 코드 접두
+PM_SIDO = P.get('pm_sido', '경기')                           # 에어코리아 sidoName
+# 발신처 '경기도 광주시'·'경기북부 동두천시'·'강원특별자치도 춘천시' 에서 시군을 뽑는 정규식
+_SIDO_SIGUN_RE = _re.compile('(?:' + '|'.join(_re.escape(w) for w in SIDO_WORDS)
+                             + r')(?:특별자치도|특별자치시|광역시|특별시|도|북부|남부)*\s*([가-힣]+?)(시|군)')
 
 
 
@@ -1306,7 +1318,7 @@ def fetch_warning_bulletins():
     try:
         r = requests.get(f'{base}/getWthrWrnMsg', params={
             'serviceKey': DATA_KEY, 'pageNo': 1, 'numOfRows': 15,
-            'dataType': 'JSON', 'stnId': 109,
+            'dataType': 'JSON', 'stnId': WRN_STN,
             'fromTmFc': from_dt, 'toTmFc': to_dt,
         }, timeout=15)
         r.raise_for_status()
@@ -1334,7 +1346,7 @@ def fetch_warning_bulletins():
     try:
         r = requests.get(f'{base}/getWthrInfoList', params={
             'serviceKey': DATA_KEY, 'pageNo': 1, 'numOfRows': 10,
-            'dataType': 'JSON', 'stnId': 109,
+            'dataType': 'JSON', 'stnId': WRN_STN,
             'fromTmFc': from_dt, 'toTmFc': to_dt,
         }, timeout=15)
         r.raise_for_status()
@@ -1356,7 +1368,7 @@ def fetch_warning_bulletins():
     # 3) 기상정보 본문 (전국 해설 — 소나기·안개·폭염 등 현황/전망) — getWthrInfo
     #    레이더 카드 옆에 표시할 최신 기상정보 1건. 108(전국) 우선, 없으면 109(수도권).
     try:
-        for stn in ('108', '109'):
+        for stn in ('108', str(WRN_STN)):
             r = requests.get(f'{base}/getWthrInfo', params={
                 'serviceKey': DATA_KEY, 'pageNo': 1, 'numOfRows': 5,
                 'dataType': 'JSON', 'stnId': stn,
@@ -1664,7 +1676,7 @@ def fetch_apihub_warnings():
         _rid = str(reg_id or '')
         is_north_gg = _rid in NORTH_GG_REG_MAP
         # 경기 전체(관할 밖 경기 시군 포함) — 화면의 '경기도 특보' 집계용
-        is_gyeonggi = is_north_gg or _rid.startswith('L101')
+        is_gyeonggi = is_north_gg or _rid.startswith(WRN_PREFIX)
 
         # 시간 포맷
         def fmt(s):
@@ -1764,7 +1776,7 @@ def fetch_warnings():
         'pageNo': 1,
         'numOfRows': 50,
         'dataType': 'JSON',
-        'stnId': 109,  # 경기도 (북부)
+        'stnId': WRN_STN,  # 시도 담당 지방기상청 (109 수도권 · 105 강원 …)
     }
     r = requests.get(url, params=params, timeout=15)
     r.raise_for_status()
@@ -1845,7 +1857,7 @@ def fetch_pm():
         'returnType': 'json',
         'numOfRows': 200,
         'pageNo': 1,
-        'sidoName': '경기',
+        'sidoName': PM_SIDO,
         'ver': '1.3',
     }
     r = requests.get(url, params=params, timeout=15)
@@ -1963,7 +1975,7 @@ def fetch_fire_incidents():
                 'damage_area': damage,
                 'year': it.get('startyear', ''),
                 'is_north': sigun in north_sigun,
-                'is_gyeonggi': '경기' in sido,
+                'is_gyeonggi': any(w in sido for w in SIDO_WORDS),
                 'is_this_year': it.get('startyear', '') == cur_year,
             }
 
@@ -2016,7 +2028,7 @@ def fetch_fire():
 
     region_max = {}
     for it in items:
-        if str(it.get('doname', '')) != '경기도':
+        if not str(it.get('doname', '')).startswith(tuple(SIDO_WORDS)):
             continue
         sigun = str(it.get('sigun', '')).strip()
         target = sigun_map.get(sigun)
@@ -2512,13 +2524,13 @@ def fetch_messages():
         - 반대편 광역('경기남부'↔'경기북부') 또는 관할 밖 시군 → 제외
         - 서울·인천 등 비경기 → 제외"""
         s = rcptn.strip()
-        if not s.startswith('경기'):
+        if not s.startswith(tuple(SIDO_WORDS)):
             return False
-        if s.startswith(P['exclude_prefix']):
+        if P['exclude_prefix'] and s.startswith(P['exclude_prefix']):
             return False
         if any(k in s for k in north_sigun):
             return True
-        m = _re.search(r'경기[도북부남]*\s*([가-힣]+?)(시|군)', s)
+        m = _SIDO_SIGUN_RE.search(s)
         if m:
             return m.group(1) in north_sigun   # 특정 시군이면 북부만
         return True   # 시군명 없는 경기 전역
@@ -2555,14 +2567,14 @@ def fetch_messages():
 
         # 북부가 아니면: "경기도 광주시" 같은 패턴에서 시군명 추출
         if not region:
-            m = _re.search(r'경기[도북부남]*\s+([가-힣]+?)(시|군)', rcptn)
+            m = _SIDO_SIGUN_RE.search(rcptn)
             if m:
                 sender = m.group(1) + m.group(2)
                 region = m.group(1)
             else:
                 # "경기도", "경기북부" 등 도 전역
-                sender = '경기도'
-                region = '경기도'
+                sender = WIDE_LABEL
+                region = WIDE_LABEL
 
         result.append({
             'sender': sender,
@@ -3089,8 +3101,9 @@ def _canon_region(name):
     n = (name or '').strip()
     if not n:
         return None
-    if n in ('경기북부', '경기남부', '경기도', '수도권', '경기'):
-        return '경기도'
+    if (n in ('경기북부', '경기남부', '경기도', '수도권', '경기') or n in SIDO_WORDS
+            or n in (WIDE_LABEL, P.get('full'))):
+        return WIDE_LABEL
     n = _re.sub(r'(동북부|서북부|동남부|서남부|남부|북부|동부|서부|중부|내륙|산지|앞바다|해안)', '', n)
     n = _re.sub(r'(특별자치시|특별자치도|특별시|광역시|자치시|자치도)', '', n)
     n = _re.sub(r'(시|군|구|도)$', '', n)
