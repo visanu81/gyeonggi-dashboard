@@ -185,10 +185,45 @@ def area_centroid(rings):
     return best
 
 
+# 통계청 시군구 코드 앞 2자리 → 시도 (전국 확장용). 법정동코드와 다르다(강원 51 ↔ 통계청 32).
+KOSTAT_SIDO = {'11': '서울', '21': '부산', '22': '대구', '23': '인천', '24': '광주', '25': '대전',
+               '26': '울산', '29': '세종', '31': '경기', '32': '강원', '33': '충북', '34': '충남',
+               '35': '전북', '36': '전남', '37': '경북', '38': '경남', '39': '제주'}
+
+
+def groups_from_profile(key, geo):
+    """생성 프로파일(tools/profiles/<key>.json)의 시군을 경계자료에서 이름으로 찾는다.
+    시 하위 구('수원시 장안구' 식으로 name 이 따로 있는 경우)는 시로 묶는다."""
+    prof = json.loads((ROOT / 'tools' / 'profiles' / f'{key}.json').read_text(encoding='utf-8'))
+    prefixes = tuple(prof.get('kostat') or [next(k for k, v in KOSTAT_SIDO.items() if v == prof['label'])])
+    admin = prof['admin']                      # 시군 → '춘천시'
+    alias = prof.get('map_alias') or {}        # 이름이 바뀐 곳(미추홀구←남구·청주←청원군)
+    anyp = set(prof.get('map_any_prefix') or [])   # 소속이 바뀐 곳(군위군: 경북→대구)
+    groups = {}
+    for f in geo['features']:
+        code = str(f['properties']['code'])
+        name = f['properties']['name']
+        if not (code.startswith(prefixes) or name in anyp):
+            continue
+        for area, adm in admin.items():
+            names = alias.get(area) or [adm]
+            if any(name == n or name.startswith(n) for n in names):
+                groups.setdefault(area, []).append(code)
+                break
+    missing = [a for a in admin if a not in groups]
+    if missing:
+        raise SystemExit(f'경계자료에서 못 찾은 시군: {missing}')
+    order = [a for a in prof['region_order'] if a in groups]
+    return groups, order
+
+
 def build(profile, merge=False):
     geo = load_geojson()
     by_code = {str(f['properties']['code']): f for f in geo['features']}
-    groups, order = GROUPS[profile], ORDER[profile]
+    if profile in GROUPS:
+        groups, order = GROUPS[profile], ORDER[profile]
+    else:
+        groups, order = groups_from_profile(profile, geo)
 
     shapes = {}
     for area in order:
@@ -283,7 +318,7 @@ def verify():
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('--verify', action='store_true')
-    ap.add_argument('--profile', choices=['north', 'south', 'all'])
+    ap.add_argument('--profile', help='north·south·all 또는 생성 프로파일 키(gangwon …)')
     ap.add_argument('--merge', action='store_true', help='시 안의 구 경계선 제거')
     ap.add_argument('--out', help='출력 파일명 (프로젝트 루트 기준)')
     a = ap.parse_args()

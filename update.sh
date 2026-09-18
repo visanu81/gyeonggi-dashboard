@@ -87,8 +87,13 @@ fi
 # --no-push로 파일만 만들고, 마지막 --push-only가 한꺼번에 커밋·푸시·배포한다.
 /usr/bin/python3 tools/update_data.py --profile south --no-push >> cron.log 2>&1 &
 SOUTH_PID=$!
+# 강원(전국 확장 시범, 2026-09-18) — 상태폴더 .tmp/gangwon/, 이미지는 북부 것 재사용. 남부와 같은 방식.
+# 나머지 시도는 이 회차의 소요시간을 보고 배치 설계 후 추가한다(운영현황.md '서버 수집 설계').
+/usr/bin/python3 tools/update_data.py --profile gangwon --no-push >> cron.log 2>&1 &
+GANGWON_PID=$!
 /usr/bin/python3 tools/update_data.py --no-push >> cron.log 2>&1
 wait $SOUTH_PID
+wait $GANGWON_PID
 /usr/bin/python3 tools/update_data.py --push-only >> cron.log 2>&1
 
 # ── 교통상황판 돌리기 (2026-08-28 추가) ────────────────────────────
