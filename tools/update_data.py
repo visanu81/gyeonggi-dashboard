@@ -1860,18 +1860,21 @@ def pm_grade(pm10, pm25):
 
 def fetch_pm():
     url = 'https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty'
-    params = {
-        'serviceKey': DATA_KEY,
-        'returnType': 'json',
-        'numOfRows': 200,
-        'pageNo': 1,
-        'sidoName': PM_SIDO,
-        'ver': '1.3',
-    }
-    r = requests.get(url, params=params, timeout=15)
-    r.raise_for_status()
-    body = r.json()['response']['body']
-    items = body.get('items', [])
+    # 통합시(전남광주)는 에어코리아가 아직 광주·전남으로 나눠 준다 → 시도마다 한 번씩 받아 합친다
+    items = []
+    for sido in ([PM_SIDO] if isinstance(PM_SIDO, str) else PM_SIDO):
+        params = {
+            'serviceKey': DATA_KEY,
+            'returnType': 'json',
+            'numOfRows': 200,
+            'pageNo': 1,
+            'sidoName': sido,
+            'ver': '1.3',
+        }
+        r = requests.get(url, params=params, timeout=15)
+        r.raise_for_status()
+        body = r.json()['response']['body']
+        items += body.get('items', []) or []
 
     by_station = {it['stationName']: it for it in items if it.get('stationName')}
 
