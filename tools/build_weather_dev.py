@@ -307,6 +307,15 @@ def main():
     for name in PAGES:
         (PUB / name).write_text(NOTICE, encoding='utf-8')
     shutil.copytree(SITE, PUB / DEV_DIR)
+    # 경기 전체판(/new/ 루트)도 운영 ggweather 의 데이터·이미지를 직접 읽게 — 빌드 시점 스냅샷이 아니라 5분 갱신.
+    # (시도판은 build_sido_sites 에서 같은 방식으로 gyeonggi-dashboard 의 data-<key>.js 를 읽는다)
+    for f in (PUB / DEV_DIR).glob('*.html'):
+        body = f.read_text(encoding='utf-8')
+        live = 'https://ggweather.visanu81.workers.dev/'
+        body = body.replace('src="data.js"', f'src="{live}data.js"').replace("'data.js?_t='", f"'{live}data.js?_t='")
+        body = body.replace("IMGH=''", f"IMGH='{live}'")
+        body = body.replace("'images/kma_", f"'{live}images/kma_").replace('"images/kma_', f'"{live}images/kma_')
+        f.write_text(body, encoding='utf-8')
     (PUB / DEV_DIR / '전국.html').write_text(landing_html(sidos), encoding='utf-8')
     inject_sido_list(PUB / DEV_DIR, sidos)
     (DEPLOY / 'wrangler.toml').write_text(WRANGLER, encoding='utf-8')
