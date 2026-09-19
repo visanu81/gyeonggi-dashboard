@@ -213,7 +213,8 @@ def groups_from_profile(key, geo):
     missing = [a for a in admin if a not in groups]
     if missing:
         raise SystemExit(f'경계자료에서 못 찾은 시군: {missing}')
-    order = [a for a in prof['region_order'] if a in groups]
+    # [0]은 시도 전역 이름(세종은 단위 이름과 같아 중복이 난다) → 뒤부터, 중복 제거
+    order = list(dict.fromkeys(a for a in prof['region_order'][1:] if a in groups))
     return groups, order
 
 

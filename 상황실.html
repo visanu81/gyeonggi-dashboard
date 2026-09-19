@@ -1705,7 +1705,7 @@ const REGIME = { 2:{rain:26.5,wind:13.4,temp:24.2,humid:94}, 7:{rain:11.2,wind:8
 const EXT = () => (typeof window !== 'undefined' && window.WALL_DATA) || {};
 
 class Component extends DCLogic {
-  state = { idx:5, now:new Date(), started:Date.now(), playing:true, theme:'dark' };
+  state = { idx:(function(){ var RC=window.REGION_CONF||{}; var i=NAMES.indexOf(RC.home); return i>=0 ? i : 0; })(), now:new Date(), started:Date.now(), playing:true, theme:'dark' };
 
   componentDidMount(){
     this.setState({ theme: this.props.startTheme || 'dark' });

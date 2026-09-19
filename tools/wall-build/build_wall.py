@@ -1185,6 +1185,12 @@ patch('<script src="./region.js"></script>',
       '<script>\n' + _ws + '\n</script>',
       '배치 편집기·시도 선택 삽입')
 
+# (M) 첫 관서 — 디자인 원본은 idx:5(경기북부 동두천 자리)로 고정돼 있어 관서가 5개 이하인 시도(세종 1·제주 2·
+#     대전 5·울산 5)에서 빈 화면이 났다(2026-09-19 전국 점검). 기본 관서(REGION_CONF.home)의 자리로, 없으면 0.
+patch("state = { idx:5, now:new Date(), started:Date.now(), playing:true, theme:'dark' };",
+      "state = { idx:(function(){ var RC=window.REGION_CONF||{}; var i=NAMES.indexOf(RC.home); return i>=0 ? i : 0; })(), now:new Date(), started:Date.now(), playing:true, theme:'dark' };",
+      '첫 관서 = 기본 관서')
+
 h = h.replace('</body>', INJECT + '\n</body>', 1)
 
 # ── 전역 후처리 ────────────────────────────────────────────
