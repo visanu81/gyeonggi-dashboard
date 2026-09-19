@@ -138,16 +138,26 @@ def build_sido_sites():
             body = f.read_text(encoding='utf-8')
             body = body.replace('경기도 · 34개 소방서', f'{wide} · {cnt}')
             body = body.replace('34개 소방서', cnt).replace('경기도', wide)
+            if src == '서버':
+                # 서버가 수집하는 시도는 운영 주소의 데이터·이미지를 직접 읽게 한다 —
+                # 작업장을 다시 배포하지 않아도 5분마다 갱신된다(경기 전체판과 같은 방식).
+                live = f'https://gyeonggi-dashboard.visanu81.workers.dev/data-{key}.js'
+                body = body.replace('src="data.js"', f'src="{live}"')
+                body = body.replace("'data.js?_t='", f"'{live}?_t='")
+                body = body.replace("IMGH=''", "IMGH='https://gyeonggi-dashboard.visanu81.workers.dev/'")
+                body = body.replace("'images/kma_", "'https://gyeonggi-dashboard.visanu81.workers.dev/images/kma_")
+                body = body.replace('"images/kma_', '"https://gyeonggi-dashboard.visanu81.workers.dev/images/kma_')
             f.write_text(body, encoding='utf-8')
-        out.append((key, wide, folder))
+        out.append((key, wide, folder, src))
         print(f'  · 시도판 {wide}: 데이터={src}, 시군 {len(prof["regions"])}곳')
     return out
 
 
 def landing_html(sidos):
     rows = ''.join(
-        f'<a class="row" href="./{folder}/지도.html"><b>{wide}</b><span>지도 · 상황실 · 호우</span></a>'
-        for key, wide, folder in sorted(sidos, key=lambda s: s[2]))
+        f'<a class="row" href="./{folder}/지도.html"><b>{wide}</b>'
+        f'<span>{"5분마다 갱신" if src == "서버" else "시험판 · 갱신 안 됨"}</span></a>'
+        for key, wide, folder, src in sorted(sidos, key=lambda s: (s[3] != '서버', s[2])))
     return f"""<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>전국 기상·재난 상황판 — 시도 선택</title>
@@ -159,7 +169,7 @@ def landing_html(sidos):
         background:#141e33;border:1px solid #28313f;border-radius:14px;color:#f3f6fc;text-decoration:none;}}
   a.row span{{color:#93a5c4;font-size:13px;}} a.row.gg b{{color:#ffb020;}}
 </style></head><body><div class="wrap">
-<h1>전국 기상·재난 상황판</h1><p>시도를 고르세요. 경기 외 시도는 아직 서버 수집 전이라 데이터가 갱신되지 않는 시험판입니다.</p>
+<h1>전국 기상·재난 상황판</h1><p>시도를 고르세요. "5분마다 갱신"은 서버가 수집 중, "시험판"은 화면 확인용 1회 수집본입니다.</p>
 <a class="row gg" href="./지도.html"><b>경기도</b><span>34개 소방서 · 운영과 같은 데이터</span></a>
 {rows}
 </div></body></html>
