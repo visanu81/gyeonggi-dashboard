@@ -32,6 +32,7 @@
  "map_alias": {},
  "unit_alias": {},
  "map_any_prefix": [],
+ "map_inset_units": [],
  "regions": [
   {
    "name": "서귀포",
@@ -235,6 +236,14 @@
   ]
  },
  "aws_fallback": {},
+ "aws_neighbors": {
+  "서귀포": [
+   "제주"
+  ],
+  "제주": [
+   "서귀포"
+  ]
+ },
  "river_stations": [
   {
    "code": "6003620",
@@ -242,7 +251,7 @@
    "sigun": "서귀포",
    "warning": 2.4,
    "danger": 4.9,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -251,7 +260,7 @@
    "sigun": "서귀포",
    "warning": 1.7,
    "danger": 3.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -260,7 +269,7 @@
    "sigun": "제주",
    "warning": 2.2,
    "danger": 4.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -269,7 +278,7 @@
    "sigun": "제주",
    "warning": 2.6,
    "danger": 4.9,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   }
  ],
@@ -283,7 +292,8 @@
    "alm": 4.5,
    "srs": 5.5,
    "pfh": 5.59,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "6002670": {
    "agc": "기후에너지환경부",
@@ -294,7 +304,8 @@
    "alm": 4.9,
    "srs": 6,
    "pfh": 6.08,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "6003620": {
    "agc": "기후에너지환경부",
@@ -305,7 +316,8 @@
    "alm": 4.9,
    "srs": 6.1,
    "pfh": 6.13,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "6004670": {
    "agc": "기후에너지환경부",
@@ -316,7 +328,8 @@
    "alm": 3.5,
    "srs": 4.3,
    "pfh": 4.36,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   }
  },
  "keywords": [
@@ -370,13 +383,5 @@
   "서귀포": "서귀포시",
   "제주": "제주시"
  },
- "generated": "2026-09-18 17:46",
- "aws_neighbors": {
-  "서귀포": [
-   "제주"
-  ],
-  "제주": [
-   "서귀포"
-  ]
- }
+ "generated": "2026-09-20 07:09"
 }

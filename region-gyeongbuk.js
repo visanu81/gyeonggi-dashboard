@@ -7,7 +7,7 @@ window.REGION_CONF = {
  "label": "경상북도",
  "office": "경상북도",
  "home": "안동",
- "countText": "22개 시군",
+ "countText": "23개 관서",
  "dataHost": "https://weather.visanu81.workers.dev",
  "wideNames": [
   "경북",
@@ -36,10 +36,11 @@ window.REGION_CONF = {
   "상주",
   "청송",
   "의성",
+  "포항북부",
   "구미",
   "김천",
   "칠곡",
-  "포항",
+  "포항남부",
   "영천",
   "성주",
   "경산",
@@ -61,10 +62,11 @@ window.REGION_CONF = {
   "상주",
   "청송",
   "의성",
+  "포항북부",
   "구미",
   "김천",
   "칠곡",
-  "포항",
+  "포항남부",
   "영천",
   "성주",
   "경산",
@@ -134,10 +136,14 @@ window.REGION_CONF = {
    2
   ],
   "영천": [
+   3,
+   2
+  ],
+  "포항북부": [
    4,
    2
   ],
-  "포항": [
+  "포항남부": [
    5,
    2
   ],
@@ -184,7 +190,8 @@ window.REGION_CONF = {
   "청도": "청도군",
   "청송": "청송군",
   "칠곡": "칠곡군",
-  "포항": "포항시"
+  "포항남부": "포항시",
+  "포항북부": "포항시"
  },
  "riverMatch": {
   "울릉": [
@@ -223,6 +230,9 @@ window.REGION_CONF = {
   "의성": [
    "의성"
   ],
+  "포항북부": [
+   "포항북부"
+  ],
   "구미": [
    "구미"
   ],
@@ -232,8 +242,8 @@ window.REGION_CONF = {
   "칠곡": [
    "칠곡"
   ],
-  "포항": [
-   "포항"
+  "포항남부": [
+   "포항남부"
   ],
   "영천": [
    "영천"
@@ -270,15 +280,30 @@ window.REGION_CONF = {
   "구미": "구미·김천·칠곡",
   "김천": "구미·김천·칠곡",
   "칠곡": "구미·김천·칠곡",
-  "포항": "포항·영천·성주",
-  "영천": "포항·영천·성주",
-  "성주": "포항·영천·성주",
+  "포항남부": "포항남부·영천·성주",
+  "영천": "포항남부·영천·성주",
+  "성주": "포항남부·영천·성주",
   "경산": "경산·경주·고령",
   "경주": "경산·경주·고령",
   "고령": "경산·경주·고령",
-  "청도": "청도"
+  "청도": "청도",
+  "포항북부": "포항남부·영천·성주"
  },
- "alias": {},
+ "alias": {
+  "포항북부": "포항남부"
+ },
+ "riverCodes": {
+  "포항남부": [
+   "2101687",
+   "2101690",
+   "2403620"
+  ],
+  "포항북부": [
+   "2012603",
+   "2101660",
+   "2402680"
+  ]
+ },
  "floodKeywords": [
   "가사천",
   "감천",
@@ -287,6 +312,7 @@ window.REGION_CONF = {
   "경상북도",
   "경주",
   "고령",
+  "곡강천",
   "구미",
   "금천",
   "금호강",
@@ -339,7 +365,9 @@ window.REGION_CONF = {
   "청송",
   "청통전",
   "칠곡",
-  "포항",
+  "칠성천",
+  "포항남부",
+  "포항북부",
   "한천",
   "형산강",
   "회천"
@@ -352,13 +380,15 @@ window.REGION_CONF = {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 안동시 성곡동",
-   "pfh": 161.7
+   "pfh": 161.7,
+   "cctv": false
   },
   "2001611": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 안동시 상아동",
-   "pfh": 98.8
+   "pfh": 98.8,
+   "cctv": false
   },
   "2001615": {
    "agc": "기후에너지환경부",
@@ -369,7 +399,8 @@ window.REGION_CONF = {
    "alm": 7.2,
    "srs": 8.02,
    "pfh": 8.02,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2001628": {
    "agc": "기후에너지환경부",
@@ -380,7 +411,8 @@ window.REGION_CONF = {
    "alm": 7.9,
    "srs": 9.05,
    "pfh": 9.05,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2001668": {
    "agc": "기후에너지환경부",
@@ -391,19 +423,22 @@ window.REGION_CONF = {
    "alm": 4.5,
    "srs": 5.09,
    "pfh": 5.09,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2002110": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 안동시 임하면 임하리",
-   "pfh": 164.7
+   "pfh": 164.7,
+   "cctv": false
   },
   "2002111": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경북 청송군 안덕면 성재리",
-   "pfh": 364.9
+   "pfh": 364.9,
+   "cctv": false
   },
   "2002604": {
    "agc": "기후에너지환경부",
@@ -414,7 +449,8 @@ window.REGION_CONF = {
    "alm": 4.9,
    "srs": 5.51,
    "pfh": 5.51,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2002607": {
    "agc": "기후에너지환경부",
@@ -425,13 +461,15 @@ window.REGION_CONF = {
    "alm": 4.4,
    "srs": 5.02,
    "pfh": 5.02,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2002610": {
    "agc": "한국수자원공사",
    "addr": "경상북도 청송군 현서면 백자리 무명교",
    "gdt": 361.519,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2002634": {
    "agc": "기후에너지환경부",
@@ -442,7 +480,8 @@ window.REGION_CONF = {
    "alm": 5.7,
    "srs": 6.83,
    "pfh": 6.83,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2002650": {
    "agc": "기후에너지환경부",
@@ -453,7 +492,8 @@ window.REGION_CONF = {
    "alm": 5,
    "srs": 5.8,
    "pfh": 5.8,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2002685": {
    "agc": "기후에너지환경부",
@@ -464,7 +504,8 @@ window.REGION_CONF = {
    "alm": 5,
    "srs": 5.81,
    "pfh": 5.81,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2003640": {
    "agc": "기후에너지환경부",
@@ -475,7 +516,8 @@ window.REGION_CONF = {
    "alm": 4.7,
    "srs": 5.29,
    "pfh": 5.29,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2003670": {
    "agc": "기후에너지환경부",
@@ -486,13 +528,15 @@ window.REGION_CONF = {
    "alm": 6.6,
    "srs": 8.62,
    "pfh": 8.62,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2004101": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 영주시 평은면",
-   "pfh": 164
+   "pfh": 164,
+   "cctv": false
   },
   "2004605": {
    "agc": "기후에너지환경부",
@@ -503,7 +547,8 @@ window.REGION_CONF = {
    "alm": 3.9,
    "srs": 4.75,
    "pfh": 4.75,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2004615": {
    "agc": "기후에너지환경부",
@@ -514,7 +559,8 @@ window.REGION_CONF = {
    "alm": 5.8,
    "srs": 6.64,
    "pfh": 6.64,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2004624": {
    "agc": "기후에너지환경부",
@@ -525,7 +571,8 @@ window.REGION_CONF = {
    "alm": 5.4,
    "srs": 6.14,
    "pfh": 6.14,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2004635": {
    "agc": "기후에너지환경부",
@@ -536,7 +583,8 @@ window.REGION_CONF = {
    "alm": 8.1,
    "srs": 9.45,
    "pfh": 9.45,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2004668": {
    "agc": "기후에너지환경부",
@@ -547,7 +595,8 @@ window.REGION_CONF = {
    "alm": 3.8,
    "srs": 4.39,
    "pfh": 4.39,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2004680": {
    "agc": "기후에너지환경부",
@@ -558,7 +607,8 @@ window.REGION_CONF = {
    "alm": 7,
    "srs": 8.62,
    "pfh": 8.62,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2004689": {
    "agc": "기후에너지환경부",
@@ -569,7 +619,8 @@ window.REGION_CONF = {
    "alm": 4.5,
    "srs": 5.12,
    "pfh": 5.12,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2005610": {
    "agc": "기후에너지환경부",
@@ -580,7 +631,8 @@ window.REGION_CONF = {
    "alm": 5.1,
    "srs": 5.8,
    "pfh": 5.8,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2005660": {
    "agc": "기후에너지환경부",
@@ -591,7 +643,8 @@ window.REGION_CONF = {
    "alm": 6.5,
    "srs": 6.68,
    "pfh": 6.68,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2005680": {
    "agc": "기후에너지환경부",
@@ -602,7 +655,8 @@ window.REGION_CONF = {
    "alm": 3.9,
    "srs": 4.58,
    "pfh": 4.58,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2006665": {
    "agc": "기후에너지환경부",
@@ -613,7 +667,8 @@ window.REGION_CONF = {
    "alm": 3.9,
    "srs": 4.64,
    "pfh": 4.64,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2006675": {
    "agc": "기후에너지환경부",
@@ -624,7 +679,8 @@ window.REGION_CONF = {
    "alm": 6,
    "srs": 6.55,
    "pfh": 6.55,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2008631": {
    "agc": "기후에너지환경부",
@@ -635,7 +691,8 @@ window.REGION_CONF = {
    "alm": 4,
    "srs": 4.75,
    "pfh": 4.75,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2008633": {
    "agc": "기후에너지환경부",
@@ -646,7 +703,8 @@ window.REGION_CONF = {
    "alm": 8,
    "srs": 9.67,
    "pfh": 9.67,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2009620": {
    "agc": "기후에너지환경부",
@@ -657,7 +715,8 @@ window.REGION_CONF = {
    "alm": 10.5,
    "srs": 13.37,
    "pfh": 13.37,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2009670": {
    "agc": "기후에너지환경부",
@@ -668,7 +727,8 @@ window.REGION_CONF = {
    "alm": 5.3,
    "srs": 6.24,
    "pfh": 6.24,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2009680": {
    "agc": "기후에너지환경부",
@@ -679,13 +739,15 @@ window.REGION_CONF = {
    "alm": 35,
    "srs": 36.26,
    "pfh": 36.26,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2010101": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 김천시 부항면 신옥리",
-   "pfh": 198.6
+   "pfh": 198.6,
+   "cctv": false
   },
   "2010635": {
    "agc": "기후에너지환경부",
@@ -696,7 +758,8 @@ window.REGION_CONF = {
    "alm": 4.5,
    "srs": 5.24,
    "pfh": 5.24,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2010640": {
    "agc": "기후에너지환경부",
@@ -707,7 +770,8 @@ window.REGION_CONF = {
    "alm": 6,
    "srs": 6.94,
    "pfh": 6.94,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2010650": {
    "agc": "기후에너지환경부",
@@ -718,7 +782,8 @@ window.REGION_CONF = {
    "alm": 5,
    "srs": 5.45,
    "pfh": 5.45,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2011625": {
    "agc": "기후에너지환경부",
@@ -729,7 +794,8 @@ window.REGION_CONF = {
    "alm": 5.1,
    "srs": 6.17,
    "pfh": 6.17,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2011648": {
    "agc": "기후에너지환경부",
@@ -740,7 +806,8 @@ window.REGION_CONF = {
    "alm": 28,
    "srs": 29.06,
    "pfh": 29.06,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2011649": {
    "agc": "기후에너지환경부",
@@ -751,7 +818,8 @@ window.REGION_CONF = {
    "alm": 26,
    "srs": 27.88,
    "pfh": 27.88,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2011650": {
    "agc": "기후에너지환경부",
@@ -762,7 +830,8 @@ window.REGION_CONF = {
    "alm": 13.1,
    "srs": 15.81,
    "pfh": 15.81,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2011660": {
    "agc": "기후에너지환경부",
@@ -773,7 +842,8 @@ window.REGION_CONF = {
    "alm": 9,
    "srs": 10.5,
    "pfh": 10.5,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2011665": {
    "agc": "기후에너지환경부",
@@ -784,7 +854,8 @@ window.REGION_CONF = {
    "alm": 6.1,
    "srs": 7.3,
    "pfh": 7.31,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2011670": {
    "agc": "기후에너지환경부",
@@ -795,19 +866,22 @@ window.REGION_CONF = {
    "alm": 5.9,
    "srs": 6.98,
    "pfh": 6.99,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2012101": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경북 영천시 화북면 입석리",
-   "pfh": 238.5
+   "pfh": 238.5,
+   "cctv": false
   },
   "2012210": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 영천시 자양면 성곡리",
-   "pfh": 159.3
+   "pfh": 159.3,
+   "cctv": false
   },
   "2012603": {
    "agc": "기후에너지환경부",
@@ -818,7 +892,8 @@ window.REGION_CONF = {
    "alm": 3.6,
    "srs": 4.02,
    "pfh": 4.02,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2012625": {
    "agc": "기후에너지환경부",
@@ -829,7 +904,8 @@ window.REGION_CONF = {
    "alm": 3.4,
    "srs": 4.09,
    "pfh": 4.09,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2012628": {
    "agc": "기후에너지환경부",
@@ -840,7 +916,8 @@ window.REGION_CONF = {
    "alm": 4.2,
    "srs": 4.95,
    "pfh": 4.95,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2012638": {
    "agc": "기후에너지환경부",
@@ -851,7 +928,8 @@ window.REGION_CONF = {
    "alm": 3.6,
    "srs": 4.22,
    "pfh": 4.22,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2012640": {
    "agc": "기후에너지환경부",
@@ -862,7 +940,8 @@ window.REGION_CONF = {
    "alm": 6.2,
    "srs": 7.28,
    "pfh": 7.28,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2012643": {
    "agc": "기후에너지환경부",
@@ -873,7 +952,8 @@ window.REGION_CONF = {
    "alm": 6.8,
    "srs": 8.21,
    "pfh": 8.21,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2012648": {
    "agc": "기후에너지환경부",
@@ -884,7 +964,8 @@ window.REGION_CONF = {
    "alm": 4.1,
    "srs": 5.01,
    "pfh": 5.01,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2013640": {
    "agc": "기후에너지환경부",
@@ -895,7 +976,8 @@ window.REGION_CONF = {
    "alm": 4.9,
    "srs": 5.35,
    "pfh": 5.35,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2013650": {
    "agc": "기후에너지환경부",
@@ -906,7 +988,8 @@ window.REGION_CONF = {
    "alm": 4.2,
    "srs": 4.84,
    "pfh": 4.84,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2013685": {
    "agc": "기후에너지환경부",
@@ -917,13 +1000,15 @@ window.REGION_CONF = {
    "alm": 7.2,
    "srs": 8.66,
    "pfh": 8.66,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2021210": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 청도군 운문면 대천리",
-   "pfh": 152.6
+   "pfh": 152.6,
+   "cctv": false
   },
   "2021630": {
    "agc": "한국수자원공사",
@@ -934,7 +1019,8 @@ window.REGION_CONF = {
    "alm": 6.1,
    "srs": 7.76,
    "pfh": 7.76,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2021640": {
    "agc": "기후에너지환경부",
@@ -945,7 +1031,8 @@ window.REGION_CONF = {
    "alm": 6.6,
    "srs": 7.7,
    "pfh": 7.7,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2021643": {
    "agc": "기후에너지환경부",
@@ -956,7 +1043,8 @@ window.REGION_CONF = {
    "alm": 6.5,
    "srs": 7.6,
    "pfh": 7.61,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2101625": {
    "agc": "기후에너지환경부",
@@ -967,7 +1055,20 @@ window.REGION_CONF = {
    "alm": 6.3,
    "srs": 9.04,
    "pfh": 9.04,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
+  },
+  "2101660": {
+   "agc": "기후에너지환경부",
+   "addr": "경상북도 포항시 북구 기계면  인비리 1321-1",
+   "gdt": 68.944,
+   "att": 3.2,
+   "wrn": 3.7,
+   "alm": 4.3,
+   "srs": 4.89,
+   "pfh": 4.89,
+   "fstn": false,
+   "cctv": false
   },
   "2101668": {
    "agc": "기후에너지환경부",
@@ -978,7 +1079,8 @@ window.REGION_CONF = {
    "alm": 4.4,
    "srs": 4.89,
    "pfh": 4.89,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2101675": {
    "agc": "기후에너지환경부",
@@ -989,7 +1091,20 @@ window.REGION_CONF = {
    "alm": 10,
    "srs": 13.47,
    "pfh": 13.47,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
+  },
+  "2101687": {
+   "agc": "기후에너지환경부",
+   "addr": "경상북도 포항시 남구 연일읍  오천리 390-1",
+   "gdt": -0.123,
+   "att": 3.4,
+   "wrn": 4.4,
+   "alm": 5.4,
+   "srs": 6.4,
+   "pfh": 6.4,
+   "fstn": false,
+   "cctv": false
   },
   "2101690": {
    "agc": "기후에너지환경부",
@@ -1000,7 +1115,8 @@ window.REGION_CONF = {
    "alm": 5.8,
    "srs": 6.75,
    "pfh": 6.75,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2401611": {
    "agc": "기후에너지환경부",
@@ -1011,7 +1127,8 @@ window.REGION_CONF = {
    "alm": 4.7,
    "srs": 5.25,
    "pfh": 5.25,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2401616": {
    "agc": "기후에너지환경부",
@@ -1022,7 +1139,8 @@ window.REGION_CONF = {
    "alm": 4.5,
    "srs": 5.45,
    "pfh": 5.45,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2401650": {
    "agc": "기후에너지환경부",
@@ -1033,7 +1151,8 @@ window.REGION_CONF = {
    "alm": 6,
    "srs": 6.98,
    "pfh": 6.98,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2401690": {
    "agc": "기후에너지환경부",
@@ -1044,7 +1163,8 @@ window.REGION_CONF = {
    "alm": 4.9,
    "srs": 5.57,
    "pfh": 5.57,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2401692": {
    "agc": "기후에너지환경부",
@@ -1055,7 +1175,8 @@ window.REGION_CONF = {
    "alm": 4.2,
    "srs": 4.81,
    "pfh": 4.81,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2402630": {
    "agc": "기후에너지환경부",
@@ -1066,13 +1187,27 @@ window.REGION_CONF = {
    "alm": 4.9,
    "srs": 5.78,
    "pfh": 5.78,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
+  },
+  "2402680": {
+   "agc": "기후에너지환경부",
+   "addr": "경상북도 포항시 북구 흥해읍  용천리 1333-1 (곡강교)",
+   "gdt": 9.466,
+   "att": 2.5,
+   "wrn": 3.1,
+   "alm": 3.6,
+   "srs": 4.15,
+   "pfh": 4.15,
+   "fstn": false,
+   "cctv": true
   },
   "2403201": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 경주시 감포읍 오류리",
-   "pfh": 41.2
+   "pfh": 41.2,
+   "cctv": false
   },
   "2403620": {
    "agc": "기후에너지환경부",
@@ -1083,7 +1218,8 @@ window.REGION_CONF = {
    "alm": 3.6,
    "srs": 4.52,
    "pfh": 4.52,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   }
  }
 };

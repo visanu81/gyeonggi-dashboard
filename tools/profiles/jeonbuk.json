@@ -3,8 +3,8 @@
  "label": "전북",
  "title": "전북 기상·재난 상황판",
  "full": "전북특별자치도",
- "home": "전주",
- "home_office": "전주소방서",
+ "home": "전주완산",
+ "home_office": "전주완산소방서",
  "host": "weather.visanu81.workers.dev",
  "data_file": "data-jeonbuk.js",
  "map_file": "map-geo-jeonbuk.js",
@@ -30,9 +30,28 @@
  "kostat": [
   "35"
  ],
- "map_alias": {},
- "unit_alias": {},
+ "map_alias": {
+  "전주완산": [
+   "전주시완산구"
+  ],
+  "전주덕진": [
+   "전주시덕진구"
+  ]
+ },
+ "alias": {
+  "전주덕진": "전주완산"
+ },
+ "splits": {
+  "전주": [
+   "전주완산",
+   "전주덕진"
+  ]
+ },
+ "unit_alias": {
+  "전주": "전주완산"
+ },
  "map_any_prefix": [],
+ "map_inset_units": [],
  "regions": [
   {
    "name": "고창",
@@ -134,15 +153,6 @@
    "admin": "장수군"
   },
   {
-   "name": "전주",
-   "nx": 63,
-   "ny": 89,
-   "sgg": "5211000000",
-   "lat": 35.84092,
-   "lon": 127.11718,
-   "admin": "전주시"
-  },
-  {
    "name": "정읍",
    "nx": 58,
    "ny": 83,
@@ -159,10 +169,111 @@
    "lat": 35.76036,
    "lon": 127.43743,
    "admin": "진안군"
+  },
+  {
+   "name": "전주완산",
+   "nx": 63,
+   "ny": 89,
+   "sgg": "5211100000",
+   "lat": 35.82149,
+   "lon": 127.15497,
+   "admin": "전주시"
+  }
+ ],
+ "stations_all": [
+  {
+   "name": "고창",
+   "lat": 35.34824,
+   "lon": 126.599,
+   "admin": "고창군"
+  },
+  {
+   "name": "군산",
+   "lat": 36.0053,
+   "lon": 126.76135,
+   "admin": "군산시"
+  },
+  {
+   "name": "김제",
+   "lat": 35.80905,
+   "lon": 126.87765,
+   "admin": "김제시"
+  },
+  {
+   "name": "남원",
+   "lat": 35.4213,
+   "lon": 127.39652,
+   "admin": "남원시"
+  },
+  {
+   "name": "무주",
+   "lat": 36.00168,
+   "lon": 127.66836,
+   "admin": "무주군"
+  },
+  {
+   "name": "부안",
+   "lat": 35.72961,
+   "lon": 126.71657,
+   "admin": "부안군"
+  },
+  {
+   "name": "순창",
+   "lat": 35.37831,
+   "lon": 127.06684,
+   "admin": "순창군"
+  },
+  {
+   "name": "완주",
+   "lat": 35.98551,
+   "lon": 127.24573,
+   "admin": "완주군"
+  },
+  {
+   "name": "익산",
+   "lat": 35.93807,
+   "lon": 126.99252,
+   "admin": "익산시"
+  },
+  {
+   "name": "임실",
+   "lat": 35.61203,
+   "lon": 127.28556,
+   "admin": "임실군"
+  },
+  {
+   "name": "장수",
+   "lat": 35.65696,
+   "lon": 127.52031,
+   "admin": "장수군"
+  },
+  {
+   "name": "정읍",
+   "lat": 35.56333,
+   "lon": 126.83904,
+   "admin": "정읍시"
+  },
+  {
+   "name": "진안",
+   "lat": 35.76036,
+   "lon": 127.43743,
+   "admin": "진안군"
+  },
+  {
+   "name": "전주완산",
+   "lat": 35.82149,
+   "lon": 127.15497,
+   "admin": "전주시"
+  },
+  {
+   "name": "전주덕진",
+   "lat": 35.83491,
+   "lon": 127.08488,
+   "admin": "전주시"
   }
  ],
  "pm_stations": {
-  "전주": "팔복동",
+  "전주완산": "노송동",
   "군산": "사정동",
   "익산": "팔봉동",
   "정읍": "연지동",
@@ -175,7 +286,8 @@
   "임실": "임실읍",
   "무주": "무주읍",
   "순창": "순창읍",
-  "장수": "장수읍"
+  "장수": "장수읍",
+  "전주덕진": "팔복동"
  },
  "aws_stations": {
   "고창": [
@@ -352,20 +464,6 @@
     "번암"
    ]
   ],
-  "전주": [
-   [
-    146,
-    "전주"
-   ],
-   [
-    341,
-    "서전주"
-   ],
-   [
-    864,
-    "완산"
-   ]
-  ],
   "정읍": [
    [
     245,
@@ -393,9 +491,102 @@
     758,
     "동향"
    ]
+  ],
+  "전주완산": [
+   [
+    864,
+    "완산"
+   ]
+  ],
+  "전주덕진": [
+   [
+    146,
+    "전주"
+   ],
+   [
+    341,
+    "서전주"
+   ]
   ]
  },
  "aws_fallback": {},
+ "aws_neighbors": {
+  "고창": [
+   "정읍",
+   "순창",
+   "부안"
+  ],
+  "군산": [
+   "익산",
+   "김제",
+   "부안"
+  ],
+  "김제": [
+   "부안",
+   "익산",
+   "전주덕진"
+  ],
+  "남원": [
+   "임실",
+   "장수",
+   "순창"
+  ],
+  "무주": [
+   "진안",
+   "완주",
+   "장수"
+  ],
+  "부안": [
+   "김제",
+   "정읍",
+   "군산"
+  ],
+  "순창": [
+   "정읍",
+   "남원",
+   "임실"
+  ],
+  "완주": [
+   "전주완산",
+   "전주덕진",
+   "익산"
+  ],
+  "익산": [
+   "전주덕진",
+   "김제",
+   "전주완산"
+  ],
+  "임실": [
+   "진안",
+   "장수",
+   "남원"
+  ],
+  "장수": [
+   "진안",
+   "임실",
+   "남원"
+  ],
+  "정읍": [
+   "부안",
+   "김제",
+   "순창"
+  ],
+  "진안": [
+   "장수",
+   "임실",
+   "전주완산"
+  ],
+  "전주완산": [
+   "전주덕진",
+   "익산",
+   "완주"
+  ],
+  "전주덕진": [
+   "전주완산",
+   "익산",
+   "김제"
+  ]
+ },
  "river_stations": [
   {
    "code": "5301660",
@@ -403,7 +594,7 @@
    "sigun": "고창",
    "warning": 2.5,
    "danger": 4.8,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -448,7 +639,7 @@
    "sigun": "남원",
    "warning": 3.5,
    "danger": 7.4,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -457,7 +648,7 @@
    "sigun": "남원",
    "warning": 1.0,
    "danger": 3.4,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -466,7 +657,7 @@
    "sigun": "남원",
    "warning": 2.5,
    "danger": 5.3,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -475,7 +666,7 @@
    "sigun": "무주",
    "warning": 2.3,
    "danger": 5.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -512,7 +703,7 @@
    "sigun": "순창",
    "warning": 2.9,
    "danger": 5.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -521,7 +712,7 @@
    "sigun": "순창",
    "warning": 3.0,
    "danger": 7.3,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -530,7 +721,7 @@
    "sigun": "순창",
    "warning": 2.4,
    "danger": 4.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -539,7 +730,7 @@
    "sigun": "완주",
    "warning": 1.2,
    "danger": 4.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -548,7 +739,7 @@
    "sigun": "완주",
    "warning": 1.6,
    "danger": 3.4,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -557,7 +748,7 @@
    "sigun": "완주",
    "warning": 4.4,
    "danger": 8.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -593,7 +784,7 @@
    "sigun": "임실",
    "warning": 2.7,
    "danger": 3.7,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -602,7 +793,7 @@
    "sigun": "임실",
    "warning": 2.2,
    "danger": 5.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -611,7 +802,7 @@
    "sigun": "임실",
    "warning": 2.2,
    "danger": 4.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -620,7 +811,7 @@
    "sigun": "장수",
    "warning": 1.5,
    "danger": 3.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -629,7 +820,7 @@
    "sigun": "장수",
    "warning": 1.7,
    "danger": 3.4,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -642,39 +833,12 @@
    "api": "waterlevel"
   },
   {
-   "code": "3301654",
-   "name": "삼천 (전주 세내교)",
-   "sigun": "전주",
-   "warning": 3.9,
-   "danger": 5.8,
-   "has_cctv": false,
-   "api": "waterlevel"
-  },
-  {
-   "code": "3301657",
-   "name": "전주천 (전주 서천교)",
-   "sigun": "전주",
-   "warning": 2.3,
-   "danger": 5.0,
-   "has_cctv": false,
-   "api": "waterlevel"
-  },
-  {
-   "code": "3301665",
-   "name": "전주천 (전주 미산교)",
-   "sigun": "전주",
-   "warning": 3.2,
-   "danger": 5.9,
-   "has_cctv": false,
-   "api": "waterlevel"
-  },
-  {
    "code": "3302620",
    "name": "동진강 (정읍 거산교)",
    "sigun": "정읍",
    "warning": 4.4,
    "danger": 6.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -683,7 +847,7 @@
    "sigun": "정읍",
    "warning": 4.5,
    "danger": 6.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -692,7 +856,7 @@
    "sigun": "정읍",
    "warning": 2.0,
    "danger": 4.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -701,7 +865,7 @@
    "sigun": "진안",
    "warning": 3.0,
    "danger": 5.7,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -720,6 +884,60 @@
    "warning": 2.5,
    "danger": 4.0,
    "has_cctv": false,
+   "api": "waterlevel"
+  },
+  {
+   "code": "3301654",
+   "name": "삼천 (전주완산 세내교)",
+   "sigun": "전주완산",
+   "warning": 3.9,
+   "danger": 5.8,
+   "has_cctv": true,
+   "api": "waterlevel"
+  },
+  {
+   "code": "3301657",
+   "name": "전주천 (전주완산 서천교)",
+   "sigun": "전주완산",
+   "warning": 2.3,
+   "danger": 5.0,
+   "has_cctv": true,
+   "api": "waterlevel"
+  },
+  {
+   "code": "3301665",
+   "name": "전주천 (전주완산 미산교)",
+   "sigun": "전주완산",
+   "warning": 3.2,
+   "danger": 5.9,
+   "has_cctv": true,
+   "api": "waterlevel"
+  },
+  {
+   "code": "3301655",
+   "name": "삼천 (전주완산 서곡교)",
+   "sigun": "전주완산",
+   "warning": 2.1,
+   "danger": 3.9,
+   "has_cctv": false,
+   "api": "waterlevel"
+  },
+  {
+   "code": "3301656",
+   "name": "전주완산 효자2교",
+   "sigun": "전주완산",
+   "warning": 1.2,
+   "danger": 2.3,
+   "has_cctv": false,
+   "api": "waterlevel"
+  },
+  {
+   "code": "3301637",
+   "name": "전주덕진 안덕교",
+   "sigun": "전주덕진",
+   "warning": 1.0,
+   "danger": 2.5,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -755,7 +973,8 @@
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "전라북도 진안군 안천면 삼락리",
-   "pfh": 265.5
+   "pfh": 265.5,
+   "cctv": false
   },
   "3001605": {
    "agc": "기후에너지환경부",
@@ -766,7 +985,8 @@
    "alm": 3.5,
    "srs": 4.24,
    "pfh": 4.24,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3001610": {
    "agc": "기후에너지환경부",
@@ -777,7 +997,8 @@
    "alm": 3.4,
    "srs": 3.98,
    "pfh": 3.98,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "3001616": {
    "agc": "기후에너지환경부",
@@ -788,7 +1009,8 @@
    "alm": 2.2,
    "srs": 2.6,
    "pfh": 2.6,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3001633": {
    "agc": "기후에너지환경부",
@@ -799,7 +1021,8 @@
    "alm": 4,
    "srs": 4.97,
    "pfh": 4.97,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3001654": {
    "agc": "기후에너지환경부",
@@ -810,7 +1033,8 @@
    "alm": 4,
    "srs": 4.68,
    "pfh": 4.68,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3002655": {
    "agc": "기후에너지환경부",
@@ -821,7 +1045,8 @@
    "alm": 5.4,
    "srs": 6.65,
    "pfh": 6.65,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3003617": {
    "agc": "기후에너지환경부",
@@ -832,7 +1057,8 @@
    "alm": 5.1,
    "srs": 6.05,
    "pfh": 6.05,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3003680": {
    "agc": "기후에너지환경부",
@@ -843,13 +1069,15 @@
    "alm": 5,
    "srs": 6.26,
    "pfh": 6.26,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3014410": {
    "kind": "dam",
    "agc": "한국농어촌공사",
    "addr": "전라북도 군산시 성산면 성덕리",
-   "pfh": 4.62
+   "pfh": 4.62,
+   "cctv": false
   },
   "3014632": {
    "agc": "기후에너지환경부",
@@ -860,7 +1088,8 @@
    "alm": 4.4,
    "srs": 5.43,
    "pfh": 5.43,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3014639": {
    "agc": "기후에너지환경부",
@@ -871,7 +1100,8 @@
    "alm": 7.1,
    "srs": 7.98,
    "pfh": 7.98,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3203690": {
    "agc": "기후에너지환경부",
@@ -882,7 +1112,8 @@
    "alm": 3.2,
    "srs": 3.5,
    "pfh": 3.59,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3301630": {
    "agc": "기후에너지환경부",
@@ -893,7 +1124,20 @@
    "alm": 4,
    "srs": 4.3,
    "pfh": 4.33,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
+  },
+  "3301637": {
+   "agc": "기후에너지환경부",
+   "addr": "전북특별자치도 전주시 덕진구 산정동 807-2",
+   "gdt": 45.133,
+   "att": 1,
+   "wrn": 1.9,
+   "alm": 2.5,
+   "srs": 3,
+   "pfh": 3.07,
+   "fstn": false,
+   "cctv": true
   },
   "3301640": {
    "agc": "기후에너지환경부",
@@ -904,7 +1148,8 @@
    "alm": 3.4,
    "srs": 3.8,
    "pfh": 3.83,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3301654": {
    "agc": "기후에너지환경부",
@@ -915,7 +1160,32 @@
    "alm": 5.8,
    "srs": 6.3,
    "pfh": 6.34,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
+  },
+  "3301655": {
+   "agc": "기후에너지환경부",
+   "addr": "전북특별자치도 전주시 완산구 효자동 서곡교",
+   "gdt": 17.248,
+   "att": 2.1,
+   "wrn": 3,
+   "alm": 3.9,
+   "srs": 4.7,
+   "pfh": 4.7,
+   "fstn": false,
+   "cctv": false
+  },
+  "3301656": {
+   "agc": "기후에너지환경부",
+   "addr": "전북특별자치도 전주시 완산구 효자동2가 785-12",
+   "gdt": 28.67,
+   "att": 1.2,
+   "wrn": 1.8,
+   "alm": 2.3,
+   "srs": 2.7,
+   "pfh": 2.77,
+   "fstn": false,
+   "cctv": false
   },
   "3301657": {
    "agc": "기후에너지환경부",
@@ -926,7 +1196,8 @@
    "alm": 5,
    "srs": 5.7,
    "pfh": 5.74,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3301665": {
    "agc": "기후에너지환경부",
@@ -937,7 +1208,8 @@
    "alm": 5.9,
    "srs": 6.5,
    "pfh": 6.53,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3301670": {
    "agc": "기후에너지환경부",
@@ -948,7 +1220,8 @@
    "alm": 8,
    "srs": 8.7,
    "pfh": 8.73,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3301675": {
    "agc": "기후에너지환경부",
@@ -959,7 +1232,8 @@
    "alm": 5.8,
    "srs": 7.2,
    "pfh": 7.29,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3302620": {
    "agc": "기후에너지환경부",
@@ -970,7 +1244,8 @@
    "alm": 6.5,
    "srs": 7.3,
    "pfh": 7.39,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3302630": {
    "agc": "기후에너지환경부",
@@ -981,7 +1256,8 @@
    "alm": 6.5,
    "srs": 6.9,
    "pfh": 6.91,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3302645": {
    "agc": "기후에너지환경부",
@@ -992,7 +1268,8 @@
    "alm": 4,
    "srs": 4.4,
    "pfh": 4.46,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3302665": {
    "agc": "기후에너지환경부",
@@ -1003,7 +1280,8 @@
    "alm": 5.9,
    "srs": 6.9,
    "pfh": 6.93,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3302680": {
    "agc": "기후에너지환경부",
@@ -1014,13 +1292,15 @@
    "alm": 4.4,
    "srs": 5.3,
    "pfh": 5.71,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "4001110": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "전라북도 임실군 강진면 용수리",
-   "pfh": 197.7
+   "pfh": 197.7,
+   "cctv": false
   },
   "4001610": {
    "agc": "기후에너지환경부",
@@ -1031,7 +1311,8 @@
    "alm": 5.7,
    "srs": 6.2,
    "pfh": 6.97,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4002620": {
    "agc": "기후에너지환경부",
@@ -1042,7 +1323,8 @@
    "alm": 3.7,
    "srs": 4.4,
    "pfh": 5.23,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4002640": {
    "agc": "기후에너지환경부",
@@ -1053,7 +1335,8 @@
    "alm": 5.5,
    "srs": 6.1,
    "pfh": 6.17,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4003650": {
    "agc": "기후에너지환경부",
@@ -1064,7 +1347,8 @@
    "alm": 4.5,
    "srs": 5.2,
    "pfh": 5.27,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4003690": {
    "agc": "기후에너지환경부",
@@ -1075,7 +1359,8 @@
    "alm": 5.1,
    "srs": 5.8,
    "pfh": 6.17,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4004615": {
    "agc": "기후에너지환경부",
@@ -1086,7 +1371,8 @@
    "alm": 7.3,
    "srs": 8.3,
    "pfh": 8.36,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4004630": {
    "agc": "기후에너지환경부",
@@ -1097,7 +1383,8 @@
    "alm": 4.1,
    "srs": 4.4,
    "pfh": 4.47,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4004690": {
    "agc": "기후에너지환경부",
@@ -1108,7 +1395,8 @@
    "alm": 7.4,
    "srs": 9,
    "pfh": 9.01,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4005645": {
    "agc": "기후에너지환경부",
@@ -1119,7 +1407,8 @@
    "alm": 3.4,
    "srs": 3.9,
    "pfh": 3.91,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4005670": {
    "agc": "기후에너지환경부",
@@ -1130,7 +1419,8 @@
    "alm": 5.3,
    "srs": 6.6,
    "pfh": 6.63,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5301635": {
    "agc": "기후에너지환경부",
@@ -1141,7 +1431,8 @@
    "alm": 3.3,
    "srs": 4,
    "pfh": 5.51,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "5301660": {
    "agc": "기후에너지환경부",
@@ -1152,7 +1443,8 @@
    "alm": 4.8,
    "srs": 5.7,
    "pfh": 5.7,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   }
  },
  "keywords": [
@@ -1170,9 +1462,11 @@
   "익산",
   "임실",
   "장수",
-  "전주",
   "정읍",
-  "진안"
+  "진안",
+  "전주완산",
+  "전주덕진",
+  "전주"
  ],
  "reg_map": {
   "L1060100": "고창",
@@ -1185,7 +1479,7 @@
   "L1061000": "순창",
   "L1061100": "익산",
   "L1061200": "정읍",
-  "L1061300": "전주",
+  "L1061300": "전주완산",
   "L1061400": "남원",
   "L1061500": "부안",
   "L1061600": "군산",
@@ -1202,7 +1496,8 @@
   "무주",
   "완주",
   "익산",
-  "전주",
+  "전주덕진",
+  "전주완산",
   "김제",
   "진안",
   "부안",
@@ -1225,9 +1520,9 @@
   "익산시": "익산",
   "임실군": "임실",
   "장수군": "장수",
-  "전주시": "전주",
   "정읍시": "정읍",
-  "진안군": "진안"
+  "진안군": "진안",
+  "전주시": "전주완산"
  },
  "fire_groups": {
   "군산·무주·완주": [
@@ -1235,9 +1530,9 @@
    "무주",
    "완주"
   ],
-  "익산·전주·김제": [
+  "익산·전주완산·김제": [
    "익산",
-   "전주",
+   "전주완산",
    "김제"
   ],
   "진안·부안·장수": [
@@ -1287,7 +1582,8 @@
   "장수",
   "전라북도",
   "전북",
-  "전주",
+  "전주덕진",
+  "전주완산",
   "전주천",
   "정읍",
   "정읍천",
@@ -1318,81 +1614,10 @@
   "익산": "익산시",
   "임실": "임실군",
   "장수": "장수군",
-  "전주": "전주시",
   "정읍": "정읍시",
-  "진안": "진안군"
+  "진안": "진안군",
+  "전주완산": "전주시",
+  "전주덕진": "전주시"
  },
- "generated": "2026-09-18 17:47",
- "aws_neighbors": {
-  "고창": [
-   "정읍",
-   "순창",
-   "부안"
-  ],
-  "군산": [
-   "익산",
-   "김제",
-   "부안"
-  ],
-  "김제": [
-   "부안",
-   "익산",
-   "전주"
-  ],
-  "남원": [
-   "임실",
-   "장수",
-   "순창"
-  ],
-  "무주": [
-   "진안",
-   "완주",
-   "장수"
-  ],
-  "부안": [
-   "김제",
-   "정읍",
-   "군산"
-  ],
-  "순창": [
-   "정읍",
-   "남원",
-   "임실"
-  ],
-  "완주": [
-   "전주",
-   "익산",
-   "진안"
-  ],
-  "익산": [
-   "전주",
-   "김제",
-   "군산"
-  ],
-  "임실": [
-   "진안",
-   "장수",
-   "남원"
-  ],
-  "장수": [
-   "진안",
-   "임실",
-   "남원"
-  ],
-  "전주": [
-   "익산",
-   "완주",
-   "김제"
-  ],
-  "정읍": [
-   "부안",
-   "김제",
-   "순창"
-  ],
-  "진안": [
-   "장수",
-   "임실",
-   "전주"
-  ]
- }
+ "generated": "2026-09-20 07:33"
 }

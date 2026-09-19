@@ -79,13 +79,24 @@ def build(key):
         raise SystemExit(f'지도에 없는 시군: {missing}')
     pos, cols = build_pos(cent, order)
 
+    alias = prof.get('alias') or {}
     fire_group = {}
     for g, members in prof['fire_groups'].items():
         for m in members:
             fire_group[m] = g
+    for sub, parent in alias.items():             # 분리 소방서는 시 본체의 산불 묶음
+        if parent in fire_group:
+            fire_group[sub] = fire_group[parent]
+    # 분리 소방서의 관할 하천 — 시군 배분 대신 관측소 코드로 직접(경기 riverCodes 와 같은 규칙)
+    river_codes = {}
+    for parent, subs in (prof.get('splits') or {}).items():
+        for s in subs:
+            river_codes[s] = sorted({st['code'] for st in prof['river_stations'] if st['sigun'] == s})
     label = prof['label']
     admins = list(prof['admin'].values())
-    if any(a.endswith('구') for a in admins):
+    if prof.get('splits'):
+        count_text = f'{len(order)}개 관서'
+    elif any(a.endswith('구') for a in admins):
         count_text = f'{len(order)}개 ' + ('구·군' if any(a.endswith('군') for a in admins) else '구')
     else:
         count_text = f'{len(order)}개 시군'
@@ -105,7 +116,8 @@ def build(key):
         'admin': prof['admin'],
         'riverMatch': {a: [a] for a in order},
         'fireGroup': fire_group,
-        'alias': {},
+        'alias': alias,
+        'riverCodes': river_codes,
         'floodKeywords': sorted(prof['flood_keywords']),
         'topRiversTitle': '주요 감시',
         'topRivers': [],

@@ -32,9 +32,28 @@
  "kostat": [
   "37"
  ],
- "map_alias": {},
- "unit_alias": {},
+ "map_alias": {
+  "포항남부": [
+   "포항시남구"
+  ],
+  "포항북부": [
+   "포항시북구"
+  ]
+ },
+ "alias": {
+  "포항북부": "포항남부"
+ },
+ "splits": {
+  "포항": [
+   "포항남부",
+   "포항북부"
+  ]
+ },
+ "unit_alias": {
+  "포항": "포항남부"
+ },
  "map_any_prefix": [],
+ "map_inset_units": [],
  "regions": [
   {
    "name": "경산",
@@ -226,12 +245,152 @@
    "admin": "칠곡군"
   },
   {
-   "name": "포항",
-   "nx": 102,
-   "ny": 95,
-   "sgg": "4711000000",
-   "lat": 36.03201,
-   "lon": 129.38002,
+   "name": "포항남부",
+   "nx": 104,
+   "ny": 94,
+   "sgg": "4711100000",
+   "lat": 36.0006,
+   "lon": 129.45864,
+   "admin": "포항시"
+  }
+ ],
+ "stations_all": [
+  {
+   "name": "경산",
+   "lat": 35.82425,
+   "lon": 128.743,
+   "admin": "경산시"
+  },
+  {
+   "name": "경주",
+   "lat": 35.78164,
+   "lon": 129.2665,
+   "admin": "경주시"
+  },
+  {
+   "name": "고령",
+   "lat": 35.69603,
+   "lon": 128.28214,
+   "admin": "고령군"
+  },
+  {
+   "name": "구미",
+   "lat": 36.13055,
+   "lon": 128.32055,
+   "admin": "구미시"
+  },
+  {
+   "name": "김천",
+   "lat": 36.11987,
+   "lon": 128.1552,
+   "admin": "김천시"
+  },
+  {
+   "name": "문경",
+   "lat": 36.62727,
+   "lon": 128.14879,
+   "admin": "문경시"
+  },
+  {
+   "name": "봉화",
+   "lat": 36.94361,
+   "lon": 128.91449,
+   "admin": "봉화군"
+  },
+  {
+   "name": "상주",
+   "lat": 36.40837,
+   "lon": 128.15741,
+   "admin": "상주시"
+  },
+  {
+   "name": "성주",
+   "lat": 35.92552,
+   "lon": 128.2985,
+   "admin": "성주군"
+  },
+  {
+   "name": "안동",
+   "lat": 36.57293,
+   "lon": 128.70733,
+   "admin": "안동시"
+  },
+  {
+   "name": "영덕",
+   "lat": 36.53337,
+   "lon": 129.40926,
+   "admin": "영덕군"
+  },
+  {
+   "name": "영양",
+   "lat": 36.62497,
+   "lon": 129.088,
+   "admin": "영양군"
+  },
+  {
+   "name": "영주",
+   "lat": 36.87183,
+   "lon": 128.51687,
+   "admin": "영주시"
+  },
+  {
+   "name": "영천",
+   "lat": 35.97742,
+   "lon": 128.9514,
+   "admin": "영천시"
+  },
+  {
+   "name": "예천",
+   "lat": 36.65996,
+   "lon": 128.46461,
+   "admin": "예천군"
+  },
+  {
+   "name": "울릉",
+   "lat": 37.44335,
+   "lon": 131.11295,
+   "admin": "울릉군"
+  },
+  {
+   "name": "울진",
+   "lat": 36.99176,
+   "lon": 129.41278,
+   "admin": "울진군"
+  },
+  {
+   "name": "의성",
+   "lat": 36.3561,
+   "lon": 128.68864,
+   "admin": "의성군"
+  },
+  {
+   "name": "청도",
+   "lat": 35.65404,
+   "lon": 128.73183,
+   "admin": "청도군"
+  },
+  {
+   "name": "청송",
+   "lat": 36.36922,
+   "lon": 129.02578,
+   "admin": "청송군"
+  },
+  {
+   "name": "칠곡",
+   "lat": 36.03977,
+   "lon": 128.3813,
+   "admin": "칠곡군"
+  },
+  {
+   "name": "포항남부",
+   "lat": 36.0006,
+   "lon": 129.45864,
+   "admin": "포항시"
+  },
+  {
+   "name": "포항북부",
+   "lat": 36.14624,
+   "lon": 129.21104,
    "admin": "포항시"
   }
  ],
@@ -245,7 +404,8 @@
   "영양": "영양군",
   "예천": "예천군",
   "청도": "화양읍",
-  "포항": "송도동",
+  "포항남부": "청림동",
+  "포항북부": "장량동",
   "경주": "보덕동",
   "김천": "율곡동",
   "안동": "명륜동",
@@ -558,7 +718,7 @@
     "팔공산"
    ]
   ],
-  "포항": [
+  "포항남부": [
    [
     138,
     "포항"
@@ -566,14 +726,6 @@
    [
     139,
     "포항(공)"
-   ],
-   [
-    804,
-    "청하"
-   ],
-   [
-    805,
-    "죽장"
    ],
    [
     808,
@@ -584,16 +736,143 @@
     "구룡포"
    ],
    [
-    830,
-    "기계"
-   ],
-   [
     995,
     "오천"
+   ]
+  ],
+  "포항북부": [
+   [
+    804,
+    "청하"
+   ],
+   [
+    805,
+    "죽장"
+   ],
+   [
+    830,
+    "기계"
    ]
   ]
  },
  "aws_fallback": {},
+ "aws_neighbors": {
+  "경산": [
+   "청도",
+   "영천",
+   "칠곡"
+  ],
+  "경주": [
+   "포항남부",
+   "영천",
+   "포항북부"
+  ],
+  "고령": [
+   "성주",
+   "칠곡",
+   "청도"
+  ],
+  "구미": [
+   "칠곡",
+   "김천",
+   "성주"
+  ],
+  "김천": [
+   "구미",
+   "칠곡",
+   "성주"
+  ],
+  "문경": [
+   "상주",
+   "예천",
+   "영주"
+  ],
+  "봉화": [
+   "영주",
+   "영양",
+   "울진"
+  ],
+  "상주": [
+   "문경",
+   "김천",
+   "구미"
+  ],
+  "성주": [
+   "칠곡",
+   "구미",
+   "김천"
+  ],
+  "안동": [
+   "예천",
+   "의성",
+   "영양"
+  ],
+  "영덕": [
+   "영양",
+   "청송",
+   "포항북부"
+  ],
+  "영양": [
+   "청송",
+   "영덕",
+   "안동"
+  ],
+  "영주": [
+   "예천",
+   "봉화",
+   "안동"
+  ],
+  "영천": [
+   "경산",
+   "포항북부",
+   "경주"
+  ],
+  "예천": [
+   "안동",
+   "영주",
+   "문경"
+  ],
+  "울릉": [
+   "울진",
+   "영덕",
+   "영양"
+  ],
+  "울진": [
+   "봉화",
+   "영양",
+   "영덕"
+  ],
+  "의성": [
+   "안동",
+   "청송",
+   "예천"
+  ],
+  "청도": [
+   "경산",
+   "고령",
+   "영천"
+  ],
+  "청송": [
+   "영양",
+   "포항북부",
+   "의성"
+  ],
+  "칠곡": [
+   "구미",
+   "성주",
+   "김천"
+  ],
+  "포항남부": [
+   "포항북부",
+   "경주",
+   "영천"
+  ],
+  "포항북부": [
+   "포항남부",
+   "영천",
+   "청송"
+  ]
+ },
  "river_stations": [
   {
    "code": "2012648",
@@ -601,7 +880,7 @@
    "sigun": "경산",
    "warning": 2.5,
    "danger": 4.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -628,7 +907,7 @@
    "sigun": "경주",
    "warning": 2.78,
    "danger": 6.3,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -637,7 +916,7 @@
    "sigun": "경주",
    "warning": 3.6,
    "danger": 4.4,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -646,7 +925,7 @@
    "sigun": "경주",
    "warning": 7.78,
    "danger": 10.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -655,7 +934,7 @@
    "sigun": "고령",
    "warning": 3.7,
    "danger": 4.9,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -664,7 +943,7 @@
    "sigun": "고령",
    "warning": 3.1,
    "danger": 4.2,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -673,7 +952,7 @@
    "sigun": "고령",
    "warning": 4.1,
    "danger": 7.2,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -682,7 +961,7 @@
    "sigun": "구미",
    "warning": 3.0,
    "danger": 5.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -691,7 +970,7 @@
    "sigun": "구미",
    "warning": 2.21,
    "danger": 5.3,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -709,7 +988,7 @@
    "sigun": "김천",
    "warning": 2.6,
    "danger": 5.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -718,7 +997,7 @@
    "sigun": "김천",
    "warning": 3.2,
    "danger": 4.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -736,7 +1015,7 @@
    "sigun": "문경",
    "warning": 4.3,
    "danger": 6.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -745,7 +1024,7 @@
    "sigun": "문경",
    "warning": 3.2,
    "danger": 4.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -763,7 +1042,7 @@
    "sigun": "봉화",
    "warning": 5.8,
    "danger": 7.9,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -772,7 +1051,7 @@
    "sigun": "봉화",
    "warning": 1.98,
    "danger": 3.9,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -790,7 +1069,7 @@
    "sigun": "상주",
    "warning": 2.8,
    "danger": 3.9,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -799,7 +1078,7 @@
    "sigun": "상주",
    "warning": 2.7,
    "danger": 3.9,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -808,7 +1087,7 @@
    "sigun": "상주",
    "warning": 3.7,
    "danger": 6.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -826,7 +1105,7 @@
    "sigun": "성주",
    "warning": 3.7,
    "danger": 6.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -844,7 +1123,7 @@
    "sigun": "안동",
    "warning": 3.1,
    "danger": 5.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -853,7 +1132,7 @@
    "sigun": "안동",
    "warning": 3.8,
    "danger": 4.7,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -871,7 +1150,7 @@
    "sigun": "영덕",
    "warning": 3.4,
    "danger": 4.9,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -898,7 +1177,7 @@
    "sigun": "영양",
    "warning": 3.7,
    "danger": 5.7,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -925,7 +1204,7 @@
    "sigun": "영주",
    "warning": 4.9,
    "danger": 8.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -952,7 +1231,7 @@
    "sigun": "영천",
    "warning": 2.2,
    "danger": 3.4,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -961,7 +1240,7 @@
    "sigun": "영천",
    "warning": 2.7,
    "danger": 4.2,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -970,7 +1249,7 @@
    "sigun": "영천",
    "warning": 3.31,
    "danger": 6.2,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -979,7 +1258,7 @@
    "sigun": "예천",
    "warning": 4.1,
    "danger": 6.6,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -988,7 +1267,7 @@
    "sigun": "예천",
    "warning": 2.6,
    "danger": 3.8,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -997,7 +1276,7 @@
    "sigun": "예천",
    "warning": 4.1,
    "danger": 7.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1006,7 +1285,7 @@
    "sigun": "울진",
    "warning": 2.9,
    "danger": 4.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1015,7 +1294,7 @@
    "sigun": "울진",
    "warning": 4.2,
    "danger": 6.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1033,7 +1312,7 @@
    "sigun": "의성",
    "warning": 2.8,
    "danger": 4.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1042,7 +1321,7 @@
    "sigun": "의성",
    "warning": 4.83,
    "danger": 8.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1051,7 +1330,7 @@
    "sigun": "의성",
    "warning": 8.3,
    "danger": 10.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1060,7 +1339,7 @@
    "sigun": "청도",
    "warning": 4.5,
    "danger": 6.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1069,7 +1348,7 @@
    "sigun": "청도",
    "warning": 4.7,
    "danger": 6.6,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1096,7 +1375,7 @@
    "sigun": "칠곡",
    "warning": 8.46,
    "danger": 13.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1119,29 +1398,56 @@
   },
   {
    "code": "2101690",
-   "name": "형산강 (포항 형산교)",
-   "sigun": "포항",
+   "name": "형산강 (포항남부 형산교)",
+   "sigun": "포항남부",
    "warning": 4.38,
    "danger": 5.8,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
    "code": "2403620",
-   "name": "냉천 (포항 문덕3교)",
-   "sigun": "포항",
+   "name": "냉천 (포항남부 문덕3교)",
+   "sigun": "포항남부",
    "warning": 2.1,
    "danger": 3.6,
+   "has_cctv": true,
+   "api": "waterlevel"
+  },
+  {
+   "code": "2101687",
+   "name": "칠성천 (포항남부 남천교)",
+   "sigun": "포항남부",
+   "warning": 3.4,
+   "danger": 5.4,
    "has_cctv": false,
    "api": "waterlevel"
   },
   {
    "code": "2012603",
-   "name": "가사천 (포항 송내교)",
-   "sigun": "포항",
+   "name": "가사천 (포항북부 송내교)",
+   "sigun": "포항북부",
    "warning": 2.8,
    "danger": 3.6,
    "has_cctv": false,
+   "api": "waterlevel"
+  },
+  {
+   "code": "2101660",
+   "name": "기계천 (포항북부 인비교)",
+   "sigun": "포항북부",
+   "warning": 3.2,
+   "danger": 4.3,
+   "has_cctv": false,
+   "api": "waterlevel"
+  },
+  {
+   "code": "2402680",
+   "name": "곡강천 (포항북부 곡강교)",
+   "sigun": "포항북부",
+   "warning": 2.5,
+   "danger": 3.6,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1249,13 +1555,15 @@
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 안동시 성곡동",
-   "pfh": 161.7
+   "pfh": 161.7,
+   "cctv": false
   },
   "2001611": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 안동시 상아동",
-   "pfh": 98.8
+   "pfh": 98.8,
+   "cctv": false
   },
   "2001615": {
    "agc": "기후에너지환경부",
@@ -1266,7 +1574,8 @@
    "alm": 7.2,
    "srs": 8.02,
    "pfh": 8.02,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2001628": {
    "agc": "기후에너지환경부",
@@ -1277,7 +1586,8 @@
    "alm": 7.9,
    "srs": 9.05,
    "pfh": 9.05,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2001668": {
    "agc": "기후에너지환경부",
@@ -1288,19 +1598,22 @@
    "alm": 4.5,
    "srs": 5.09,
    "pfh": 5.09,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2002110": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 안동시 임하면 임하리",
-   "pfh": 164.7
+   "pfh": 164.7,
+   "cctv": false
   },
   "2002111": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경북 청송군 안덕면 성재리",
-   "pfh": 364.9
+   "pfh": 364.9,
+   "cctv": false
   },
   "2002604": {
    "agc": "기후에너지환경부",
@@ -1311,7 +1624,8 @@
    "alm": 4.9,
    "srs": 5.51,
    "pfh": 5.51,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2002607": {
    "agc": "기후에너지환경부",
@@ -1322,13 +1636,15 @@
    "alm": 4.4,
    "srs": 5.02,
    "pfh": 5.02,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2002610": {
    "agc": "한국수자원공사",
    "addr": "경상북도 청송군 현서면 백자리 무명교",
    "gdt": 361.519,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2002634": {
    "agc": "기후에너지환경부",
@@ -1339,7 +1655,8 @@
    "alm": 5.7,
    "srs": 6.83,
    "pfh": 6.83,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2002650": {
    "agc": "기후에너지환경부",
@@ -1350,7 +1667,8 @@
    "alm": 5,
    "srs": 5.8,
    "pfh": 5.8,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2002685": {
    "agc": "기후에너지환경부",
@@ -1361,7 +1679,8 @@
    "alm": 5,
    "srs": 5.81,
    "pfh": 5.81,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2003640": {
    "agc": "기후에너지환경부",
@@ -1372,7 +1691,8 @@
    "alm": 4.7,
    "srs": 5.29,
    "pfh": 5.29,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2003670": {
    "agc": "기후에너지환경부",
@@ -1383,13 +1703,15 @@
    "alm": 6.6,
    "srs": 8.62,
    "pfh": 8.62,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2004101": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 영주시 평은면",
-   "pfh": 164
+   "pfh": 164,
+   "cctv": false
   },
   "2004605": {
    "agc": "기후에너지환경부",
@@ -1400,7 +1722,8 @@
    "alm": 3.9,
    "srs": 4.75,
    "pfh": 4.75,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2004615": {
    "agc": "기후에너지환경부",
@@ -1411,7 +1734,8 @@
    "alm": 5.8,
    "srs": 6.64,
    "pfh": 6.64,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2004624": {
    "agc": "기후에너지환경부",
@@ -1422,7 +1746,8 @@
    "alm": 5.4,
    "srs": 6.14,
    "pfh": 6.14,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2004635": {
    "agc": "기후에너지환경부",
@@ -1433,7 +1758,8 @@
    "alm": 8.1,
    "srs": 9.45,
    "pfh": 9.45,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2004668": {
    "agc": "기후에너지환경부",
@@ -1444,7 +1770,8 @@
    "alm": 3.8,
    "srs": 4.39,
    "pfh": 4.39,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2004680": {
    "agc": "기후에너지환경부",
@@ -1455,7 +1782,8 @@
    "alm": 7,
    "srs": 8.62,
    "pfh": 8.62,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2004689": {
    "agc": "기후에너지환경부",
@@ -1466,7 +1794,8 @@
    "alm": 4.5,
    "srs": 5.12,
    "pfh": 5.12,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2005610": {
    "agc": "기후에너지환경부",
@@ -1477,7 +1806,8 @@
    "alm": 5.1,
    "srs": 5.8,
    "pfh": 5.8,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2005660": {
    "agc": "기후에너지환경부",
@@ -1488,7 +1818,8 @@
    "alm": 6.5,
    "srs": 6.68,
    "pfh": 6.68,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2005680": {
    "agc": "기후에너지환경부",
@@ -1499,7 +1830,8 @@
    "alm": 3.9,
    "srs": 4.58,
    "pfh": 4.58,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2006665": {
    "agc": "기후에너지환경부",
@@ -1510,7 +1842,8 @@
    "alm": 3.9,
    "srs": 4.64,
    "pfh": 4.64,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2006675": {
    "agc": "기후에너지환경부",
@@ -1521,7 +1854,8 @@
    "alm": 6,
    "srs": 6.55,
    "pfh": 6.55,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2008631": {
    "agc": "기후에너지환경부",
@@ -1532,7 +1866,8 @@
    "alm": 4,
    "srs": 4.75,
    "pfh": 4.75,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2008633": {
    "agc": "기후에너지환경부",
@@ -1543,7 +1878,8 @@
    "alm": 8,
    "srs": 9.67,
    "pfh": 9.67,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2009620": {
    "agc": "기후에너지환경부",
@@ -1554,7 +1890,8 @@
    "alm": 10.5,
    "srs": 13.37,
    "pfh": 13.37,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2009670": {
    "agc": "기후에너지환경부",
@@ -1565,7 +1902,8 @@
    "alm": 5.3,
    "srs": 6.24,
    "pfh": 6.24,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2009680": {
    "agc": "기후에너지환경부",
@@ -1576,13 +1914,15 @@
    "alm": 35,
    "srs": 36.26,
    "pfh": 36.26,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2010101": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 김천시 부항면 신옥리",
-   "pfh": 198.6
+   "pfh": 198.6,
+   "cctv": false
   },
   "2010635": {
    "agc": "기후에너지환경부",
@@ -1593,7 +1933,8 @@
    "alm": 4.5,
    "srs": 5.24,
    "pfh": 5.24,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2010640": {
    "agc": "기후에너지환경부",
@@ -1604,7 +1945,8 @@
    "alm": 6,
    "srs": 6.94,
    "pfh": 6.94,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2010650": {
    "agc": "기후에너지환경부",
@@ -1615,7 +1957,8 @@
    "alm": 5,
    "srs": 5.45,
    "pfh": 5.45,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2011625": {
    "agc": "기후에너지환경부",
@@ -1626,7 +1969,8 @@
    "alm": 5.1,
    "srs": 6.17,
    "pfh": 6.17,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2011648": {
    "agc": "기후에너지환경부",
@@ -1637,7 +1981,8 @@
    "alm": 28,
    "srs": 29.06,
    "pfh": 29.06,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2011649": {
    "agc": "기후에너지환경부",
@@ -1648,7 +1993,8 @@
    "alm": 26,
    "srs": 27.88,
    "pfh": 27.88,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2011650": {
    "agc": "기후에너지환경부",
@@ -1659,7 +2005,8 @@
    "alm": 13.1,
    "srs": 15.81,
    "pfh": 15.81,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2011660": {
    "agc": "기후에너지환경부",
@@ -1670,7 +2017,8 @@
    "alm": 9,
    "srs": 10.5,
    "pfh": 10.5,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2011665": {
    "agc": "기후에너지환경부",
@@ -1681,7 +2029,8 @@
    "alm": 6.1,
    "srs": 7.3,
    "pfh": 7.31,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2011670": {
    "agc": "기후에너지환경부",
@@ -1692,19 +2041,22 @@
    "alm": 5.9,
    "srs": 6.98,
    "pfh": 6.99,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2012101": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경북 영천시 화북면 입석리",
-   "pfh": 238.5
+   "pfh": 238.5,
+   "cctv": false
   },
   "2012210": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 영천시 자양면 성곡리",
-   "pfh": 159.3
+   "pfh": 159.3,
+   "cctv": false
   },
   "2012603": {
    "agc": "기후에너지환경부",
@@ -1715,7 +2067,8 @@
    "alm": 3.6,
    "srs": 4.02,
    "pfh": 4.02,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2012625": {
    "agc": "기후에너지환경부",
@@ -1726,7 +2079,8 @@
    "alm": 3.4,
    "srs": 4.09,
    "pfh": 4.09,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2012628": {
    "agc": "기후에너지환경부",
@@ -1737,7 +2091,8 @@
    "alm": 4.2,
    "srs": 4.95,
    "pfh": 4.95,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2012638": {
    "agc": "기후에너지환경부",
@@ -1748,7 +2103,8 @@
    "alm": 3.6,
    "srs": 4.22,
    "pfh": 4.22,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2012640": {
    "agc": "기후에너지환경부",
@@ -1759,7 +2115,8 @@
    "alm": 6.2,
    "srs": 7.28,
    "pfh": 7.28,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2012643": {
    "agc": "기후에너지환경부",
@@ -1770,7 +2127,8 @@
    "alm": 6.8,
    "srs": 8.21,
    "pfh": 8.21,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2012648": {
    "agc": "기후에너지환경부",
@@ -1781,7 +2139,8 @@
    "alm": 4.1,
    "srs": 5.01,
    "pfh": 5.01,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2013640": {
    "agc": "기후에너지환경부",
@@ -1792,7 +2151,8 @@
    "alm": 4.9,
    "srs": 5.35,
    "pfh": 5.35,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2013650": {
    "agc": "기후에너지환경부",
@@ -1803,7 +2163,8 @@
    "alm": 4.2,
    "srs": 4.84,
    "pfh": 4.84,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2013685": {
    "agc": "기후에너지환경부",
@@ -1814,13 +2175,15 @@
    "alm": 7.2,
    "srs": 8.66,
    "pfh": 8.66,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2021210": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 청도군 운문면 대천리",
-   "pfh": 152.6
+   "pfh": 152.6,
+   "cctv": false
   },
   "2021630": {
    "agc": "한국수자원공사",
@@ -1831,7 +2194,8 @@
    "alm": 6.1,
    "srs": 7.76,
    "pfh": 7.76,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2021640": {
    "agc": "기후에너지환경부",
@@ -1842,7 +2206,8 @@
    "alm": 6.6,
    "srs": 7.7,
    "pfh": 7.7,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2021643": {
    "agc": "기후에너지환경부",
@@ -1853,7 +2218,8 @@
    "alm": 6.5,
    "srs": 7.6,
    "pfh": 7.61,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2101625": {
    "agc": "기후에너지환경부",
@@ -1864,7 +2230,20 @@
    "alm": 6.3,
    "srs": 9.04,
    "pfh": 9.04,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
+  },
+  "2101660": {
+   "agc": "기후에너지환경부",
+   "addr": "경상북도 포항시 북구 기계면  인비리 1321-1",
+   "gdt": 68.944,
+   "att": 3.2,
+   "wrn": 3.7,
+   "alm": 4.3,
+   "srs": 4.89,
+   "pfh": 4.89,
+   "fstn": false,
+   "cctv": false
   },
   "2101668": {
    "agc": "기후에너지환경부",
@@ -1875,7 +2254,8 @@
    "alm": 4.4,
    "srs": 4.89,
    "pfh": 4.89,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2101675": {
    "agc": "기후에너지환경부",
@@ -1886,7 +2266,20 @@
    "alm": 10,
    "srs": 13.47,
    "pfh": 13.47,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
+  },
+  "2101687": {
+   "agc": "기후에너지환경부",
+   "addr": "경상북도 포항시 남구 연일읍  오천리 390-1",
+   "gdt": -0.123,
+   "att": 3.4,
+   "wrn": 4.4,
+   "alm": 5.4,
+   "srs": 6.4,
+   "pfh": 6.4,
+   "fstn": false,
+   "cctv": false
   },
   "2101690": {
    "agc": "기후에너지환경부",
@@ -1897,7 +2290,8 @@
    "alm": 5.8,
    "srs": 6.75,
    "pfh": 6.75,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2401611": {
    "agc": "기후에너지환경부",
@@ -1908,7 +2302,8 @@
    "alm": 4.7,
    "srs": 5.25,
    "pfh": 5.25,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2401616": {
    "agc": "기후에너지환경부",
@@ -1919,7 +2314,8 @@
    "alm": 4.5,
    "srs": 5.45,
    "pfh": 5.45,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2401650": {
    "agc": "기후에너지환경부",
@@ -1930,7 +2326,8 @@
    "alm": 6,
    "srs": 6.98,
    "pfh": 6.98,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2401690": {
    "agc": "기후에너지환경부",
@@ -1941,7 +2338,8 @@
    "alm": 4.9,
    "srs": 5.57,
    "pfh": 5.57,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2401692": {
    "agc": "기후에너지환경부",
@@ -1952,7 +2350,8 @@
    "alm": 4.2,
    "srs": 4.81,
    "pfh": 4.81,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2402630": {
    "agc": "기후에너지환경부",
@@ -1963,13 +2362,27 @@
    "alm": 4.9,
    "srs": 5.78,
    "pfh": 5.78,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
+  },
+  "2402680": {
+   "agc": "기후에너지환경부",
+   "addr": "경상북도 포항시 북구 흥해읍  용천리 1333-1 (곡강교)",
+   "gdt": 9.466,
+   "att": 2.5,
+   "wrn": 3.1,
+   "alm": 3.6,
+   "srs": 4.15,
+   "pfh": 4.15,
+   "fstn": false,
+   "cctv": true
   },
   "2403201": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상북도 경주시 감포읍 오류리",
-   "pfh": 41.2
+   "pfh": 41.2,
+   "cctv": false
   },
   "2403620": {
    "agc": "기후에너지환경부",
@@ -1980,7 +2393,8 @@
    "alm": 3.6,
    "srs": 4.52,
    "pfh": 4.52,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   }
  },
  "keywords": [
@@ -2009,6 +2423,8 @@
   "청도",
   "청송",
   "칠곡",
+  "포항남부",
+  "포항북부",
   "포항"
  ],
  "reg_map": {
@@ -2027,7 +2443,7 @@
   "L1071800": "청송",
   "L1072100": "울릉",
   "L1072200": "영덕",
-  "L1072400": "포항",
+  "L1072400": "포항남부",
   "L1072600": "김천",
   "L1072700": "안동",
   "L1072800": "영양",
@@ -2066,10 +2482,11 @@
   "상주",
   "청송",
   "의성",
+  "포항북부",
   "구미",
   "김천",
   "칠곡",
-  "포항",
+  "포항남부",
   "영천",
   "성주",
   "경산",
@@ -2099,7 +2516,7 @@
   "청도군": "청도",
   "청송군": "청송",
   "칠곡군": "칠곡",
-  "포항시": "포항"
+  "포항시": "포항남부"
  },
  "fire_groups": {
   "울릉·울진·봉화": [
@@ -2127,8 +2544,8 @@
    "김천",
    "칠곡"
   ],
-  "포항·영천·성주": [
-   "포항",
+  "포항남부·영천·성주": [
+   "포항남부",
    "영천",
    "성주"
   ],
@@ -2149,6 +2566,7 @@
   "경상북도",
   "경주",
   "고령",
+  "곡강천",
   "구미",
   "금천",
   "금호강",
@@ -2201,7 +2619,9 @@
   "청송",
   "청통전",
   "칠곡",
-  "포항",
+  "칠성천",
+  "포항남부",
+  "포항북부",
   "한천",
   "형산강",
   "회천"
@@ -2243,119 +2663,8 @@
   "청도": "청도군",
   "청송": "청송군",
   "칠곡": "칠곡군",
-  "포항": "포항시"
+  "포항남부": "포항시",
+  "포항북부": "포항시"
  },
- "generated": "2026-09-18 18:00",
- "aws_neighbors": {
-  "경산": [
-   "청도",
-   "영천",
-   "칠곡"
-  ],
-  "경주": [
-   "포항",
-   "영천",
-   "경산"
-  ],
-  "고령": [
-   "성주",
-   "칠곡",
-   "청도"
-  ],
-  "구미": [
-   "칠곡",
-   "김천",
-   "성주"
-  ],
-  "김천": [
-   "구미",
-   "칠곡",
-   "성주"
-  ],
-  "문경": [
-   "상주",
-   "예천",
-   "영주"
-  ],
-  "봉화": [
-   "영주",
-   "영양",
-   "울진"
-  ],
-  "상주": [
-   "문경",
-   "김천",
-   "구미"
-  ],
-  "성주": [
-   "칠곡",
-   "구미",
-   "김천"
-  ],
-  "안동": [
-   "예천",
-   "의성",
-   "영양"
-  ],
-  "영덕": [
-   "영양",
-   "청송",
-   "울진"
-  ],
-  "영양": [
-   "청송",
-   "영덕",
-   "안동"
-  ],
-  "영주": [
-   "예천",
-   "봉화",
-   "안동"
-  ],
-  "영천": [
-   "경산",
-   "경주",
-   "포항"
-  ],
-  "예천": [
-   "안동",
-   "영주",
-   "문경"
-  ],
-  "울릉": [
-   "울진",
-   "영덕",
-   "영양"
-  ],
-  "울진": [
-   "봉화",
-   "영양",
-   "영덕"
-  ],
-  "의성": [
-   "안동",
-   "청송",
-   "예천"
-  ],
-  "청도": [
-   "경산",
-   "고령",
-   "영천"
-  ],
-  "청송": [
-   "영양",
-   "의성",
-   "안동"
-  ],
-  "칠곡": [
-   "구미",
-   "성주",
-   "김천"
-  ],
-  "포항": [
-   "경주",
-   "영천",
-   "청송"
-  ]
- }
+ "generated": "2026-09-20 07:35"
 }

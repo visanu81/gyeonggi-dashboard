@@ -32,6 +32,7 @@
  "map_alias": {},
  "unit_alias": {},
  "map_any_prefix": [],
+ "map_inset_units": [],
  "regions": [
   {
    "name": "대덕구",
@@ -119,6 +120,33 @@
   ]
  },
  "aws_fallback": {},
+ "aws_neighbors": {
+  "대덕구": [
+   "유성구",
+   "동구",
+   "서구"
+  ],
+  "동구": [
+   "대덕구",
+   "중구",
+   "유성구"
+  ],
+  "서구": [
+   "중구",
+   "유성구",
+   "동구"
+  ],
+  "유성구": [
+   "대덕구",
+   "서구",
+   "중구"
+  ],
+  "중구": [
+   "서구",
+   "유성구",
+   "동구"
+  ]
+ },
  "river_stations": [
   {
    "code": "3009680",
@@ -126,7 +154,7 @@
    "sigun": "대덕구",
    "warning": 2.7,
    "danger": 4.8,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -144,7 +172,7 @@
    "sigun": "동구",
    "warning": 2.1,
    "danger": 3.8,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -162,7 +190,7 @@
    "sigun": "동구",
    "warning": 1.5,
    "danger": 2.8,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -171,7 +199,7 @@
    "sigun": "서구",
    "warning": 1.8,
    "danger": 3.2,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -180,7 +208,7 @@
    "sigun": "서구",
    "warning": 2.5,
    "danger": 4.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -225,7 +253,7 @@
    "sigun": "중구",
    "warning": 1.8,
    "danger": 3.2,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel",
    "nearby": true
   },
@@ -253,13 +281,15 @@
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "대전광역시 대덕구 미호동",
-   "pfh": 80
+   "pfh": 80,
+   "cctv": false
   },
   "3008611": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "대전시 대덕구 용호동 천426-1",
-   "pfh": 35.1
+   "pfh": 35.1,
+   "cctv": false
   },
   "3008695": {
    "agc": "기후에너지환경부",
@@ -270,7 +300,8 @@
    "alm": 6.7,
    "srs": 8.32,
    "pfh": 8.32,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3009630": {
    "agc": "기후에너지환경부",
@@ -281,7 +312,8 @@
    "alm": 3.2,
    "srs": 3.92,
    "pfh": 3.92,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3009635": {
    "agc": "기후에너지환경부",
@@ -292,7 +324,8 @@
    "alm": 3.3,
    "srs": 3.98,
    "pfh": 3.98,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3009640": {
    "agc": "기후에너지환경부",
@@ -303,7 +336,8 @@
    "alm": 3.8,
    "srs": 4.6,
    "pfh": 4.6,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3009645": {
    "agc": "기후에너지환경부",
@@ -314,7 +348,8 @@
    "alm": 2.8,
    "srs": 3.13,
    "pfh": 3.13,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "3009650": {
    "agc": "기후에너지환경부",
@@ -325,7 +360,8 @@
    "alm": 3.1,
    "srs": 3.91,
    "pfh": 3.91,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3009655": {
    "agc": "기후에너지환경부",
@@ -336,7 +372,8 @@
    "alm": 4,
    "srs": 4.96,
    "pfh": 4.96,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3009669": {
    "agc": "기후에너지환경부",
@@ -347,7 +384,8 @@
    "alm": 3.1,
    "srs": 3.87,
    "pfh": 3.87,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3009670": {
    "agc": "기후에너지환경부",
@@ -358,7 +396,8 @@
    "alm": 4.5,
    "srs": 5.03,
    "pfh": 5.03,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3009671": {
    "agc": "기후에너지환경부",
@@ -369,7 +408,8 @@
    "alm": 3.3,
    "srs": 4.02,
    "pfh": 4.02,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3009680": {
    "agc": "기후에너지환경부",
@@ -380,7 +420,8 @@
    "alm": 4.8,
    "srs": 5.73,
    "pfh": 5.73,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   }
  },
  "keywords": [
@@ -448,32 +489,5 @@
   "유성구": "유성구",
   "중구": "중구"
  },
- "generated": "2026-09-18 17:41",
- "aws_neighbors": {
-  "대덕구": [
-   "유성구",
-   "동구",
-   "서구"
-  ],
-  "동구": [
-   "대덕구",
-   "중구",
-   "유성구"
-  ],
-  "서구": [
-   "중구",
-   "유성구",
-   "동구"
-  ],
-  "유성구": [
-   "대덕구",
-   "서구",
-   "중구"
-  ],
-  "중구": [
-   "서구",
-   "유성구",
-   "동구"
-  ]
- }
+ "generated": "2026-09-20 07:03"
 }

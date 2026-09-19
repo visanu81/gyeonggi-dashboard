@@ -32,6 +32,7 @@
  "map_alias": {},
  "unit_alias": {},
  "map_any_prefix": [],
+ "map_inset_units": [],
  "regions": [
   {
    "name": "강릉",
@@ -667,6 +668,98 @@
   ]
  },
  "aws_fallback": {},
+ "aws_neighbors": {
+  "강릉": [
+   "동해",
+   "삼척",
+   "양양"
+  ],
+  "고성": [
+   "속초",
+   "양양",
+   "인제"
+  ],
+  "동해": [
+   "삼척",
+   "강릉",
+   "정선"
+  ],
+  "삼척": [
+   "동해",
+   "태백",
+   "정선"
+  ],
+  "속초": [
+   "양양",
+   "고성",
+   "인제"
+  ],
+  "양구": [
+   "인제",
+   "화천",
+   "춘천"
+  ],
+  "양양": [
+   "속초",
+   "고성",
+   "인제"
+  ],
+  "영월": [
+   "평창",
+   "정선",
+   "태백"
+  ],
+  "원주": [
+   "횡성",
+   "홍천",
+   "평창"
+  ],
+  "인제": [
+   "양구",
+   "속초",
+   "양양"
+  ],
+  "정선": [
+   "평창",
+   "태백",
+   "영월"
+  ],
+  "철원": [
+   "화천",
+   "춘천",
+   "양구"
+  ],
+  "춘천": [
+   "화천",
+   "홍천",
+   "양구"
+  ],
+  "태백": [
+   "정선",
+   "삼척",
+   "동해"
+  ],
+  "평창": [
+   "영월",
+   "정선",
+   "횡성"
+  ],
+  "홍천": [
+   "횡성",
+   "춘천",
+   "원주"
+  ],
+  "화천": [
+   "춘천",
+   "양구",
+   "철원"
+  ],
+  "횡성": [
+   "원주",
+   "홍천",
+   "평창"
+  ]
+ },
  "river_stations": [
   {
    "code": "1302648",
@@ -674,7 +767,7 @@
    "sigun": "강릉",
    "warning": 2.8,
    "danger": 4.8,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -683,7 +776,7 @@
    "sigun": "강릉",
    "warning": 3.0,
    "danger": 4.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -719,7 +812,7 @@
    "sigun": "삼척",
    "warning": 3.2,
    "danger": 5.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -782,7 +875,7 @@
    "sigun": "양양",
    "warning": 3.0,
    "danger": 4.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -809,7 +902,7 @@
    "sigun": "영월",
    "warning": 4.6,
    "danger": 8.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -818,7 +911,7 @@
    "sigun": "영월",
    "warning": 4.0,
    "danger": 6.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -827,7 +920,7 @@
    "sigun": "영월",
    "warning": 5.0,
    "danger": 7.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -836,7 +929,7 @@
    "sigun": "원주",
    "warning": 2.0,
    "danger": 3.9,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -845,7 +938,7 @@
    "sigun": "원주",
    "warning": 3.5,
    "danger": 5.8,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -863,7 +956,7 @@
    "sigun": "인제",
    "warning": 4.5,
    "danger": 7.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -872,7 +965,7 @@
    "sigun": "인제",
    "warning": 4.0,
    "danger": 6.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -890,7 +983,7 @@
    "sigun": "정선",
    "warning": 3.6,
    "danger": 6.4,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -899,7 +992,7 @@
    "sigun": "정선",
    "warning": 4.0,
    "danger": 6.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -908,7 +1001,7 @@
    "sigun": "정선",
    "warning": 4.5,
    "danger": 6.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -917,7 +1010,7 @@
    "sigun": "철원",
    "warning": 4.0,
    "danger": 7.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -971,7 +1064,7 @@
    "sigun": "태백",
    "warning": 3.3,
    "danger": 5.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -998,7 +1091,7 @@
    "sigun": "평창",
    "warning": 4.0,
    "danger": 7.2,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1016,7 +1109,7 @@
    "sigun": "홍천",
    "warning": 2.5,
    "danger": 4.6,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1025,7 +1118,7 @@
    "sigun": "홍천",
    "warning": 2.0,
    "danger": 6.4,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1070,7 +1163,7 @@
    "sigun": "횡성",
    "warning": 2.4,
    "danger": 6.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1169,7 +1262,8 @@
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "강원도 삼척시 숙암리 15",
-   "pfh": 675.3
+   "pfh": 675.3,
+   "cctv": false
   },
   "1001602": {
    "agc": "기후에너지환경부",
@@ -1180,7 +1274,8 @@
    "alm": 5,
    "srs": 6,
    "pfh": 6,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1001625": {
    "agc": "기후에너지환경부",
@@ -1191,7 +1286,8 @@
    "alm": 6.4,
    "srs": 7.8,
    "pfh": 8.1,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1001626": {
    "agc": "기후에너지환경부",
@@ -1202,7 +1298,8 @@
    "alm": 6.5,
    "srs": 8.2,
    "pfh": 8.2,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1001629": {
    "agc": "기후에너지환경부",
@@ -1213,7 +1310,8 @@
    "alm": 6.5,
    "srs": 7.6,
    "pfh": 7.6,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1001690": {
    "agc": "기후에너지환경부",
@@ -1224,7 +1322,8 @@
    "alm": 8.5,
    "srs": 10.5,
    "pfh": 10.5,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1002625": {
    "agc": "기후에너지환경부",
@@ -1235,7 +1334,8 @@
    "alm": 6.6,
    "srs": 8,
    "pfh": 8,
-   "fstn": true
+   "fstn": true,
+   "cctv": false
   },
   "1002650": {
    "agc": "기후에너지환경부",
@@ -1246,7 +1346,8 @@
    "alm": 7.2,
    "srs": 8.8,
    "pfh": 8.8,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1002670": {
    "agc": "기후에너지환경부",
@@ -1257,7 +1358,8 @@
    "alm": 5.9,
    "srs": 7.7,
    "pfh": 7.7,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1002675": {
    "agc": "기후에너지환경부",
@@ -1268,7 +1370,8 @@
    "alm": 4.7,
    "srs": 5.6,
    "pfh": 5.6,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1002685": {
    "agc": "기후에너지환경부",
@@ -1279,7 +1382,8 @@
    "alm": 6,
    "srs": 6.8,
    "pfh": 6.8,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1002687": {
    "agc": "기후에너지환경부",
@@ -1290,7 +1394,8 @@
    "alm": 7.5,
    "srs": 8,
    "pfh": 8,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1005695": {
    "agc": "기후에너지환경부",
@@ -1301,13 +1406,15 @@
    "alm": 6.8,
    "srs": 8.4,
    "pfh": 8.4,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1006110": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "강원도 횡성군 갑천면 대관대리",
-   "pfh": 180
+   "pfh": 180,
+   "cctv": false
   },
   "1006650": {
    "agc": "기후에너지환경부",
@@ -1318,7 +1425,8 @@
    "alm": 6,
    "srs": 7.3,
    "pfh": 7.3,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1006665": {
    "agc": "기후에너지환경부",
@@ -1329,7 +1437,8 @@
    "alm": 3.9,
    "srs": 4.8,
    "pfh": 4.8,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1006690": {
    "agc": "기후에너지환경부",
@@ -1340,25 +1449,29 @@
    "alm": 5.8,
    "srs": 7.1,
    "pfh": 7.1,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1009710": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "강원도 화천군 화천읍 수하리",
-   "pfh": 264.6
+   "pfh": 264.6,
+   "cctv": false
   },
   "1010310": {
    "kind": "dam",
    "agc": "한국수력원자력",
    "addr": "강원도 화천군 간동면 어룡동길 42",
-   "pfh": 183
+   "pfh": 183,
+   "cctv": false
   },
   "1010320": {
    "kind": "dam",
    "agc": "한국수력원자력",
    "addr": "강원도 춘천시 신북읍 영서로 3741",
-   "pfh": 104.9
+   "pfh": 104.9,
+   "cctv": false
   },
   "1010631": {
    "agc": "기후에너지환경부",
@@ -1369,7 +1482,8 @@
    "alm": 3.3,
    "srs": 4.3,
    "pfh": 4.5,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1010633": {
    "agc": "기후에너지환경부",
@@ -1380,7 +1494,8 @@
    "alm": 5,
    "srs": 5.9,
    "pfh": 5.9,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1010673": {
    "agc": "기후에너지환경부",
@@ -1391,7 +1506,8 @@
    "alm": 6.1,
    "srs": 7,
    "pfh": 7,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1010674": {
    "agc": "기후에너지환경부",
@@ -1402,7 +1518,8 @@
    "alm": 6.6,
    "srs": 7.3,
    "pfh": 7.8,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1010686": {
    "agc": "기후에너지환경부",
@@ -1413,7 +1530,8 @@
    "alm": 4.7,
    "srs": 5.9,
    "pfh": 5.9,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1010695": {
    "agc": "기후에너지환경부",
@@ -1424,7 +1542,8 @@
    "alm": 7.7,
    "srs": 9.5,
    "pfh": 9.5,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1011695": {
    "agc": "기후에너지환경부",
@@ -1435,13 +1554,15 @@
    "alm": 7.5,
    "srs": 8.2,
    "pfh": 8.2,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1012110": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "강원도 춘천시 동면 월곡리",
-   "pfh": 198
+   "pfh": 198,
+   "cctv": false
   },
   "1012625": {
    "agc": "기후에너지환경부",
@@ -1452,7 +1573,8 @@
    "alm": 7.3,
    "srs": 9,
    "pfh": 2.7,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1012630": {
    "agc": "기후에너지환경부",
@@ -1463,7 +1585,8 @@
    "alm": 6.5,
    "srs": 7.5,
    "pfh": 7.5,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1012645": {
    "agc": "기후에너지환경부",
@@ -1474,7 +1597,8 @@
    "alm": 7.6,
    "srs": 9.1,
    "pfh": 9.1,
-   "fstn": true
+   "fstn": true,
+   "cctv": false
   },
   "1012685": {
    "agc": "기후에너지환경부",
@@ -1485,13 +1609,15 @@
    "alm": 5.4,
    "srs": 6.5,
    "pfh": 6.5,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1013310": {
    "kind": "dam",
    "agc": "한국수력원자력",
    "addr": "강원도 춘천시 신동면 옛경춘로 62-15",
-   "pfh": 73.36
+   "pfh": 73.36,
+   "cctv": false
   },
   "1013610": {
    "agc": "기후에너지환경부",
@@ -1502,7 +1628,8 @@
    "alm": 7.2,
    "srs": 8.3,
    "pfh": 8.3,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1014620": {
    "agc": "기후에너지환경부",
@@ -1513,7 +1640,8 @@
    "alm": 4.6,
    "srs": 5.5,
    "pfh": 5.5,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1014650": {
    "agc": "기후에너지환경부",
@@ -1524,7 +1652,8 @@
    "alm": 6.4,
    "srs": 7.3,
    "pfh": 7.3,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1021630": {
    "agc": "기후에너지환경부",
@@ -1534,7 +1663,8 @@
    "wrn": 3,
    "alm": 4,
    "srs": 5,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1022620": {
    "agc": "기후에너지환경부",
@@ -1545,7 +1675,8 @@
    "alm": 6.9,
    "srs": 8,
    "pfh": 8,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1022626": {
    "agc": "기후에너지환경부",
@@ -1556,7 +1687,8 @@
    "alm": 7,
    "srs": 8.6,
    "pfh": 8.6,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1301620": {
    "agc": "기후에너지환경부",
@@ -1567,7 +1699,8 @@
    "alm": 4.5,
    "srs": 5.2,
    "pfh": 5.2,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1301625": {
    "agc": "기후에너지환경부",
@@ -1578,7 +1711,8 @@
    "alm": 5.2,
    "srs": 6.1,
    "pfh": 6.1,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1301630": {
    "agc": "기후에너지환경부",
@@ -1589,7 +1723,8 @@
    "alm": 5.2,
    "srs": 6.1,
    "pfh": 6.1,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1301632": {
    "agc": "기후에너지환경부",
@@ -1600,7 +1735,8 @@
    "alm": 6.6,
    "srs": 7.1,
    "pfh": 7.1,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1301658": {
    "agc": "기후에너지환경부",
@@ -1611,7 +1747,8 @@
    "alm": 4.5,
    "srs": 5.6,
    "pfh": 5.6,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1301665": {
    "agc": "기후에너지환경부",
@@ -1622,13 +1759,15 @@
    "alm": 4,
    "srs": 4.5,
    "pfh": 4.2,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1302210": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "강원도 동해시 삼화동 산284",
-   "pfh": 114.25
+   "pfh": 114.25,
+   "cctv": false
   },
   "1302646": {
    "agc": "기후에너지환경부",
@@ -1639,7 +1778,8 @@
    "alm": 4.8,
    "srs": 5.8,
    "pfh": 5.8,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1302648": {
    "agc": "기후에너지환경부",
@@ -1650,7 +1790,8 @@
    "alm": 4.8,
    "srs": 5.8,
    "pfh": 5.8,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1302668": {
    "agc": "기후에너지환경부",
@@ -1661,7 +1802,8 @@
    "alm": 3,
    "srs": 3.8,
    "pfh": 3.8,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1302670": {
    "agc": "기후에너지환경부",
@@ -1672,7 +1814,8 @@
    "alm": 4.5,
    "srs": 5.5,
    "pfh": 5.5,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1303610": {
    "agc": "기후에너지환경부",
@@ -1683,7 +1826,8 @@
    "alm": 5,
    "srs": 6,
    "pfh": 6,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1303640": {
    "agc": "기후에너지환경부",
@@ -1694,7 +1838,8 @@
    "alm": 5.6,
    "srs": 6.6,
    "pfh": 6.6,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1303650": {
    "agc": "기후에너지환경부",
@@ -1705,7 +1850,8 @@
    "alm": 5.1,
    "srs": 6.1,
    "pfh": 6.1,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2001608": {
    "agc": "기후에너지환경부",
@@ -1716,7 +1862,8 @@
    "alm": 4.6,
    "srs": 5.33,
    "pfh": 5.33,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2001610": {
    "agc": "기후에너지환경부",
@@ -1727,7 +1874,8 @@
    "alm": 5.1,
    "srs": 6.64,
    "pfh": 6.64,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   }
  },
  "keywords": [
@@ -1955,97 +2103,5 @@
   "화천": "화천군",
   "횡성": "횡성군"
  },
- "generated": "2026-09-18 17:42",
- "aws_neighbors": {
-  "강릉": [
-   "동해",
-   "삼척",
-   "양양"
-  ],
-  "고성": [
-   "속초",
-   "양양",
-   "인제"
-  ],
-  "동해": [
-   "삼척",
-   "강릉",
-   "정선"
-  ],
-  "삼척": [
-   "동해",
-   "태백",
-   "정선"
-  ],
-  "속초": [
-   "양양",
-   "고성",
-   "인제"
-  ],
-  "양구": [
-   "인제",
-   "화천",
-   "춘천"
-  ],
-  "양양": [
-   "속초",
-   "고성",
-   "인제"
-  ],
-  "영월": [
-   "평창",
-   "정선",
-   "태백"
-  ],
-  "원주": [
-   "횡성",
-   "홍천",
-   "평창"
-  ],
-  "인제": [
-   "양구",
-   "속초",
-   "양양"
-  ],
-  "정선": [
-   "평창",
-   "태백",
-   "영월"
-  ],
-  "철원": [
-   "화천",
-   "춘천",
-   "양구"
-  ],
-  "춘천": [
-   "화천",
-   "홍천",
-   "양구"
-  ],
-  "태백": [
-   "정선",
-   "삼척",
-   "동해"
-  ],
-  "평창": [
-   "영월",
-   "정선",
-   "횡성"
-  ],
-  "홍천": [
-   "횡성",
-   "춘천",
-   "원주"
-  ],
-  "화천": [
-   "춘천",
-   "양구",
-   "철원"
-  ],
-  "횡성": [
-   "원주",
-   "홍천",
-   "평창"
-  ]
- }
+ "generated": "2026-09-20 07:05"
 }

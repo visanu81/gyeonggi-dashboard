@@ -32,6 +32,7 @@
  "map_alias": {},
  "unit_alias": {},
  "map_any_prefix": [],
+ "map_inset_units": [],
  "regions": [
   {
    "name": "남구",
@@ -143,6 +144,33 @@
   ]
  },
  "aws_fallback": {},
+ "aws_neighbors": {
+  "남구": [
+   "동구",
+   "중구",
+   "울주"
+  ],
+  "동구": [
+   "남구",
+   "중구",
+   "북구"
+  ],
+  "북구": [
+   "중구",
+   "동구",
+   "남구"
+  ],
+  "울주": [
+   "남구",
+   "중구",
+   "동구"
+  ],
+  "중구": [
+   "북구",
+   "남구",
+   "동구"
+  ]
+ },
  "river_stations": [
   {
    "code": "2201660",
@@ -150,7 +178,7 @@
    "sigun": "남구",
    "warning": 3.5,
    "danger": 6.9,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -159,7 +187,7 @@
    "sigun": "동구",
    "warning": 3.19,
    "danger": 5.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel",
    "nearby": true
   },
@@ -169,7 +197,7 @@
    "sigun": "북구",
    "warning": 3.19,
    "danger": 5.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -178,7 +206,7 @@
    "sigun": "북구",
    "warning": 3.75,
    "danger": 4.8,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -196,7 +224,7 @@
    "sigun": "울주",
    "warning": 3.8,
    "danger": 5.7,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -205,7 +233,7 @@
    "sigun": "울주",
    "warning": 5.2,
    "danger": 7.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -223,7 +251,7 @@
    "sigun": "중구",
    "warning": 7.1,
    "danger": 9.2,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -255,13 +283,15 @@
    "alm": 4,
    "srs": 4.67,
    "pfh": 4.67,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2201231": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "울산광역시 울주군 두동면 천전리",
-   "pfh": 122.7
+   "pfh": 122.7,
+   "cctv": false
   },
   "2201630": {
    "agc": "기후에너지환경부",
@@ -272,7 +302,8 @@
    "alm": 5.7,
    "srs": 7.37,
    "pfh": 7.37,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2201660": {
    "agc": "기후에너지환경부",
@@ -283,7 +314,8 @@
    "alm": 6.9,
    "srs": 8.52,
    "pfh": 8.52,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2201670": {
    "agc": "기후에너지환경부",
@@ -294,7 +326,8 @@
    "alm": 9.2,
    "srs": 10.78,
    "pfh": 10.78,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2201685": {
    "agc": "기후에너지환경부",
@@ -305,7 +338,8 @@
    "alm": 4.8,
    "srs": 5.39,
    "pfh": 5.39,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2201690": {
    "agc": "기후에너지환경부",
@@ -316,11 +350,13 @@
    "alm": 5.5,
    "srs": 5.72,
    "pfh": 5.72,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2301211": {
    "kind": "dam",
-   "addr": "울산광역시 울주군 웅촌면 통천리 44"
+   "addr": "울산광역시 울주군 웅촌면 통천리 44",
+   "cctv": false
   },
   "2301670": {
    "agc": "기후에너지환경부",
@@ -331,7 +367,8 @@
    "alm": 7.5,
    "srs": 9.49,
    "pfh": 9.49,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2403660": {
    "agc": "기후에너지환경부",
@@ -342,7 +379,8 @@
    "alm": 3.1,
    "srs": 3.52,
    "pfh": 3.52,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   }
  },
  "keywords": [
@@ -409,32 +447,5 @@
   "울주": "울주군",
   "중구": "중구"
  },
- "generated": "2026-09-18 17:50",
- "aws_neighbors": {
-  "남구": [
-   "동구",
-   "중구",
-   "울주"
-  ],
-  "동구": [
-   "남구",
-   "중구",
-   "북구"
-  ],
-  "북구": [
-   "중구",
-   "동구",
-   "남구"
-  ],
-  "울주": [
-   "남구",
-   "중구",
-   "동구"
-  ],
-  "중구": [
-   "북구",
-   "남구",
-   "동구"
-  ]
- }
+ "generated": "2026-09-20 07:12"
 }

@@ -6,8 +6,8 @@ window.REGION_CONF = {
  "key": "chungbuk",
  "label": "충청북도",
  "office": "충청북도",
- "home": "청주",
- "countText": "11개 시군",
+ "home": "청주동부",
+ "countText": "12개 관서",
  "dataHost": "https://weather.visanu81.workers.dev",
  "wideNames": [
   "충북",
@@ -30,7 +30,8 @@ window.REGION_CONF = {
   "진천",
   "괴산",
   "증평",
-  "청주",
+  "청주서부",
+  "청주동부",
   "보은",
   "옥천",
   "영동"
@@ -44,7 +45,8 @@ window.REGION_CONF = {
   "진천",
   "괴산",
   "증평",
-  "청주",
+  "청주서부",
+  "청주동부",
   "보은",
   "옥천",
   "영동"
@@ -66,11 +68,11 @@ window.REGION_CONF = {
    4,
    0
   ],
-  "진천": [
+  "청주서부": [
    0,
    1
   ],
-  "청주": [
+  "진천": [
    1,
    1
   ],
@@ -82,12 +84,16 @@ window.REGION_CONF = {
    4,
    1
   ],
-  "옥천": [
+  "청주동부": [
    0,
    2
   ],
+  "옥천": [
+   1,
+   2
+  ],
   "보은": [
-   2,
+   3,
    2
   ],
   "영동": [
@@ -105,8 +111,9 @@ window.REGION_CONF = {
   "제천": "제천시",
   "증평": "증평군",
   "진천": "진천군",
-  "청주": "청주",
-  "충주": "충주시"
+  "충주": "충주시",
+  "청주동부": "청주",
+  "청주서부": "청주"
  },
  "riverMatch": {
   "제천": [
@@ -130,8 +137,11 @@ window.REGION_CONF = {
   "증평": [
    "증평"
   ],
-  "청주": [
-   "청주"
+  "청주서부": [
+   "청주서부"
+  ],
+  "청주동부": [
+   "청주동부"
   ],
   "보은": [
    "보은"
@@ -150,14 +160,31 @@ window.REGION_CONF = {
   "음성": "음성·진천·괴산",
   "진천": "음성·진천·괴산",
   "괴산": "음성·진천·괴산",
-  "증평": "증평·청주·보은",
-  "청주": "증평·청주·보은",
-  "보은": "증평·청주·보은",
+  "증평": "증평·청주동부·보은",
+  "청주동부": "증평·청주동부·보은",
+  "보은": "증평·청주동부·보은",
   "옥천": "옥천·영동",
-  "영동": "옥천·영동"
+  "영동": "옥천·영동",
+  "청주서부": "증평·청주동부·보은"
  },
- "alias": {},
+ "alias": {
+  "청주서부": "청주동부"
+ },
+ "riverCodes": {
+  "청주동부": [
+   "1004616",
+   "1004620",
+   "3011635",
+   "3011645",
+   "3011660",
+   "3011665"
+  ],
+  "청주서부": [
+   "3011663"
+  ]
+ },
  "floodKeywords": [
+  "감천",
   "괴산",
   "금강",
   "단양",
@@ -168,6 +195,7 @@ window.REGION_CONF = {
   "보강천",
   "보은",
   "보청천",
+  "석남천",
   "석문동천",
   "소옥천",
   "시항천",
@@ -188,7 +216,8 @@ window.REGION_CONF = {
   "죽령천",
   "증평",
   "진천",
-  "청주",
+  "청주동부",
+  "청주서부",
   "충북",
   "충주",
   "충청북도",
@@ -202,13 +231,15 @@ window.REGION_CONF = {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "충청북도 충주시 종민동",
-   "pfh": 145
+   "pfh": 145,
+   "cctv": false
   },
   "1003611": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "충청북도 충주시 가금면 장천리",
-   "pfh": 67.3
+   "pfh": 67.3,
+   "cctv": false
   },
   "1003626": {
    "agc": "기후에너지환경부",
@@ -219,7 +250,8 @@ window.REGION_CONF = {
    "alm": 4.8,
    "srs": 5.4,
    "pfh": 5.4,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1003636": {
    "agc": "기후에너지환경부",
@@ -230,7 +262,8 @@ window.REGION_CONF = {
    "alm": 13,
    "srs": 15.9,
    "pfh": 15.9,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1003645": {
    "agc": "기후에너지환경부",
@@ -241,7 +274,8 @@ window.REGION_CONF = {
    "alm": 5,
    "srs": 5.7,
    "pfh": 5.7,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1003652": {
    "agc": "기후에너지환경부",
@@ -252,7 +286,8 @@ window.REGION_CONF = {
    "alm": 3.8,
    "srs": 4.4,
    "pfh": 4.4,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1003658": {
    "agc": "기후에너지환경부",
@@ -263,7 +298,8 @@ window.REGION_CONF = {
    "alm": 4.5,
    "srs": 5,
    "pfh": 5.3,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1003661": {
    "agc": "기후에너지환경부",
@@ -274,13 +310,39 @@ window.REGION_CONF = {
    "alm": 6.2,
    "srs": 7.2,
    "pfh": 8.3,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1004310": {
    "kind": "dam",
    "agc": "한국수력원자력",
    "addr": "충청북도 괴산군 칠성면 산막이옛길 43",
-   "pfh": 136.93
+   "pfh": 136.93,
+   "cctv": false
+  },
+  "1004616": {
+   "agc": "기후에너지환경부",
+   "addr": "충청북도 청주시 상당구 미원면 운암리 청석굴교",
+   "gdt": 209.399,
+   "att": 3.3,
+   "wrn": 5.6,
+   "alm": 6.5,
+   "srs": 7.9,
+   "pfh": 7.9,
+   "fstn": false,
+   "cctv": false
+  },
+  "1004620": {
+   "agc": "기후에너지환경부",
+   "addr": "충청북도 청주시 상당구 미원면 옥화리 옥화1교",
+   "gdt": 198.602,
+   "att": 2.9,
+   "wrn": 4.8,
+   "alm": 6,
+   "srs": 7.2,
+   "pfh": 7.2,
+   "fstn": false,
+   "cctv": false
   },
   "1004631": {
    "agc": "기후에너지환경부",
@@ -291,7 +353,8 @@ window.REGION_CONF = {
    "alm": 6,
    "srs": 6.7,
    "pfh": 7.9,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1004646": {
    "agc": "기후에너지환경부",
@@ -302,7 +365,8 @@ window.REGION_CONF = {
    "alm": 3.5,
    "srs": 3.8,
    "pfh": 3.6,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1004680": {
    "agc": "기후에너지환경부",
@@ -313,7 +377,8 @@ window.REGION_CONF = {
    "alm": 3.9,
    "srs": 4.6,
    "pfh": 4.7,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1004693": {
    "agc": "기후에너지환경부",
@@ -324,7 +389,8 @@ window.REGION_CONF = {
    "alm": 7.1,
    "srs": 8.5,
    "pfh": 8.5,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1004694": {
    "agc": "기후에너지환경부",
@@ -335,7 +401,8 @@ window.REGION_CONF = {
    "alm": 5.4,
    "srs": 6.5,
    "pfh": 6.5,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1004695": {
    "agc": "기후에너지환경부",
@@ -346,7 +413,8 @@ window.REGION_CONF = {
    "alm": 6,
    "srs": 7.6,
    "pfh": 7.6,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1007609": {
    "agc": "기후에너지환경부",
@@ -357,7 +425,8 @@ window.REGION_CONF = {
    "alm": 3.9,
    "srs": 4.5,
    "pfh": 5.4,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1007610": {
    "agc": "기후에너지환경부",
@@ -368,7 +437,8 @@ window.REGION_CONF = {
    "alm": 3.9,
    "srs": 4.1,
    "pfh": 4.1,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "1007613": {
    "agc": "기후에너지환경부",
@@ -379,7 +449,8 @@ window.REGION_CONF = {
    "alm": 3.8,
    "srs": 4.4,
    "pfh": 4.4,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3004670": {
    "agc": "기후에너지환경부",
@@ -390,7 +461,8 @@ window.REGION_CONF = {
    "alm": 1.4,
    "srs": 1.67,
    "pfh": 1.67,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3004685": {
    "agc": "기후에너지환경부",
@@ -401,7 +473,8 @@ window.REGION_CONF = {
    "alm": 5.5,
    "srs": 7.02,
    "pfh": 7.02,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3004690": {
    "agc": "기후에너지환경부",
@@ -412,7 +485,8 @@ window.REGION_CONF = {
    "alm": 8,
    "srs": 9.47,
    "pfh": 9.47,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3006680": {
    "agc": "한국수자원공사",
@@ -422,7 +496,8 @@ window.REGION_CONF = {
    "wrn": 6.4,
    "alm": 7.9,
    "srs": 9.9,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3007610": {
    "agc": "기후에너지환경부",
@@ -433,7 +508,8 @@ window.REGION_CONF = {
    "alm": 2.8,
    "srs": 3.41,
    "pfh": 3.41,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3007617": {
    "agc": "기후에너지환경부",
@@ -444,7 +520,8 @@ window.REGION_CONF = {
    "alm": 2.6,
    "srs": 3.27,
    "pfh": 3.27,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3007620": {
    "agc": "기후에너지환경부",
@@ -455,7 +532,8 @@ window.REGION_CONF = {
    "alm": 3.5,
    "srs": 4.58,
    "pfh": 4.58,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3007660": {
    "agc": "기후에너지환경부",
@@ -466,7 +544,8 @@ window.REGION_CONF = {
    "alm": 8,
    "srs": 8.66,
    "pfh": 8.66,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3008630": {
    "agc": "기후에너지환경부",
@@ -477,7 +556,8 @@ window.REGION_CONF = {
    "alm": 4.4,
    "srs": 5.44,
    "pfh": 5.44,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3011613": {
    "agc": "기후에너지환경부",
@@ -488,7 +568,8 @@ window.REGION_CONF = {
    "alm": 3,
    "srs": 3.79,
    "pfh": 3.79,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "3011615": {
    "agc": "기후에너지환경부",
@@ -499,7 +580,8 @@ window.REGION_CONF = {
    "alm": 2.3,
    "srs": 2.89,
    "pfh": 2.89,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "3011620": {
    "agc": "기후에너지환경부",
@@ -510,7 +592,8 @@ window.REGION_CONF = {
    "alm": 5.5,
    "srs": 6.12,
    "pfh": 6.12,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3011625": {
    "agc": "기후에너지환경부",
@@ -521,7 +604,8 @@ window.REGION_CONF = {
    "alm": 3.5,
    "srs": 4.44,
    "pfh": 4.44,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3011631": {
    "agc": "기후에너지환경부",
@@ -532,7 +616,8 @@ window.REGION_CONF = {
    "alm": 3.3,
    "srs": 4.17,
    "pfh": 4.17,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3011635": {
    "agc": "기후에너지환경부",
@@ -543,7 +628,8 @@ window.REGION_CONF = {
    "alm": 6.3,
    "srs": 7.32,
    "pfh": 7.32,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3011645": {
    "agc": "기후에너지환경부",
@@ -554,7 +640,8 @@ window.REGION_CONF = {
    "alm": 5,
    "srs": 5.99,
    "pfh": 5.99,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3011660": {
    "agc": "기후에너지환경부",
@@ -565,7 +652,32 @@ window.REGION_CONF = {
    "alm": 5.4,
    "srs": 6.34,
    "pfh": 6.34,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
+  },
+  "3011663": {
+   "agc": "기후에너지환경부",
+   "addr": "충청북도 청주시 흥덕구 지동동  843-5",
+   "gdt": 31.301,
+   "att": 2.3,
+   "wrn": 3.1,
+   "alm": 3.9,
+   "srs": 4.81,
+   "pfh": 4.81,
+   "fstn": false,
+   "cctv": false
+  },
+  "3011665": {
+   "agc": "기후에너지환경부",
+   "addr": "충청북도 청주시 흥덕구 강내면 탑연리 미호천교(충청북도 청주시 흥덕구 오송읍 궁평리)",
+   "gdt": 19.643,
+   "att": 5,
+   "wrn": 7,
+   "alm": 8,
+   "srs": 9.38,
+   "pfh": 9.38,
+   "fstn": true,
+   "cctv": true
   }
  }
 };

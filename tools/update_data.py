@@ -325,7 +325,13 @@ def shared_get(key, url, params=None, timeout=15, max_age=240, headers=None):
                     return cached
                 if not lock.exists():
                     break
-        r = requests.get(url, params=params, timeout=timeout, headers=headers)
+        # API허브가 가끔 첫 응답을 15초 넘게 끌다 끊는다(2026-09-20 실측: 직접 호출 1~3초, 간헐적 ReadTimeout).
+        # 한 번 더, 두 배 여유로 다시 묻는다 — 전국 공통 자료라 한 번 실패하면 시도 15개가 같이 빈다.
+        try:
+            r = requests.get(url, params=params, timeout=timeout, headers=headers)
+        except requests.exceptions.Timeout:
+            _time.sleep(1.5)
+            r = requests.get(url, params=params, timeout=timeout * 2, headers=headers)
         if r.status_code == 200:
             try:
                 _atomic_write_text(path, json.dumps({'ts': _time.time(), 'status': r.status_code,

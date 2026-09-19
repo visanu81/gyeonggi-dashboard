@@ -6,8 +6,8 @@ window.REGION_CONF = {
  "key": "jeonbuk",
  "label": "전라북도",
  "office": "전라북도",
- "home": "전주",
- "countText": "14개 시군",
+ "home": "전주완산",
+ "countText": "15개 관서",
  "dataHost": "https://weather.visanu81.workers.dev",
  "wideNames": [
   "전라북도",
@@ -28,7 +28,8 @@ window.REGION_CONF = {
   "무주",
   "완주",
   "익산",
-  "전주",
+  "전주덕진",
+  "전주완산",
   "김제",
   "진안",
   "부안",
@@ -45,7 +46,8 @@ window.REGION_CONF = {
   "무주",
   "완주",
   "익산",
-  "전주",
+  "전주덕진",
+  "전주완산",
   "김제",
   "진안",
   "부안",
@@ -65,11 +67,11 @@ window.REGION_CONF = {
    1,
    0
   ],
-  "완주": [
+  "전주덕진": [
    2,
    0
   ],
-  "진안": [
+  "완주": [
    3,
    0
   ],
@@ -81,15 +83,15 @@ window.REGION_CONF = {
    0,
    1
   ],
-  "정읍": [
+  "김제": [
    1,
    1
   ],
-  "김제": [
+  "전주완산": [
    2,
    1
   ],
-  "전주": [
+  "진안": [
    3,
    1
   ],
@@ -101,8 +103,12 @@ window.REGION_CONF = {
    0,
    2
   ],
-  "순창": [
+  "정읍": [
    1,
+   2
+  ],
+  "순창": [
+   2,
    2
   ],
   "임실": [
@@ -126,9 +132,10 @@ window.REGION_CONF = {
   "익산": "익산시",
   "임실": "임실군",
   "장수": "장수군",
-  "전주": "전주시",
   "정읍": "정읍시",
-  "진안": "진안군"
+  "진안": "진안군",
+  "전주완산": "전주시",
+  "전주덕진": "전주시"
  },
  "riverMatch": {
   "군산": [
@@ -143,8 +150,11 @@ window.REGION_CONF = {
   "익산": [
    "익산"
   ],
-  "전주": [
-   "전주"
+  "전주덕진": [
+   "전주덕진"
+  ],
+  "전주완산": [
+   "전주완산"
   ],
   "김제": [
    "김제"
@@ -178,9 +188,9 @@ window.REGION_CONF = {
   "군산": "군산·무주·완주",
   "무주": "군산·무주·완주",
   "완주": "군산·무주·완주",
-  "익산": "익산·전주·김제",
-  "전주": "익산·전주·김제",
-  "김제": "익산·전주·김제",
+  "익산": "익산·전주완산·김제",
+  "전주완산": "익산·전주완산·김제",
+  "김제": "익산·전주완산·김제",
   "진안": "진안·부안·장수",
   "부안": "진안·부안·장수",
   "장수": "진안·부안·장수",
@@ -188,9 +198,24 @@ window.REGION_CONF = {
   "정읍": "임실·정읍·남원",
   "남원": "임실·정읍·남원",
   "순창": "순창·고창",
-  "고창": "순창·고창"
+  "고창": "순창·고창",
+  "전주덕진": "익산·전주완산·김제"
  },
- "alias": {},
+ "alias": {
+  "전주덕진": "전주완산"
+ },
+ "riverCodes": {
+  "전주완산": [
+   "3301654",
+   "3301655",
+   "3301656",
+   "3301657",
+   "3301665"
+  ],
+  "전주덕진": [
+   "3301637"
+  ]
+ },
  "floodKeywords": [
   "갈담천",
   "경천",
@@ -223,7 +248,8 @@ window.REGION_CONF = {
   "장수",
   "전라북도",
   "전북",
-  "전주",
+  "전주덕진",
+  "전주완산",
   "전주천",
   "정읍",
   "정읍천",
@@ -239,7 +265,8 @@ window.REGION_CONF = {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "전라북도 진안군 안천면 삼락리",
-   "pfh": 265.5
+   "pfh": 265.5,
+   "cctv": false
   },
   "3001605": {
    "agc": "기후에너지환경부",
@@ -250,7 +277,8 @@ window.REGION_CONF = {
    "alm": 3.5,
    "srs": 4.24,
    "pfh": 4.24,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3001610": {
    "agc": "기후에너지환경부",
@@ -261,7 +289,8 @@ window.REGION_CONF = {
    "alm": 3.4,
    "srs": 3.98,
    "pfh": 3.98,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "3001616": {
    "agc": "기후에너지환경부",
@@ -272,7 +301,8 @@ window.REGION_CONF = {
    "alm": 2.2,
    "srs": 2.6,
    "pfh": 2.6,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3001633": {
    "agc": "기후에너지환경부",
@@ -283,7 +313,8 @@ window.REGION_CONF = {
    "alm": 4,
    "srs": 4.97,
    "pfh": 4.97,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3001654": {
    "agc": "기후에너지환경부",
@@ -294,7 +325,8 @@ window.REGION_CONF = {
    "alm": 4,
    "srs": 4.68,
    "pfh": 4.68,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3002655": {
    "agc": "기후에너지환경부",
@@ -305,7 +337,8 @@ window.REGION_CONF = {
    "alm": 5.4,
    "srs": 6.65,
    "pfh": 6.65,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3003617": {
    "agc": "기후에너지환경부",
@@ -316,7 +349,8 @@ window.REGION_CONF = {
    "alm": 5.1,
    "srs": 6.05,
    "pfh": 6.05,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3003680": {
    "agc": "기후에너지환경부",
@@ -327,13 +361,15 @@ window.REGION_CONF = {
    "alm": 5,
    "srs": 6.26,
    "pfh": 6.26,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3014410": {
    "kind": "dam",
    "agc": "한국농어촌공사",
    "addr": "전라북도 군산시 성산면 성덕리",
-   "pfh": 4.62
+   "pfh": 4.62,
+   "cctv": false
   },
   "3014632": {
    "agc": "기후에너지환경부",
@@ -344,7 +380,8 @@ window.REGION_CONF = {
    "alm": 4.4,
    "srs": 5.43,
    "pfh": 5.43,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3014639": {
    "agc": "기후에너지환경부",
@@ -355,7 +392,8 @@ window.REGION_CONF = {
    "alm": 7.1,
    "srs": 7.98,
    "pfh": 7.98,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3203690": {
    "agc": "기후에너지환경부",
@@ -366,7 +404,8 @@ window.REGION_CONF = {
    "alm": 3.2,
    "srs": 3.5,
    "pfh": 3.59,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3301630": {
    "agc": "기후에너지환경부",
@@ -377,7 +416,20 @@ window.REGION_CONF = {
    "alm": 4,
    "srs": 4.3,
    "pfh": 4.33,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
+  },
+  "3301637": {
+   "agc": "기후에너지환경부",
+   "addr": "전북특별자치도 전주시 덕진구 산정동 807-2",
+   "gdt": 45.133,
+   "att": 1,
+   "wrn": 1.9,
+   "alm": 2.5,
+   "srs": 3,
+   "pfh": 3.07,
+   "fstn": false,
+   "cctv": true
   },
   "3301640": {
    "agc": "기후에너지환경부",
@@ -388,7 +440,8 @@ window.REGION_CONF = {
    "alm": 3.4,
    "srs": 3.8,
    "pfh": 3.83,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3301654": {
    "agc": "기후에너지환경부",
@@ -399,7 +452,32 @@ window.REGION_CONF = {
    "alm": 5.8,
    "srs": 6.3,
    "pfh": 6.34,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
+  },
+  "3301655": {
+   "agc": "기후에너지환경부",
+   "addr": "전북특별자치도 전주시 완산구 효자동 서곡교",
+   "gdt": 17.248,
+   "att": 2.1,
+   "wrn": 3,
+   "alm": 3.9,
+   "srs": 4.7,
+   "pfh": 4.7,
+   "fstn": false,
+   "cctv": false
+  },
+  "3301656": {
+   "agc": "기후에너지환경부",
+   "addr": "전북특별자치도 전주시 완산구 효자동2가 785-12",
+   "gdt": 28.67,
+   "att": 1.2,
+   "wrn": 1.8,
+   "alm": 2.3,
+   "srs": 2.7,
+   "pfh": 2.77,
+   "fstn": false,
+   "cctv": false
   },
   "3301657": {
    "agc": "기후에너지환경부",
@@ -410,7 +488,8 @@ window.REGION_CONF = {
    "alm": 5,
    "srs": 5.7,
    "pfh": 5.74,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3301665": {
    "agc": "기후에너지환경부",
@@ -421,7 +500,8 @@ window.REGION_CONF = {
    "alm": 5.9,
    "srs": 6.5,
    "pfh": 6.53,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3301670": {
    "agc": "기후에너지환경부",
@@ -432,7 +512,8 @@ window.REGION_CONF = {
    "alm": 8,
    "srs": 8.7,
    "pfh": 8.73,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3301675": {
    "agc": "기후에너지환경부",
@@ -443,7 +524,8 @@ window.REGION_CONF = {
    "alm": 5.8,
    "srs": 7.2,
    "pfh": 7.29,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3302620": {
    "agc": "기후에너지환경부",
@@ -454,7 +536,8 @@ window.REGION_CONF = {
    "alm": 6.5,
    "srs": 7.3,
    "pfh": 7.39,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3302630": {
    "agc": "기후에너지환경부",
@@ -465,7 +548,8 @@ window.REGION_CONF = {
    "alm": 6.5,
    "srs": 6.9,
    "pfh": 6.91,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3302645": {
    "agc": "기후에너지환경부",
@@ -476,7 +560,8 @@ window.REGION_CONF = {
    "alm": 4,
    "srs": 4.4,
    "pfh": 4.46,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "3302665": {
    "agc": "기후에너지환경부",
@@ -487,7 +572,8 @@ window.REGION_CONF = {
    "alm": 5.9,
    "srs": 6.9,
    "pfh": 6.93,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "3302680": {
    "agc": "기후에너지환경부",
@@ -498,13 +584,15 @@ window.REGION_CONF = {
    "alm": 4.4,
    "srs": 5.3,
    "pfh": 5.71,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "4001110": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "전라북도 임실군 강진면 용수리",
-   "pfh": 197.7
+   "pfh": 197.7,
+   "cctv": false
   },
   "4001610": {
    "agc": "기후에너지환경부",
@@ -515,7 +603,8 @@ window.REGION_CONF = {
    "alm": 5.7,
    "srs": 6.2,
    "pfh": 6.97,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4002620": {
    "agc": "기후에너지환경부",
@@ -526,7 +615,8 @@ window.REGION_CONF = {
    "alm": 3.7,
    "srs": 4.4,
    "pfh": 5.23,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4002640": {
    "agc": "기후에너지환경부",
@@ -537,7 +627,8 @@ window.REGION_CONF = {
    "alm": 5.5,
    "srs": 6.1,
    "pfh": 6.17,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4003650": {
    "agc": "기후에너지환경부",
@@ -548,7 +639,8 @@ window.REGION_CONF = {
    "alm": 4.5,
    "srs": 5.2,
    "pfh": 5.27,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4003690": {
    "agc": "기후에너지환경부",
@@ -559,7 +651,8 @@ window.REGION_CONF = {
    "alm": 5.1,
    "srs": 5.8,
    "pfh": 6.17,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4004615": {
    "agc": "기후에너지환경부",
@@ -570,7 +663,8 @@ window.REGION_CONF = {
    "alm": 7.3,
    "srs": 8.3,
    "pfh": 8.36,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4004630": {
    "agc": "기후에너지환경부",
@@ -581,7 +675,8 @@ window.REGION_CONF = {
    "alm": 4.1,
    "srs": 4.4,
    "pfh": 4.47,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4004690": {
    "agc": "기후에너지환경부",
@@ -592,7 +687,8 @@ window.REGION_CONF = {
    "alm": 7.4,
    "srs": 9,
    "pfh": 9.01,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4005645": {
    "agc": "기후에너지환경부",
@@ -603,7 +699,8 @@ window.REGION_CONF = {
    "alm": 3.4,
    "srs": 3.9,
    "pfh": 3.91,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4005670": {
    "agc": "기후에너지환경부",
@@ -614,7 +711,8 @@ window.REGION_CONF = {
    "alm": 5.3,
    "srs": 6.6,
    "pfh": 6.63,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5301635": {
    "agc": "기후에너지환경부",
@@ -625,7 +723,8 @@ window.REGION_CONF = {
    "alm": 3.3,
    "srs": 4,
    "pfh": 5.51,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "5301660": {
    "agc": "기후에너지환경부",
@@ -636,7 +735,8 @@ window.REGION_CONF = {
    "alm": 4.8,
    "srs": 5.7,
    "pfh": 5.7,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   }
  }
 };

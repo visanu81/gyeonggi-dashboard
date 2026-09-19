@@ -34,6 +34,7 @@
  "map_any_prefix": [
   "군위군"
  ],
+ "map_inset_units": [],
  "regions": [
   {
    "name": "군위",
@@ -194,6 +195,53 @@
   "수성구": "동구",
   "중구": "북구"
  },
+ "aws_neighbors": {
+  "군위": [
+   "북구",
+   "동구",
+   "서구"
+  ],
+  "남구": [
+   "중구",
+   "달서구",
+   "서구"
+  ],
+  "달서구": [
+   "서구",
+   "남구",
+   "중구"
+  ],
+  "달성": [
+   "달서구",
+   "서구",
+   "남구"
+  ],
+  "동구": [
+   "중구",
+   "북구",
+   "수성구"
+  ],
+  "북구": [
+   "중구",
+   "동구",
+   "서구"
+  ],
+  "서구": [
+   "달서구",
+   "중구",
+   "남구"
+  ],
+  "수성구": [
+   "동구",
+   "남구",
+   "중구"
+  ],
+  "중구": [
+   "남구",
+   "북구",
+   "동구"
+  ]
+ },
  "river_stations": [
   {
    "code": "2012667",
@@ -211,7 +259,7 @@
    "sigun": "달서구",
    "warning": 5.5,
    "danger": 9.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -220,7 +268,7 @@
    "sigun": "달성",
    "warning": 9.8,
    "danger": 19.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -247,7 +295,7 @@
    "sigun": "동구",
    "warning": 4.35,
    "danger": 8.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -256,7 +304,7 @@
    "sigun": "동구",
    "warning": 1.0,
    "danger": 4.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -274,7 +322,7 @@
    "sigun": "북구",
    "warning": 2.1,
    "danger": 4.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -283,7 +331,7 @@
    "sigun": "북구",
    "warning": 2.9,
    "danger": 4.9,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -310,7 +358,7 @@
    "sigun": "수성구",
    "warning": 1.8,
    "danger": 4.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -342,7 +390,8 @@
    "alm": 22,
    "srs": 24.35,
    "pfh": 24.35,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2012652": {
    "agc": "기후에너지환경부",
@@ -353,7 +402,8 @@
    "alm": 4.1,
    "srs": 4.93,
    "pfh": 4.93,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2012653": {
    "agc": "기후에너지환경부",
@@ -364,7 +414,8 @@
    "alm": 4.5,
    "srs": 5.47,
    "pfh": 5.47,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2012660": {
    "agc": "기후에너지환경부",
@@ -375,7 +426,8 @@
    "alm": 8.1,
    "srs": 8.96,
    "pfh": 8.96,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2012661": {
    "agc": "기후에너지환경부",
@@ -386,7 +438,8 @@
    "alm": 5.5,
    "srs": 6.36,
    "pfh": 6.37,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2012664": {
    "agc": "기후에너지환경부",
@@ -397,7 +450,8 @@
    "alm": 5.2,
    "srs": 6.08,
    "pfh": 6.08,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2012665": {
    "agc": "기후에너지환경부",
@@ -408,7 +462,8 @@
    "alm": 4.9,
    "srs": 5.88,
    "pfh": 5.88,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2012666": {
    "agc": "기후에너지환경부",
@@ -419,7 +474,8 @@
    "alm": 8.8,
    "srs": 10.69,
    "pfh": 10.69,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2012667": {
    "agc": "기후에너지환경부",
@@ -430,7 +486,8 @@
    "alm": 5.5,
    "srs": 6.52,
    "pfh": 6.52,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2012674": {
    "agc": "기후에너지환경부",
@@ -441,7 +498,8 @@
    "alm": 8,
    "srs": 9.6,
    "pfh": 9.6,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2012690": {
    "agc": "기후에너지환경부",
@@ -452,7 +510,8 @@
    "alm": 4,
    "srs": 5.03,
    "pfh": 5.03,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "2012695": {
    "agc": "기후에너지환경부",
@@ -463,7 +522,8 @@
    "alm": 9.5,
    "srs": 11.68,
    "pfh": 11.68,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "2012696": {
    "agc": "기후에너지환경부",
@@ -474,7 +534,8 @@
    "alm": 10.6,
    "srs": 11.88,
    "pfh": 11.88,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "2014660": {
    "agc": "기후에너지환경부",
@@ -485,7 +546,8 @@
    "alm": 19.1,
    "srs": 20.4,
    "pfh": 20.4,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   }
  },
  "keywords": [
@@ -584,52 +646,5 @@
   "수성구": "수성구",
   "중구": "중구"
  },
- "generated": "2026-09-18 17:40",
- "aws_neighbors": {
-  "군위": [
-   "북구",
-   "동구",
-   "서구"
-  ],
-  "남구": [
-   "중구",
-   "달서구",
-   "서구"
-  ],
-  "달서구": [
-   "서구",
-   "남구",
-   "중구"
-  ],
-  "달성": [
-   "달서구",
-   "서구",
-   "남구"
-  ],
-  "동구": [
-   "중구",
-   "북구",
-   "수성구"
-  ],
-  "북구": [
-   "중구",
-   "동구",
-   "서구"
-  ],
-  "서구": [
-   "달서구",
-   "중구",
-   "남구"
-  ],
-  "수성구": [
-   "동구",
-   "남구",
-   "중구"
-  ],
-  "중구": [
-   "남구",
-   "북구",
-   "동구"
-  ]
- }
+ "generated": "2026-09-20 07:02"
 }

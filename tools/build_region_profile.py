@@ -708,16 +708,29 @@ SIDO = {
     'sejong':    _sido('sejong', '세종', '세종특별자치시', '36', '29', 'L1170000', 133, '세종', ['세종'], '세종',
                        units={'세종': {'admin': '세종특별자치시', 'prefixes': ['3611']}},
                        map_alias={'세종': ['세종특별자치시', '세종시']}),
-    'chungbuk':  _sido('chungbuk', '충북', '충청북도', '43', '33', 'L1040000', 131, '충북', ['충북', '충청북도'], '청주',
-                       map_alias={'청주': ['청주시', '청원군']}),   # 2014 통합, 2013 경계자료엔 따로
-    'chungnam':  _sido('chungnam', '충남', '충청남도', '44', '34', 'L1030000', 133, '충남', ['충남', '충청남도'], '홍성'),
-    'jeonbuk':   _sido('jeonbuk', '전북', '전북특별자치도', '52', '35', 'L1060000', 146, '전북', ['전북', '전라북도'], '전주'),
+    'chungbuk':  _sido('chungbuk', '충북', '충청북도', '43', '33', 'L1040000', 131, '충북', ['충북', '충청북도'], '청주동부',
+                       map_alias={'청주': ['청주시', '청원군']},   # 2014 통합, 2013 경계자료엔 따로
+                       # 청주 2개 소방서 — 동부(상당·청원구), 서부(서원·흥덕구). 2013 경계자료엔 서원구·청원구가 없어
+                       # 동부=옛 상당구+청원군, 서부=옛 흥덕구로 근사한다(경계자료 갱신 시 정확해짐).
+                       splits={'청주': {'청주동부': {'prefixes': ['43111', '43114'], 'map': ['청주시상당구', '청원군']},
+                                       '청주서부': {'prefixes': ['43112', '43113'], 'map': ['청주시흥덕구']}}}),
+    'chungnam':  _sido('chungnam', '충남', '충청남도', '44', '34', 'L1030000', 133, '충남', ['충남', '충청남도'], '홍성',
+                       splits={'천안': {'천안동남': {'prefixes': ['44131'], 'map': ['천안시동남구']},
+                                       '천안서북': {'prefixes': ['44133'], 'map': ['천안시서북구']}}}),
+    'jeonbuk':   _sido('jeonbuk', '전북', '전북특별자치도', '52', '35', 'L1060000', 146, '전북', ['전북', '전라북도'], '전주완산',
+                       splits={'전주': {'전주완산': {'prefixes': ['52111'], 'map': ['전주시완산구']},
+                                       '전주덕진': {'prefixes': ['52113'], 'map': ['전주시덕진구']}}}),
     # 2026 광주·전남 통합 — 법정동 '12' 하나로 묶였지만 특보구역은 광주(L113)·전남(L105) 둘, 지도도 둘, 미세먼지도 둘
     'jngj':      _sido('jngj', '전남광주', '전남광주통합특별시', '12', ['24', '36'], ['L1050000', 'L1130000', 'L1052400'], 156,   # 흑산도.홍도 별도 상위구역
                        ['광주', '전남'], ['전남광주', '전라남도', '전남', '광주광역시'], '서구', wide='전남광주'),
     'gyeongbuk': _sido('gyeongbuk', '경북', '경상북도', '47', '37', ['L1070000', 'L1600000'], 143, '경북', ['경북', '경상북도'], '안동',   # 울릉도.독도는 별도 상위구역
-                       map_exclude=['군위군']),           # 2023 대구로 편입
-    'gyeongnam': _sido('gyeongnam', '경남', '경상남도', '48', '38', 'L1080000', 159, '경남', ['경남', '경상남도'], '창원'),
+                       map_exclude=['군위군'],            # 2023 대구로 편입
+                       splits={'포항': {'포항남부': {'prefixes': ['47111'], 'map': ['포항시남구']},
+                                       '포항북부': {'prefixes': ['47113'], 'map': ['포항시북구']}}}),
+    'gyeongnam': _sido('gyeongnam', '경남', '경상남도', '48', '38', 'L1080000', 159, '경남', ['경남', '경상남도'], '창원',
+                       splits={'창원': {'창원': {'prefixes': ['48121', '48123'], 'map': ['창원시의창구', '창원시성산구']},
+                                       '마산': {'prefixes': ['48125', '48127'], 'map': ['창원시마산합포구', '창원시마산회원구']},
+                                       '진해': {'prefixes': ['48129'], 'map': ['창원시진해구']}}}),
     'jeju':      _sido('jeju', '제주', '제주특별자치도', '50', '39', 'L1090000', 184, '제주', ['제주'], '제주'),
     'gangwon':   _sido('gangwon', '강원', '강원특별자치도', '51', '32', 'L1020000', 105, '강원', ['강원'], '춘천'),
 }
@@ -964,6 +977,7 @@ def build_dams(sd, sigun, dam_inv):
             continue
         toks = addr.split()
         area = resolve_unit(sd, unit_of(toks[1])[0]) if len(toks) > 1 else None
+        area = (sd.get('_main_of') or {}).get(area, area)   # 분리된 시(청주)는 본체 소방서로
         if area not in sigun:
             continue
 
@@ -1015,6 +1029,11 @@ def build_pm_auto(sd, sigun, msrstn, live_names, centers=None):
             area = next(iter(sd['units']))               # 세종처럼 단위가 하나
         else:
             area = resolve_unit(sd, unit_of(toks[1])[0]) if len(toks) > 1 else None
+        # 분리된 시(창원·청주…)는 측정소 주소의 구(區)로 소방서를 고른다. 구를 못 읽으면 본체 소방서로.
+        sg = (sd.get('_split_gu') or {}).get(area)
+        if sg is not None:
+            gu = toks[2] if len(toks) > 2 else ''
+            area = sg.get(gu) or (sd.get('_main_of') or {}).get(area, area)
         if area not in sigun or it.get('stationName') not in live_names:
             continue
         dist = 0.0
@@ -1061,7 +1080,33 @@ def build_sido(key, with_cctv=True, refresh=False):
     words = sd['sido_words']
     inv = fetch_aws_inventory(refresh)
     sigun = sigun_from_inventory(sd, inv)
-    print(f'[{sd["label"]}] 단위 {len(sigun)}곳: {", ".join(sigun)}')
+    # ── 3단계 소방서 분리 (2026-09-20): 한 시(市)를 구(區) 단위로 여러 소방서에. 경기 고양/일산 모델 —
+    #    첫 소방서는 시 이름을 그대로(예보·특보·미세먼지의 '본체'), 나머지는 alias 로 시에 붙고
+    #    AWS 관측소·하천·지도 조각·배치도 자리는 각자 갖는다.
+    splits = sd.get('splits') or {}
+    alias = {}
+    main_of = {}
+    map_alias = dict(sd.get('map_alias') or {})
+    split_gu = {}                      # parent → {'마산합포구': '마산', …}  (하천 관측소를 구 주소로 나눌 때)
+    for parent, subs in splits.items():
+        if parent not in sigun:
+            print(f'  [경고] 분리 대상 {parent} 이 단위 목록에 없다 — 건너뜀', file=sys.stderr)
+            continue
+        base = sigun.pop(parent)
+        split_gu[parent] = {}
+        main = parent if parent in subs else next(iter(subs))     # 본체: 시 이름 소방서, 없으면 첫 소방서(청주동부)
+        for sub, spec in subs.items():
+            sigun[sub] = {'admin': base['admin'], 'prefixes': list(spec['prefixes']), 'kind': 'sigun', 'parent': parent}
+            if sub != main:
+                alias[sub] = main
+            map_alias[sub] = list(spec.get('map') or [])
+            for mname in spec.get('map') or []:
+                split_gu[parent][mname.replace(base['admin'], '')] = sub
+        if main != parent:
+            main_of[parent] = main          # '청주' 라는 이름으로 오는 것(재난문자·미세먼지·댐)을 본체로
+    sd['_main_of'] = main_of
+    sd['_split_gu'] = split_gu
+    print(f'[{sd["label"]}] 단위 {len(sigun)}곳: {", ".join(sigun)}' + (f' (분리: {", ".join(splits)})' if splits else ''))
     sigun_map = {n: i['prefixes'] for n, i in sigun.items()}
     aws = build_aws(sigun_map, inv)
     regs = build_regions(sigun_map, aws)
@@ -1084,9 +1129,22 @@ def build_sido(key, with_cctv=True, refresh=False):
         print(f'  관측소 없는 단위 → 이웃 AWS 대용: {aws_fallback}')
 
     riv_inv = fetch_river_inventory(refresh)
-    rivers = add_nearby_rivers(build_rivers(sigun_map, riv_inv, sido_word=words, sigun=sigun,
-                                            alias=sd.get('unit_alias')), regs, riv_inv,
-                               sido_word=words)
+    rivers = build_rivers(sigun_map, riv_inv, sido_word=words, sigun=sigun, alias=sd.get('unit_alias'))
+    for parent, gu_of in split_gu.items():
+        # 시 전체 관측소를 구 주소(예: '경상남도 창원시 마산합포구 …')로 소방서에 배분. 구를 못 읽으면 본체에.
+        subs = [s for s, info in sigun.items() if info.get('parent') == parent]
+        main = parent if parent in subs else subs[0]
+        pool = build_rivers({parent: [pre for s in subs for pre in sigun[s]['prefixes']]}, riv_inv,
+                            sido_word=words, sigun={parent: {'admin': sigun[main]['admin']}},
+                            per_sigun=3 * len(subs)).get(parent, [])
+        for s in subs:
+            rivers[s] = []
+        for st in pool:
+            toks = (st.get('addr') or '').split()
+            gu = toks[2] if len(toks) > 2 else ''
+            rivers[gu_of.get(gu, main)].append(st)
+        print(f'  {parent} 하천 {len(pool)}곳 → ' + ', '.join(f"{s} {len(rivers[s])}" for s in subs))
+    rivers = add_nearby_rivers(rivers, regs, riv_inv, sido_word=words)
     dams = build_dams(sd, sigun, fetch_dam_inventory(refresh))
 
     # 하천 이름(WAMIS) — 표기를 경기와 같게 '하천명 (시군 다리명)' 으로
@@ -1150,11 +1208,12 @@ def build_sido(key, with_cctv=True, refresh=False):
     if pm_missing:
         print(f'  미세먼지 측정소 없는 단위: {pm_missing}')
 
+    regs_main = [r for r in regs if r['name'] not in alias]      # 예보·실황 수집 단위(시 본체)
     wrn_rows = fetch_wrn_regions(refresh)
     reg_map, wide_label, wide_names = build_reg_map(sd, sigun, wrn_rows)
     fire_map = build_fire_sigun_map(sigun, fetch_fire_sigun_names(sd, refresh), sd)
     river_words = sorted({n for n in names_cache.values() if n})
-    order = [r['name'] for r in sorted(regs, key=lambda r: (-r['lat'], r['lon']))]   # 북→남, 서→동
+    order = [r['name'] for r in sorted(regs, key=lambda r: (-r['lat'], r['lon']))]   # 북→남, 서→동 (분리 소방서 포함)
     gun = [n for n, i in sigun.items() if i['admin'].endswith('군')]
 
     out = {
@@ -1167,22 +1226,24 @@ def build_sido(key, with_cctv=True, refresh=False):
         'wrn_stn': sd['wrn_stn'], 'wrn_prefix': [u[:4] for u in sd['wrn_up']],
         'wide_label': wide_label, 'wide_names': wide_names,
         'pm_sido': sd['pm_sido'], 'sido_words': words,
-        'kostat': sd['kostat'], 'map_alias': sd.get('map_alias') or {},
-        'unit_alias': sd.get('unit_alias') or {},
+        'kostat': sd['kostat'], 'map_alias': map_alias,
+        'alias': alias, 'splits': {p: list(s) for p, s in splits.items()},
+        'unit_alias': {**(sd.get('unit_alias') or {}), **main_of},
         'map_any_prefix': sd.get('map_any_prefix') or [],
         'map_inset_units': sd.get('map_inset_units') or [],
-        'regions': [{k: r[k] for k in ('name', 'nx', 'ny', 'sgg', 'lat', 'lon', 'admin')} for r in regs],
+        'regions': [{k: r[k] for k in ('name', 'nx', 'ny', 'sgg', 'lat', 'lon', 'admin')} for r in regs_main],
+        'stations_all': [{k: r[k] for k in ('name', 'lat', 'lon', 'admin')} for r in regs],   # 분리 소방서 포함(배치도·이웃용)
         'pm_stations': pm,
         'aws_stations': {a: [[r['stn'], r['name']] for r in st] for a, st in aws.items()},
         'aws_fallback': aws_fallback,
         'aws_neighbors': aws_neighbors(regs),
         'river_stations': river_stations,
         'river_meta': meta,
-        'keywords': [sd['label'], sd['full']] + wide_names + list(sigun) + list((sd.get('unit_alias') or {})),
+        'keywords': [sd['label'], sd['full']] + wide_names + list(sigun) + list((sd.get('unit_alias') or {})) + list(splits),
         'reg_map': reg_map,
         'region_order': [wide_label] + order,
         'fire_sigun_map': fire_map,
-        'fire_groups': build_fire_groups(regs),
+        'fire_groups': build_fire_groups(regs_main),
         'flood_keywords': sorted(set(list(sigun) + river_words + [sd['label']] + wide_names)),
         'exclude_prefix': '',
         'gun_names': gun,
