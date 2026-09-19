@@ -436,10 +436,17 @@ def fetch_aws_rain():
         best, ok = pick(area)
         total = len(AWS_STATIONS.get(area, []))
         alt = None
-        if best is None and area in AWS_FALLBACK:      # 일산처럼 관측소가 전멸한 경우
-            alt = AWS_FALLBACK[area]
-            best, ok = pick(alt)                       # ⚠ ok도 대체분으로 갱신(안 하면 화면에 '자료없음'으로 뜸)
-            total = len(AWS_STATIONS.get(alt, []))     # ok/total을 같은 관서 기준으로 통일
+        if best is None:
+            # 일산처럼 관측소가 전멸한 경우 — 프로파일이 정한 대체 관서, 그다음 가까운 이웃 순서(전국판:
+            # 부산 해운대 937 처럼 원장엔 있는데 자료를 안 보내는 지점이 있다). 대체분은 alt 로 표기한다.
+            for cand in [AWS_FALLBACK.get(area)] + list((P.get('aws_neighbors') or {}).get(area, [])):
+                if not cand or cand == area:
+                    continue
+                b2, ok2 = pick(cand)
+                if b2 is not None:
+                    alt, best, ok = cand, b2, ok2          # ⚠ ok도 대체분으로 갱신(안 하면 화면에 '자료없음'으로 뜸)
+                    total = len(AWS_STATIONS.get(cand, []))   # ok/total을 같은 관서 기준으로 통일
+                    break
         if best is None:
             out[area] = {'ok': 0, 'total': total}      # 자료없음 (0 아님)
             continue
