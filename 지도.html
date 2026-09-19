@@ -46,7 +46,7 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   :root{
     --bg:#eef1f7; --bg2:#e6ebf4; --surface:#ffffff; --surface2:#f3f7fc; --surface3:#eaf0f8;
-    --border:#e4e9f2; --border2:#d3dbe9; --ink:#0f1b2d; --ink2:#4b5a74; --ink3:#8593aa;
+    --border:#e4e9f2; --border2:#d3dbe9; --ink:#0f1b2d; --ink2:#4b5a74; --ink3:#71809a;
     --brand:#2563eb; --brand2:#1d4ed8; --brandSoft:#e9f0ff; --cyan:#0e7490;
     --safe:#0ea371; --safeSoft:#e5f7f0; --caution:#e0930a; --cautionSoft:#fdf2df;
     --warn:#ef6c1a; --warnSoft:#ffece0; --danger:#e5484d; --dangerSoft:#fdebec; --severe:#d42a2f; --severeSoft:#fbe3e3;
@@ -56,7 +56,7 @@
   }
   [data-theme="dark"]{
     --bg:#080d18; --bg2:#0b1222; --surface:#111a2c; --surface2:#18233b; --surface3:#1e2a45;
-    --border:#26314c; --border2:#354364; --ink:#e9eef9; --ink2:#9fb0cf; --ink3:#6b7a99;
+    --border:#26314c; --border2:#354364; --ink:#e9eef9; --ink2:#9fb0cf; --ink3:#8090ad;
     --brand:#4b8bf5; --brand2:#3b82f6; --brandSoft:rgba(75,139,245,.15); --cyan:#22d3ee;
     --safe:#34d399; --safeSoft:rgba(52,211,153,.13); --caution:#fbbf24; --cautionSoft:rgba(251,191,36,.13);
     --warn:#fb923c; --warnSoft:rgba(251,146,60,.14); --danger:#f87171; --dangerSoft:rgba(248,113,113,.13); --severe:#ef4444; --severeSoft:rgba(239,68,68,.16);
@@ -178,9 +178,11 @@
         <a href="상황실.html" title="상황실(벽면) 모드 — 관할 전 관서를 15초마다 순차 표출. 대형 화면에 띄우고 F11 전체화면으로 사용" style="height:36px; padding:0 13px; border-radius:10px; border:1px solid var(--brand); background:var(--surface); color:var(--brand); font-size:12.5px; font-weight:800; font-family:inherit; text-decoration:none; display:flex; align-items:center; gap:6px; white-space:nowrap;" style-hover="background:var(--surface2)">🖥 상황실</a>
         <a href="도움말.html" title="사용설명서 — 화면 보는 법과 색·기호, 자동 판단 기준" style="height:36px; padding:0 13px; border-radius:10px; border:1px solid var(--border2); background:var(--surface); color:var(--ink2); font-size:12.5px; font-weight:800; font-family:inherit; text-decoration:none; display:flex; align-items:center; gap:6px; white-space:nowrap;" style-hover="background:var(--surface2)">❓ 설명서</a>
         <a href="https://t.me/gg_bukbu_weather_bot" target="_blank" rel="noopener" title="텔레그램 급변 알림 구독 — 봇 채팅에서 /start 한 번이면 끝. 특보·하천 위험·재난문자를 실시간으로 알려드립니다" style="height:36px; padding:0 13px; border-radius:10px; border:1px solid #229ED9; background:var(--surface); color:#229ED9; font-size:12.5px; font-weight:800; font-family:inherit; text-decoration:none; display:flex; align-items:center; gap:6px; white-space:nowrap;" style-hover="background:var(--surface2)">📲 알림받기</a>
+        <!-- 설정 3개(시연·경보음·테마)는 이동 버튼과 무게가 같으면 헷갈린다 → 오른쪽 작은 그룹으로 (2026-09-19 디자인 손질) -->
+        <span style="width:1px; height:22px; background:var(--border2); margin:0 4px;"></span>
         <button onClick="{{toggleDemo}}" style="{{demoBtnStyle}}" style-hover="filter:brightness(1.06)">{{demoBtnLabel}}</button>
-        <button onClick="{{toggleMute}}" title="경보음" style="height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--border2); background:var(--surface); color:var(--ink2); font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer; display:flex; align-items:center; gap:6px;" style-hover="background:var(--surface2)">{{muteLabel}}</button>
-        <button onClick="{{toggleTheme}}" title="라이트/다크" style="height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--border2); background:var(--surface); color:var(--ink2); font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer; display:flex; align-items:center; gap:6px;" style-hover="background:var(--surface2)">{{themeLabel}}</button>
+        <button onClick="{{toggleMute}}" title="경보음" style="height:30px; padding:0 9px; border-radius:9px; border:1px solid var(--border); background:var(--surface2); color:var(--ink3); font-size:11.5px; font-weight:700; font-family:inherit; cursor:pointer; display:flex; align-items:center; gap:5px;" style-hover="color:var(--ink);border-color:var(--border2)">{{muteLabel}}</button>
+        <button onClick="{{toggleTheme}}" title="라이트/다크" style="height:30px; padding:0 9px; border-radius:9px; border:1px solid var(--border); background:var(--surface2); color:var(--ink3); font-size:11.5px; font-weight:700; font-family:inherit; cursor:pointer; display:flex; align-items:center; gap:5px;" style-hover="color:var(--ink);border-color:var(--border2)">{{themeLabel}}</button>
       </div>
   </header>
 
@@ -215,6 +217,14 @@
           </div>
         </sc-for>
       </div>
+    </div>
+    <!-- 내 관서 한 줄 (2026-09-19 디자인 손질): 스크롤 없이 내 관할만 바로 판단. 누르면 그 관서 상세로 -->
+    <div onClick="{{mineOpen}}" style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:8px; padding:9px 16px; border-radius:12px; background:var(--surface); border:1px solid {{mineBorder}}; box-shadow:var(--sh1); cursor:pointer;" style-hover="border-color:var(--brand2)">
+      <span style="font-size:13px; font-weight:800; color:var(--brand); white-space:nowrap;">📍 {{myStation}}</span>
+      <sc-for list="{{mineItems}}" as="mi" hint-placeholder-count="5">
+        <span style="display:inline-flex; align-items:baseline; gap:5px; white-space:nowrap;"><span style="font-size:12px; color:var(--ink3);">{{mi.k}}</span><span style="font-size:13.5px; font-weight:800; color:{{mi.c}};">{{mi.v}}</span></span>
+      </sc-for>
+      <span style="margin-left:auto; font-size:12px; color:var(--ink3);">상세 ›</span>
     </div>
   </section>
 
@@ -345,10 +355,11 @@
             </sc-for>
           </sc-if>
           <sc-if value="{{noWarn}}" hint-placeholder-val="{{true}}">
-            <div style="display:flex; flex-direction:column; align-items:center; gap:7px; padding:22px 12px; text-align:center;">
-              <div style="width:38px; height:38px; border-radius:50%; background:var(--safeSoft); display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="var(--safe)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
-              <div style="font-size:13px; font-weight:700; color:var(--ink);">발효 중인 기상특보 없음</div>
-              <div style="font-size:11.5px; color:var(--ink3); line-height:1.5;">{{prelimLine}}</div>
+            <!-- 없을 땐 한 줄로(2026-09-19 디자인 손질): 상황이 없을 때 큰 카드가 노른자 자리를 차지하던 것 -->
+            <div style="display:flex; align-items:center; gap:9px; padding:6px 8px;">
+              <div style="width:22px; height:22px; border-radius:50%; background:var(--safeSoft); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="var(--safe)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+              <div style="font-size:12.5px; font-weight:700; color:var(--ink);">발효 중인 기상특보 없음</div>
+              <div style="font-size:12px; color:var(--ink3); margin-left:auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{prelimLine}}</div>
             </div>
           </sc-if>
           <sc-if value="{{hasPrelim}}" hint-placeholder-val="{{false}}">
@@ -393,10 +404,10 @@
             </sc-for>
           </sc-if>
           <sc-if value="{{noMsg}}" hint-placeholder-val="{{true}}">
-            <div style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:22px 12px; text-align:center;">
-              <div style="width:38px; height:38px; border-radius:50%; background:var(--safeSoft); display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="var(--safe)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
-              <div style="font-size:13px; font-weight:700; color:var(--ink);">발령된 재난문자 없음</div>
-              <div style="font-size:11.5px; color:var(--ink3);">경기북부 지역 재난문자를 실시간 감시 중</div>
+            <div style="display:flex; align-items:center; gap:9px; padding:2px 4px;">
+              <div style="width:22px; height:22px; border-radius:50%; background:var(--safeSoft); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="var(--safe)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+              <div style="font-size:12.5px; font-weight:700; color:var(--ink);">발령된 재난문자 없음</div>
+              <div style="font-size:12px; color:var(--ink3); margin-left:auto;">경기북부 실시간 감시 중</div>
             </div>
           </sc-if>
         </div>
@@ -421,7 +432,7 @@
               <span style="font-size:17px; color:var(--severe); flex-shrink:0;">›</span>
             </div>
           </sc-if>
-          <sc-for list="{{rivers}}" as="r" hint-placeholder-count="5">
+          <sc-for list="{{riverRows}}" as="r" hint-placeholder-count="5">
             <div onClick="{{r.open}}" style="display:flex; align-items:center; gap:12px; padding:9px 10px; border-radius:11px; cursor:pointer;" style-hover="background:var(--surface2)">
               <div style="width:64px; height:30px; flex-shrink:0;">
                 <svg viewBox="0 0 100 30" preserveAspectRatio="none" width="64" height="30" style="display:block; overflow:visible;">
@@ -445,6 +456,10 @@
               <div style="flex-shrink:0; font-size:9.5px; font-weight:800; color:#fff; background:{{r.color}}; padding:3px 7px; border-radius:6px; min-width:34px; text-align:center;">{{r.statusTxt}}</div>
             </div>
           </sc-for>
+          <!-- 관측소가 많은 시도(강원 55·경북 72)는 상위 8행만 — 주의 이상·내 관서·홍수예보지점 우선. 나머지는 펼쳐 본다 -->
+          <sc-if value="{{riverMore}}" hint-placeholder-val="{{false}}">
+            <div onClick="{{toggleRiverExpand}}" style="margin:4px 2px 2px; padding:8px; border-radius:9px; text-align:center; font-size:12px; font-weight:700; color:var(--brand); background:var(--brandSoft); cursor:pointer;">{{riverMoreLabel}}</div>
+          </sc-if>
         </div>
       </div>
       </sc-if>
@@ -1724,6 +1739,15 @@ class Component extends DCLogic {
     }).sort((a,b)=> (parseFloat(b.pctW)||0)-(parseFloat(a.pctW)||0));
     // 하천 카드: 선택 관서 인근(하천명에 시군 포함) 먼저 + 그 안에서 위험 근접순(stable)
     const rivers = riversByRisk.slice().sort((a,b)=> (a.near?0:1)-(b.near?0:1));
+    // 카드에 실제로 보이는 행 — 기본 8행. 우선순위: 주의 이상 → 내 관서 인근 → 홍수예보지점 → 위험 근접순.
+    // (2026-09-19 디자인 손질: 시도판은 관측소가 55~72곳이라 전부 나열하면 페이지 절반이 하천 목록이었다)
+    const _RM = this.RIVER_META || {};
+    const _rank = r => (r.lv==='danger'?0 : r.lv==='warning'?1 : r.near?2 : ((_RM[r.raw&&r.raw.code]||{}).fstn?3:4));
+    const riverAll = riversByRisk.slice().sort((a,b)=> _rank(a)-_rank(b) || (parseFloat(b.pctW)||0)-(parseFloat(a.pctW)||0));
+    const RIVER_SHOW = 8;
+    const riverMore = riverAll.length > RIVER_SHOW;
+    const riverRows = (st.riverExpand || !riverMore) ? riverAll : riverAll.slice(0, RIVER_SHOW);
+    const riverMoreLabel = st.riverExpand ? ('접기 ▴ (상위 '+RIVER_SHOW+'곳만)') : ('전체 '+riverAll.length+'곳 보기 ▾');
     // warnings
     const rawWarns=(d.warnings||[]);
     const groupedWarns = this.groupWarns(rawWarns);   // 같은 특보끼리 지역 묶기
@@ -1776,7 +1800,8 @@ class Component extends DCLogic {
       open:()=>this.setState({modal:{kind:'msg', msg:m}}) }));
     const images=[{src:'assets/kma_warn.png',title:'전국 특보 발효도',sub:'기상청'},{src:'assets/kma_radar.png',title:'레이더 합성',sub:'강수 분포'},{src:'assets/kma_satellite.png',title:'천리안 위성 (적외)',sub:'GK2A'},{src:'assets/kma_qpf.png',title:'초단기 강수예측',sub:'기상청'}].map(im=>({ ...im, open:()=>this.setState({modal:{kind:'image', key:im.src, title:im.title}}) }));
     // kpi/ribbon chips
-    const worstRiver = riversByRisk[0];
+    // 댐은 뺀다 — 댐의 기준(계획홍수위)은 평상시에도 90%대라 KPI 가 늘 '100%'로 보였다(강원 광동댐, 2026-09-19).
+    const worstRiver = riversByRisk.find(r => !(r.raw && r.raw.dam)) || riversByRisk[0];
     // 최고수위 하천의 지점 축약명 (예: "임진강 (군남댐)" → "군남댐", "임진강 (연천 필승교)" → "필승교")
     const _wrPlace = worstRiver ? (function(nm){ var m=String(nm||'').match(/\(([^)]+)\)/); return m ? m[1].split(' ').pop() : String(nm||'').split(' ')[0]; })(worstRiver.name) : '';
     const feelsMax = Math.max(0,...(d.stations||[]).map(s=>s.feels||0));
@@ -1784,7 +1809,7 @@ class Component extends DCLogic {
     // 리본 칩: PC(2열 배치)는 크게, 모바일은 한 줄 균등분배로 촘촘하게
     const _chipLayout = wide ? 'display:flex; flex-direction:column; align-items:center; min-width:74px; padding:8px 14px; border-radius:12px;' : 'display:flex; flex-direction:column; align-items:center; flex:1 1 0; min-width:0; padding:7px 3px; border-radius:10px;';
     const _chipVal = wide ? 'font-size:22px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums;' : 'font-size:15px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums;';
-    const _chipLabel = wide ? 'font-size:11px; font-weight:600; color:var(--ink2); margin-top:4px;' : 'font-size:8.5px; font-weight:600; color:var(--ink2); margin-top:2px; white-space:nowrap;';
+    const _chipLabel = wide ? 'font-size:12px; font-weight:600; color:var(--ink2); margin-top:4px;' : 'font-size:8.5px; font-weight:600; color:var(--ink2); margin-top:2px; white-space:nowrap;';
     // 긴 라벨(예: 최고수위(군남댐))용 — 작은 글씨 + 자간 압축으로 한 줄 유지, 다른 칩과 높이·폭 비슷하게
     const _chipLabelSm = wide ? 'font-size:9px; font-weight:600; color:var(--ink2); margin-top:4px; white-space:nowrap; letter-spacing:-.4px;' : 'font-size:6.3px; font-weight:600; color:var(--ink2); margin-top:2px; white-space:nowrap; letter-spacing:-.3px;';
     const chipsWrapStyle = wide ? 'display:flex; align-items:center; gap:9px; margin-left:auto; flex-wrap:wrap; position:relative;' : 'display:flex; align-items:stretch; gap:6px; width:100%; margin-left:0; margin-top:8px; flex-wrap:nowrap; position:relative;';
@@ -1821,6 +1846,9 @@ class Component extends DCLogic {
     const _sb = this.scopeBox();
     const _mapAR = _sb ? (_sb.w.toFixed(1) + ' / ' + _sb.h.toFixed(1))
                        : (_mg && _mg.W && _mg.H ? (_mg.W + ' / ' + _mg.H) : '1000 / 1030');
+    // 한 열(좁은 화면)일 때 지도 높이 상한 — 세로로 긴 시도(강원·인천)는 지도 하나가 한 화면을 다 먹었다(2026-09-19)
+    const _arNum = _sb ? (_sb.w/_sb.h) : (_mg && _mg.W && _mg.H ? _mg.W/_mg.H : 1000/1030);
+    const _mapCap = (w>=1160) ? '' : (' max-height:62vh; max-width:min(960px, calc(62vh * ' + _arNum.toFixed(3) + '));');
     return {
       rootRef:this.rootRef, mapRef:this.mapRef, theme:st.theme, demo:st.demo,
       // 상황실(벽면) 모드 — 위험 시 wallAlarm 클래스로 경보색 전환(애니는 스타일시트)
@@ -1843,12 +1871,30 @@ class Component extends DCLogic {
       heroCols, rightDisplay, rightCols, riverCardStyle, riverBodyStyle, chipsWrapStyle,
       themeLabel: st.theme==='dark'?'☀ 라이트':'☾ 다크',
       muteLabel: st.muted?'🔕 음소거':'🔔 경보음',
-      demoBtnLabel: st.demo?'■ 시연 종료':'▶ 시연 모드',
-      demoBtnStyle: 'height:36px; padding:0 13px; border-radius:10px; border:1px solid '+(st.demo?'var(--severe)':'var(--border2)')+'; background:'+(st.demo?'var(--severe)':'var(--surface)')+'; color:'+(st.demo?'#fff':'var(--ink2)')+'; font-size:12.5px; font-weight:800; font-family:inherit; cursor:pointer;',
+      demoBtnLabel: st.demo?'■ 시연 종료':'▶ 시연',
+      demoBtnStyle: 'height:30px; padding:0 9px; border-radius:9px; border:1px solid '+(st.demo?'var(--severe)':'var(--border)')+'; background:'+(st.demo?'var(--severe)':'var(--surface2)')+'; color:'+(st.demo?'#fff':'var(--ink3)')+'; font-size:11.5px; font-weight:700; font-family:inherit; cursor:pointer;',
       hoBtnCls,
       // ribbon
       statusLabel:status.label, statusHead:status.head,
       statusSub: this.statusSub(status, groupedWarns, rivers, prelimNorth),
+      // 내 관서 한 줄 — 기온·하늘 / 1시간 강수(AWS) / 6시간 최대 예측 / 관할 특보 / 관할 하천
+      mineItems:(function(self){
+        const a=myS.aws||{}; const rn=(a.rn60!=null)?a.rn60:(myS.rain!=null?myS.rain:null);
+        const f6=(myS.fcst6||[]); let fmax=0, fat='';
+        f6.forEach(function(x){ const v=+x.rain_mm||0; if(v>fmax){ fmax=v; fat=(x.time||''); } });
+        const myW=rawWarns.filter(function(w){ const ar=String(w.area||''); return ar.indexOf(mySg)>=0 || ar.indexOf('전역')>=0 || (((window.REGION_CONF||{}).wideNames)||[]).some(function(n){ return ar.indexOf(n)>=0; }); });
+        const myR=riversByRisk.filter(function(r){ return r.near && (r.lv==='danger'||r.lv==='warning'); });
+        const items=[
+          { k:'현재', v:(myS.temp!=null?myS.temp+'°':'-')+(myS.weather?' '+myS.weather:''), c:'var(--ink)' },
+          { k:'1시간 강수', v:(rn!=null?rn+'mm':'-'), c:(rn>0?'var(--brand)':'var(--ink)') },
+          { k:'6시간 최대', v:(f6.length?(fmax+'mm'+(fmax>0&&fat?(' ('+fat+')'):'')):'-'), c:(fmax>=10?'var(--warn)':fmax>0?'var(--brand)':'var(--ink)') },
+          { k:'특보', v:(myW.length?(self.groupWarns(myW).map(function(g){return g.type;}).join('·')):'없음'), c:(myW.length?'var(--severe)':'var(--safe)') },
+          { k:'하천', v:(myR.length?(myR.length+'곳 '+(myR.some(function(r){return r.lv==='danger';})?'위험':'주의')):'안전'), c:(myR.length?'var(--warn)':'var(--safe)') },
+        ];
+        return items;
+      })(this),
+      mineBorder: (function(){ const myR=riversByRisk.some(function(r){ return r.near && (r.lv==='danger'||r.lv==='warning'); }); const myW=rawWarns.some(function(w){ return String(w.area||'').indexOf(mySg)>=0; }); return (myW||myR)?'var(--warn)':'var(--border)'; })(),
+      mineOpen:()=>this.focusRegion(myStation, true),
       ribbonBg:status.bg, ribbonBorder:status.border, ribbonAccent:status.accent, ribbonPulse:status.pulse,
       ribbonChips,
       // map
@@ -1870,7 +1916,7 @@ class Component extends DCLogic {
       mapAR: _mapAR,
       mapCardStyle: 'background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--sh2); overflow:hidden;' + (st.focus?' display:flex; flex-direction:column;':''),
       mapWrapStyle: 'position:relative; background:var(--mapBg); border-radius:14px; margin:0 6px 2px; padding:12px 10px;' + (st.focus?' flex:1 1 auto; min-height:0;':''),
-      mapAreaStyle: st.focus ? 'position:relative; width:100%; height:100%; min-height:360px;' : ('position:relative; width:100%; max-width:960px; margin:0 auto; aspect-ratio:' + _mapAR + ';'),
+      mapAreaStyle: st.focus ? 'position:relative; width:100%; height:100%; min-height:360px;' : ('position:relative; width:100%; max-width:960px; margin:0 auto; aspect-ratio:' + _mapAR + ';' + _mapCap),
       zoomRef:this.zoomRef,
       riskPins:rpins,
       focusName: fdata?fdata.name:'', focusStatusColor: fdata?fdata.status.color:'var(--safe)',
@@ -1902,7 +1948,7 @@ class Component extends DCLogic {
       showAway: (!prelim.some(function(p){return p.north>0;})) && prelim.some(function(p){return (p.total||0)>0;}),
       prelimAway: prelim.filter(function(p){return (p.north||0)===0 && (p.total||0)>0;}).map(function(p){ return p.type.replace(' 예비특보','')+' '+(p.total||0)+'곳'; }).join(', '),
       // 수위
-      rivers,
+      rivers, riverRows, riverMore, riverMoreLabel, toggleRiverExpand:()=>this.setState({riverExpand:!this.state.riverExpand}),
       // detail sections
       stationCards:stationOrder, forecast, hourlyTable:this.hourlyTableBody(myFc), nowSummary:this.nowSummaryBody(d), fcTempLine, fcTempArea, fcRainBars, fcMax:Math.round(tmx), fcMin:Math.round(tmn),
       // 관서 선택 (헤더 드롭다운)
