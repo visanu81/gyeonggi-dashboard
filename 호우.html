@@ -275,7 +275,7 @@ class Component extends DCLogic {
       rankTab: '12h',
       myStation: (function(){ var RC=(window.REGION_CONF||{}); var h=RC.home||'동두천'; try{ var sv=(typeof localStorage!=='undefined' && localStorage.getItem('ggMyStation')) || h;
         if(RC.order && RC.order.length && RC.order.indexOf(sv)<0) sv=h; return sv; }catch(e){ return h; } })(),
-      stationPickerOpen: false
+      stationPickerOpen: (function(){ try{ if(sessionStorage.getItem('ggPickerOpen')==='1'){ sessionStorage.removeItem('ggPickerOpen'); return true; } }catch(e){} return false; })()
     };
   }
 
@@ -547,7 +547,10 @@ class Component extends DCLogic {
         const on=(sd.label===(window.REGION_CONF||{}).sidoCurrent);
         return { label:sd.label, bg:(on?'var(--brand)':'var(--surface2)'), fg:(on?'#fff':'var(--ink2)'),
           bd:(on?'var(--brand)':'var(--border2)'),
-          pick:function(){ if(on) return; try{ localStorage.setItem('ggSido', sd.base); }catch(e){}
+          pick:function(){ if(on) return;
+            /* 시도가 바뀌면 그 시도 파일을 새로 읽어야 해서 화면이 다시 열린다. 다시 열린 화면에서
+               창을 자동으로 펼쳐 이어서 관서를 고르게 한다(2026-09-19 사장님: "계속 선택 가능하면") */
+            try{ localStorage.setItem('ggSido', sd.base); sessionStorage.setItem('ggPickerOpen', '1'); }catch(e){}
             location.href = sd.base + location.pathname.split('/').pop(); } };
       }),
       stationPickerOpen:st.stationPickerOpen,
