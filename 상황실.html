@@ -3,6 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./support.js"></script>
+<style>.wall-ov:hover{opacity:1 !important;border-color:var(--acc,#ff7a2f) !important}</style>
 </head>
 <body>
 <script src="./region.js"></script>
@@ -1301,8 +1302,8 @@ http://scripts.sil.org/OFL
 
 </helmet>
 <div style="position:fixed;inset:0;background:var(--bg,#0d1118);display:flex;align-items:center;justify-content:center;font-family:'Pretendard Variable',Pretendard,system-ui,sans-serif;">
-  <a href="지도.html" title="일반 상황판(대시보드)으로 돌아가기" style="position:absolute;left:10px;top:8px;z-index:20;opacity:.22;padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);color:var(--fg,#f2f5fa);font-size:calc(12px*var(--fz,1));font-weight:520;text-decoration:none;white-space:nowrap;" style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">← 상황판</a>
-  <a href="도움말.html" title="사용설명서 — 화면 보는 법과 색·기호, 자동 판단 기준" style="position:absolute;left:98px;top:8px;z-index:20;opacity:.22;padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);color:var(--fg,#f2f5fa);font-size:calc(12px*var(--fz,1));font-weight:520;text-decoration:none;white-space:nowrap;" style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">❓ 설명서</a>
+  <a href="지도.html" title="일반 상황판(대시보드)으로 돌아가기" style="position:absolute;left:10px;top:8px;z-index:20;opacity:.22;padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);color:var(--fg,#f2f5fa);font-size:calc(12px*var(--fz,1));font-weight:520;text-decoration:none;white-space:nowrap;" class="wall-ov" style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">← 상황판</a>
+  <a href="도움말.html" title="사용설명서 — 화면 보는 법과 색·기호, 자동 판단 기준" style="position:absolute;left:98px;top:8px;z-index:20;opacity:.22;padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);color:var(--fg,#f2f5fa);font-size:calc(12px*var(--fz,1));font-weight:520;text-decoration:none;white-space:nowrap;" class="wall-ov" style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">❓ 설명서</a>
   <div ref="{{ stageRef }}" style="width:3840px;height:2160px;flex:none;transform-origin:center center;padding:56px;display:flex;flex-direction:column;gap:28px;color:var(--fg,#f2f5fa);background:var(--bg,#0d1118);position:relative;">
 
     <div style="position:absolute;inset:0;pointer-events:none;border-radius:0;animation:alertGlow 2.4s ease-in-out infinite;opacity:var(--alertOn,0);"></div>

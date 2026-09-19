@@ -455,14 +455,18 @@ patch('<div ref="{{ stageRef }}"',
       'style="position:absolute;left:10px;top:8px;z-index:20;opacity:.22;'
       'padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);'
       'color:var(--fg,#f2f5fa);font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;" '
-      'style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">← 상황판</a>\n'
+      'class="wall-ov" style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">← 상황판</a>\n'
       '  <a href="도움말.html" title="사용설명서 — 화면 보는 법과 색·기호, 자동 판단 기준" '
       'style="position:absolute;left:98px;top:8px;z-index:20;opacity:.22;'
       'padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);'
       'color:var(--fg,#f2f5fa);font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;" '
-      'style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">❓ 설명서</a>\n'
+      'class="wall-ov" style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">❓ 설명서</a>\n'
       '  <div ref="{{ stageRef }}"',
       '복귀·설명서 링크(좌상단 오버레이)')
+# 마우스를 올리면 선명해지기 — style-hover 는 이 두 링크에서 opacity 를 못 바꾼다(2026-09-19 사장님 지적:
+# 배치 편집·시도 배지는 진해지는데 상황판·설명서는 안 됨). 배지는 JS 로 직접 하므로 CSS :hover 로 맞춘다.
+patch('</head>', '<style>.wall-ov:hover{opacity:1 !important;border-color:var(--acc,#ff7a2f) !important}</style>\n</head>',
+      '오버레이 링크 hover CSS')
 
 # (j5) 출동 영향 판단 — 전역보다 한 단계 더 얇게(사장님 지적: 이 블록이 특히 두껍다).
 #      전역 리맵(800→660/700→570/500유지)에 다시 안 걸리도록 그 목록에 없는 값을 쓴다.
