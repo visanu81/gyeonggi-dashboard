@@ -19,17 +19,17 @@
   var panel = null;
   function togglePanel() {
     if (panel) { panel.remove(); panel = null; return; }
-    panel = $('div', 'position:fixed;left:10px;top:70px;z-index:45;background:#141e33;border:2px solid #ffb020;border-radius:14px;padding:12px 14px;color:#f3f6fc;font:600 14px/1.3 system-ui,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.55);max-width:520px;');
-    panel.appendChild($('div', 'font-size:12px;color:#93a5c4;margin-bottom:8px;', '시도를 고르면 그 시도 상황실로 이동합니다'));
+    panel = $('div', 'position:fixed;left:10px;top:70px;z-index:45;background:var(--panel,#141e33);border:2px solid var(--cAmber,#ffb020);border-radius:14px;padding:12px 14px;color:var(--fg,#f3f6fc);font:600 14px/1.3 system-ui,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.45);max-width:520px;');
+    panel.appendChild($('div', 'font-size:12px;color:var(--dim,#93a5c4);margin-bottom:8px;', '시도를 고르면 그 시도 상황실로 이동합니다'));
     var wrap = $('div', 'display:flex;flex-wrap:wrap;gap:6px;');
     LIST.forEach(function (sd) {
       var on = (sd.label === CUR);
-      var c = $('a', 'cursor:pointer;padding:7px 11px;border-radius:9px;border:1px solid ' + (on ? '#ffb020' : '#28313f') + ';background:' + (on ? '#ffb020' : '#151b26') + ';color:' + (on ? '#101725' : '#f2f5fa') + ';font:700 13px system-ui,sans-serif;white-space:nowrap;', sd.label);
+      var c = $('a', 'cursor:pointer;padding:7px 11px;border-radius:9px;border:1px solid ' + (on ? 'var(--cAmber,#ffb020)' : 'var(--line,#28313f)') + ';background:' + (on ? 'var(--cAmber,#ffb020)' : 'var(--panel2,#151b26)') + ';color:' + (on ? '#101725' : 'var(--fg,#f2f5fa)') + ';font:700 13px system-ui,sans-serif;white-space:nowrap;', sd.label);
       if (!on) c.onclick = function () { go(sd); };
       wrap.appendChild(c);
     });
     panel.appendChild(wrap);
-    var close = $('a', 'display:inline-block;margin-top:10px;cursor:pointer;color:#93a5c4;font-size:12px;', '닫기');
+    var close = $('a', 'display:inline-block;margin-top:10px;cursor:pointer;color:var(--dim,#93a5c4);font-size:12px;', '닫기');
     close.onclick = togglePanel;
     panel.appendChild(close);
     document.body.appendChild(panel);
@@ -37,7 +37,7 @@
 
   function mount() {
     if (!document.body) return setTimeout(mount, 50);
-    var b = $('a', 'position:absolute;left:10px;top:40px;z-index:20;cursor:pointer;opacity:.28;padding:6px 11px;border-radius:9px;border:1px solid #28313f;background:#151b26;color:#f2f5fa;font:600 12px system-ui,sans-serif;white-space:nowrap;', '🗺 시도 · ' + CUR);
+    var b = $('a', 'position:absolute;left:10px;top:40px;z-index:20;cursor:pointer;opacity:.28;padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);color:var(--fg,#f2f5fa);font:600 12px system-ui,sans-serif;white-space:nowrap;', '🗺 시도 · ' + CUR);
     b.title = '다른 시도 상황실로 바꾸기';
     b.onmouseenter = function () { b.style.opacity = 1; }; b.onmouseleave = function () { b.style.opacity = .28; };
     b.onclick = togglePanel;

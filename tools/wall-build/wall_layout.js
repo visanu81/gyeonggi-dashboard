@@ -141,7 +141,7 @@
   function stageScale() { var s = document.querySelector('[data-wall-grid]'); if (!s) return 1;
     var st = s.closest('div[style*="3840px"]') || s.parentElement; return st.getBoundingClientRect().width / 3840; }
 
-  function toast(msg, ms) { var t = $('div', 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:60;background:#141e33;color:#f3f6fc;border:1px solid #ffb020;border-radius:12px;padding:12px 20px;font:600 15px/1.4 system-ui,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.5);', msg);
+  function toast(msg, ms) { var t = $('div', 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:60;background:var(--panel,#141e33);color:var(--fg,#f3f6fc);border:1px solid var(--cAmber,#ffb020);border-radius:12px;padding:12px 20px;font:600 15px/1.4 system-ui,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.5);', msg);
     document.body.appendChild(t); setTimeout(function () { t.remove(); }, ms || 2200); }
 
   function ctl(on) { try { window.dispatchEvent(new CustomEvent('wall:edit', { detail: { on: on } })); } catch (e) {} }
@@ -152,11 +152,11 @@
     if (!badge) { badge = $('div', 'position:absolute;left:190px;top:8px;z-index:20;display:flex;gap:6px;'); document.body.appendChild(badge); }
     var custom = !isDefault(LAYOUT);
     badge.innerHTML = '';
-    var b1 = $('a', 'cursor:pointer;opacity:.28;padding:6px 11px;border-radius:9px;border:1px solid #28313f;background:#151b26;color:#f2f5fa;font:600 12px system-ui,sans-serif;white-space:nowrap;', '✎ 배치 편집');
+    var b1 = $('a', 'cursor:pointer;opacity:.28;padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);color:var(--fg,#f2f5fa);font:600 12px system-ui,sans-serif;white-space:nowrap;', '✎ 배치 편집');
     b1.onmouseenter = function () { b1.style.opacity = 1; }; b1.onmouseleave = function () { b1.style.opacity = .28; };
     b1.onclick = function () { setEdit(!EDIT); };
     badge.appendChild(b1);
-    if (custom) { var b2 = $('a', 'cursor:pointer;opacity:.5;padding:6px 11px;border-radius:9px;border:1px solid #ffb020;background:#151b26;color:#ffb020;font:600 12px system-ui,sans-serif;white-space:nowrap;', '사용자 배치 · 되돌리기');
+    if (custom) { var b2 = $('a', 'cursor:pointer;opacity:.5;padding:6px 11px;border-radius:9px;border:1px solid var(--cAmber,#ffb020);background:var(--panel,#151b26);color:var(--cAmber,#ffb020);font:600 12px system-ui,sans-serif;white-space:nowrap;', '사용자 배치 · 되돌리기');
       b2.onclick = function () { if (confirm('기본 배치로 되돌릴까요? (직전 배치는 1단계 보관됩니다)')) { LAYOUT = validate(clone(DEFAULT)); save(LAYOUT); apply(LAYOUT); refresh(); toast('기본 배치로 되돌렸습니다'); } };
       badge.appendChild(b2); }
   }
