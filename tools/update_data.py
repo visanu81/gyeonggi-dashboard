@@ -249,6 +249,98 @@ def _aws_num(v):
     return None if f < 0 else f
 
 
+# ============================================================
+# 0. 전국 공통 자료 공유 캐시 (2026-09-19 전국 확장 — 공공데이터포털 한도 대책)
+#
+# 특보·재난문자·산불·AWS·하천수위·미세먼지는 '전국 자료를 통째로' 받아 시도별로 골라 쓰는데,
+# 시도 프로파일이 각자 부르면 같은 응답을 시도 수만큼 다시 받는다(경기 둘일 땐 2배, 17개면 17배 —
+# 하루 9만 회, 포털 한도 초과). 여기서는 한 회차에 한 번만 받아 .tmp/shared/ 에 두고 나눠 쓴다.
+#   · 프로파일들이 동시에 뜨므로 파일 잠금으로 '먼저 온 쪽이 받고 나머지는 기다렸다 읽는다'.
+#   · 응답 원문(바이트)만 저장 — 파싱·관할 판정은 프로파일마다 지금처럼 각자 한다.
+#   · 실패 응답은 저장하지 않는다(호출측이 예외를 받아 이전 값 보존).
+#   · 1분 알리미(check_warnings.py)는 SHARED_MAX_AGE=0 으로 항상 새로 받고 캐시도 갱신해 준다.
+# ============================================================
+import base64 as _b64
+import os as _os
+import time as _time
+
+SHARED_DIR = ROOT / '.tmp' / 'shared'
+SHARED_MAX_AGE = None        # None=호출측 기본값, 0=항상 새로 받기(알리미), 숫자=초
+
+
+class _CachedResp:
+    """requests.Response 의 최소 흉내 — 호출측 코드를 안 바꾸기 위해."""
+    def __init__(self, content, status_code, encoding=None):
+        self.content = content
+        self.status_code = status_code
+        self.encoding = encoding
+
+    @property
+    def text(self):
+        return self.content.decode(self.encoding or 'utf-8', errors='replace')
+
+    def json(self):
+        return json.loads(self.content.decode(self.encoding or 'utf-8', errors='replace'))
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise requests.HTTPError(f'{self.status_code} Server Error (cached fetch)')
+
+
+def shared_get(key, url, params=None, timeout=15, max_age=240, headers=None):
+    """전국 공통 GET — key 별로 .tmp/shared/<key>.json 에 max_age 초 동안 공유.
+    같은 key 를 프로파일마다 다른 매개변수로 부르면 안 된다(stnId 처럼 다르면 key 에 넣을 것)."""
+    age_limit = SHARED_MAX_AGE if SHARED_MAX_AGE is not None else max_age
+    SHARED_DIR.mkdir(parents=True, exist_ok=True)
+    path = SHARED_DIR / f'{key}.json'
+    lock = SHARED_DIR / f'{key}.lock'
+
+    def _read():
+        try:
+            j = json.loads(path.read_text(encoding='utf-8'))
+            if _time.time() - j['ts'] <= age_limit:
+                return _CachedResp(_b64.b64decode(j['b64']), j['status'])
+        except Exception:
+            pass
+        return None
+
+    cached = _read()
+    if cached is not None and age_limit > 0:
+        return cached
+
+    # 잠금 — 먼저 온 프로세스가 받는다. 다른 프로세스는 최대 25초 기다렸다가 캐시를 읽는다.
+    got_lock = False
+    try:
+        try:
+            if lock.exists() and _time.time() - lock.stat().st_mtime > 90:
+                lock.unlink()                       # 죽은 프로세스가 남긴 잠금
+            fd = _os.open(str(lock), _os.O_CREAT | _os.O_EXCL | _os.O_WRONLY)
+            _os.close(fd)
+            got_lock = True
+        except FileExistsError:
+            for _ in range(125):
+                _time.sleep(0.2)
+                cached = _read()
+                if cached is not None and age_limit > 0:
+                    return cached
+                if not lock.exists():
+                    break
+        r = requests.get(url, params=params, timeout=timeout, headers=headers)
+        if r.status_code == 200:
+            try:
+                _atomic_write_text(path, json.dumps({'ts': _time.time(), 'status': r.status_code,
+                                                     'b64': _b64.b64encode(r.content).decode('ascii')}))
+            except Exception:
+                pass
+        return _CachedResp(r.content, r.status_code)
+    finally:
+        if got_lock:
+            try:
+                lock.unlink()
+            except Exception:
+                pass
+
+
 def fetch_aws_rain():
     """AWS 매분자료 1회 호출로 전 관서 실측 강수·돌풍 수집.
 
@@ -263,7 +355,7 @@ def fetch_aws_rain():
     tm = (datetime.now() - timedelta(minutes=10)).strftime('%Y%m%d%H%M')
     url = ('https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-aws2_min'
            f'?tm2={tm}&stn=0&disp=0&help=0&authKey={KMA_APIHUB_KEY}')
-    r = requests.get(url, timeout=15)
+    r = shared_get('aws_min', url, timeout=15, max_age=240)
     r.raise_for_status()
     r.encoding = 'euc-kr'
     text = r.text
@@ -282,9 +374,11 @@ def fetch_aws_rain():
             stn = int(f[1])
         except ValueError:
             continue
-        obs[stn] = {'wds': _aws_num(f[4]), 'wss': _aws_num(f[5]), 'ws10': _aws_num(f[7]),
+        obs[stn] = {'wds': _aws_num(f[4]), 'wss': _aws_num(f[5]), 'wd10': _aws_num(f[6]),
+                    'ws10': _aws_num(f[7]), 'ta': _aws_num(f[8]),
                     'rn15': _aws_num(f[10]), 'rn60': _aws_num(f[11]),
-                    'rn12h': _aws_num(f[12]), 'rnday': _aws_num(f[13])}
+                    'rn12h': _aws_num(f[12]), 'rnday': _aws_num(f[13]),
+                    'hm': _aws_num(f[14]) if len(f) > 14 else None, 'tm': f[0]}
     if not obs:
         raise RuntimeError('AWS 응답에 관측 지점 없음')
 
@@ -319,6 +413,24 @@ def fetch_aws_rain():
         return {'wss': o['wss'], 'wds': o.get('wds'), 'ws10': o.get('ws10'),
                 'station': sname, 'stn': stn}
 
+    def pick_obs(area):
+        """기온·습도·풍향의 대표 지점 — 목록의 첫 지점(대표 관측소)부터, 기온이 있는 곳.
+        강수 대표(가장 많이 온 곳)와 다를 수 있다 — 기온은 국지 최악값이 아니라 대표값이 맞다."""
+        po = None
+        for stn, sname in AWS_STATIONS.get(area, []):
+            o = obs.get(stn)
+            if not o:
+                continue
+            if po is None and o.get('ta') is not None and -60 < o['ta'] < 60:
+                po = {'ta': o['ta'], 'hm': o.get('hm'), 'wd10': o.get('wd10'), 'ws10': o.get('ws10'),
+                      'tm': o.get('tm'), 'station': sname, 'stn': stn}
+            elif po is not None:
+                # 대표 지점에 습도·바람 센서가 없으면(양주 남면처럼) 관할 안 다른 지점 값으로 채운다
+                for k in ('hm', 'wd10', 'ws10'):
+                    if po.get(k) is None and o.get(k) is not None:
+                        po[k] = o[k]
+        return po
+
     out = {}
     for area in AWS_STATIONS:
         best, ok = pick(area)
@@ -339,6 +451,9 @@ def fetch_aws_rain():
         w = pick_wind(alt or area)
         if w:
             out[area]['wind'] = w
+        po = pick_obs(alt or area)
+        if po:
+            out[area]['obs'] = po                      # 실황 대체용(기온·습도·풍향) — 아래 fetch_all_regions 참조
         if alt:
             out[area]['alt'] = alt                     # 대체 관서 — 화면에 반드시 표기
     return out
@@ -897,7 +1012,7 @@ def fetch_typhoon():
     yy = datetime.now().year
 
     def _get(url):
-        r = requests.get(url, timeout=12)
+        r = shared_get('typhoon_' + url.split('/')[-1].split('?')[0], url, timeout=12, max_age=600)
         r.raise_for_status()
         r.encoding = 'euc-kr'
         if '활용신청' in r.text[:300]:
@@ -1133,6 +1248,43 @@ def persist_today_minmax(region_name, tmax, tmin, hourly):
     return out_max, out_min
 
 
+OBS_FROM_AWS = bool(P.get('obs_from_aws', True))
+
+
+def _obs_from_aws(area, aws):
+    """AWS 관서값 → 초단기실황과 같은 모양 {t1h, rn1, reh, wsd, vec, pty, base_time}. 없으면 None."""
+    a = (aws or {}).get(area) or {}
+    po = a.get('obs')
+    if not po or po.get('ta') is None:
+        return None
+    o = {'t1h': float(po['ta']), 'base_time': '', 'src': 'aws'}
+    if po.get('hm') is not None:
+        o['reh'] = int(round(po['hm']))
+    if po.get('ws10') is not None:
+        o['wsd'] = float(po['ws10'])
+    if po.get('wd10') is not None:
+        o['vec'] = float(po['wd10'])
+    if a.get('rn60') is not None:
+        o['rn1'] = float(a['rn60'])
+    tm = str(po.get('tm') or '')
+    if len(tm) >= 12:
+        o['base_time'] = f'{tm[8:10]}:{tm[10:12]}'
+    # 강수형태 — 6시간 예측(초단기예보) 첫 칸. 비가 실측됐는데 예보가 '없음'이면 '비'로.
+    try:
+        first = (_ULTRA_CACHE.get(area) or [{}])[0]
+        pty = first.get('pty')
+        if pty not in (None, '', 0, '0'):
+            o['pty'] = str(pty)
+        elif (o.get('rn1') or 0) > 0:
+            o['pty'] = '1'
+    except Exception:
+        pass
+    return o
+
+
+_ULTRA_CACHE = {}
+
+
 def fetch_all_regions(aws=None):
     aws = aws or {}
     regions = []
@@ -1146,9 +1298,23 @@ def fetch_all_regions(aws=None):
             print(f'  ✗ {r["name"]}: {e}')
 
         # 초단기실황 + 누적 강수
+        # 2026-09-19 한도 대책: 실황(기온·습도·바람·1시간 강수)은 AWS 매분자료(전국 1회 호출)에 이미 있다.
+        # 전국 233개 시군이 실황 API 를 부르면 하루 5,600회 — 포털 한도(1만/일)의 절반이라 AWS 로 대체한다.
+        # 강수형태(PTY)는 AWS 에 없어 6시간 예측(초단기예보) 첫 칸에서 가져오고, AWS 가 없는 단위만 실황을 부른다.
         detail = {}
         try:
-            obs = fetch_current_observation(r)
+            obs = _obs_from_aws(r['name'], aws) if OBS_FROM_AWS else None
+            if obs is None:
+                obs = fetch_current_observation(r)
+            elif obs.get('reh') is None or obs.get('wsd') is None:
+                # 관할 AWS 전부에 습도나 바람이 없으면 그 항목만 실황으로 채운다(드문 경우, 호출 1회)
+                try:
+                    fill = fetch_current_observation(r)
+                    for k in ('reh', 'wsd', 'vec'):
+                        if obs.get(k) is None and fill.get(k) is not None:
+                            obs[k] = fill[k]
+                except Exception:
+                    pass
             detail['observation'] = obs
             cumul = update_rain_history(r['name'], obs.get('rn1', 0))
             detail['rain_cumul'] = cumul
@@ -1324,11 +1490,11 @@ def fetch_warning_bulletins():
 
     # 1) 통보문 본문 (전문)
     try:
-        r = requests.get(f'{base}/getWthrWrnMsg', params={
+        r = shared_get(f'wrn_msg_{WRN_STN}', f'{base}/getWthrWrnMsg', params={
             'serviceKey': DATA_KEY, 'pageNo': 1, 'numOfRows': 15,
             'dataType': 'JSON', 'stnId': WRN_STN,
             'fromTmFc': from_dt, 'toTmFc': to_dt,
-        }, timeout=15)
+        }, timeout=15, max_age=600)
         r.raise_for_status()
         items = r.json()['response']['body'].get('items', {})
         if items:
@@ -1352,11 +1518,11 @@ def fetch_warning_bulletins():
 
     # 2) 기상정보 목록 (매일 발표되는 기상 해설)
     try:
-        r = requests.get(f'{base}/getWthrInfoList', params={
+        r = shared_get(f'wrn_info_{WRN_STN}', f'{base}/getWthrInfoList', params={
             'serviceKey': DATA_KEY, 'pageNo': 1, 'numOfRows': 10,
             'dataType': 'JSON', 'stnId': WRN_STN,
             'fromTmFc': from_dt, 'toTmFc': to_dt,
-        }, timeout=15)
+        }, timeout=15, max_age=600)
         r.raise_for_status()
         items = r.json()['response']['body'].get('items', {})
         if items:
@@ -1377,7 +1543,7 @@ def fetch_warning_bulletins():
     #    레이더 카드 옆에 표시할 최신 기상정보 1건. 108(전국) 우선, 없으면 109(수도권).
     try:
         for stn in ('108', str(WRN_STN)):
-            r = requests.get(f'{base}/getWthrInfo', params={
+            r = shared_get(f'wrn_infotext_{stn}', f'{base}/getWthrInfo', params={
                 'serviceKey': DATA_KEY, 'pageNo': 1, 'numOfRows': 5,
                 'dataType': 'JSON', 'stnId': stn,
                 'fromTmFc': from_dt, 'toTmFc': to_dt,
@@ -1428,11 +1594,12 @@ def fetch_mid_forecast():
 
     for tmfc in candidates:
         try:
-            r = requests.get(
+            r = shared_get(
+                f'mid_fcst_{tmfc}',
                 'https://apis.data.go.kr/1360000/MidFcstInfoService/getMidFcst',
                 params={'serviceKey': DATA_KEY, 'pageNo': 1, 'numOfRows': 1,
                         'dataType': 'JSON', 'stnId': '108', 'tmFc': tmfc},
-                timeout=15)
+                timeout=15, max_age=1800)
             if r.status_code != 200:
                 continue
             items = r.json()['response']['body'].get('items', {})
@@ -1647,7 +1814,7 @@ def fetch_apihub_warnings():
 
     url = 'https://apihub.kma.go.kr/api/typ01/url/wrn_now_data_new.php'
     try:
-        r = requests.get(url, params={'authKey': KMA_APIHUB_KEY}, timeout=15)
+        r = shared_get('apihub_wrn_now', url, params={'authKey': KMA_APIHUB_KEY}, timeout=15, max_age=240)
         r.raise_for_status()
         # 응답은 EUC-KR 인코딩
         text = r.content.decode('euc-kr', errors='replace')
@@ -1786,7 +1953,7 @@ def fetch_warnings():
         'dataType': 'JSON',
         'stnId': WRN_STN,  # 시도 담당 지방기상청 (109 수도권 · 105 강원 …)
     }
-    r = requests.get(url, params=params, timeout=15)
+    r = shared_get(f'pwn_status_{WRN_STN}', url, params=params, timeout=15, max_age=240)
     r.raise_for_status()
     resp = r.json()['response']
     code = str(resp.get('header', {}).get('resultCode', ''))
@@ -1871,7 +2038,7 @@ def fetch_pm():
             'sidoName': sido,
             'ver': '1.3',
         }
-        r = requests.get(url, params=params, timeout=15)
+        r = shared_get(f'pm_{sido}', url, params=params, timeout=15, max_age=1500)
         r.raise_for_status()
         body = r.json()['response']['body']
         items += body.get('items', []) or []
@@ -1936,7 +2103,7 @@ def fetch_fire_incidents():
     edt = now.strftime('%Y%m%d')
 
     try:
-        r = requests.get(url, params={
+        r = shared_get('fire_incidents', url, max_age=3600, params={
             'ServiceKey': DATA_KEY,  # 활용가이드 표기대로 대문자 S
             'searchStDt': sdt,
             'searchEdDt': edt,
@@ -2019,7 +2186,7 @@ def fetch_fire():
     응답의 d1~d4 는 해당 시군 안에서 각 위험단계(낮음·보통·높음·매우높음) 면적 비율(%).
     한 시군 안에 더 높은 단계가 1%라도 있으면 그 단계로 표시."""
     url = 'https://apis.data.go.kr/1400377/forestPointV2/forestPointListSigunguSearchV2'
-    r = requests.get(url, params={
+    r = shared_get('fire_point', url, max_age=1500, params={
         'serviceKey': DATA_KEY,
         'pageNo': 1,
         'numOfRows': 300,
@@ -2256,8 +2423,8 @@ def _fnum(v):
 def fetch_hrfco_bulk(kind, unit, sess=None):
     """전 관측소 일괄 조회. kind='waterlevel'|'dam', unit='10M'|'1H' → {코드: 행}.
     행: {'time': ymdhm, 'value': 수위(하천 wl / 댐 swl), 'row': 원본}. 실패 시 예외."""
-    sess = sess or _hrfco_session()
-    r = sess.get(f'https://api.hrfco.go.kr/{HRFCO_KEY}/{kind}/list/{unit}.json', timeout=20)
+    r = shared_get(f'hrfco_{kind}_{unit}', f'https://api.hrfco.go.kr/{HRFCO_KEY}/{kind}/list/{unit}.json',
+                   timeout=20, max_age=240, headers={'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json'})
     r.raise_for_status()
     content = r.json().get('content', [])
     if not content:
@@ -2449,7 +2616,7 @@ def fetch_flood_forecast():
     ci_timeout = 5 if os.environ.get('GITHUB_ACTIONS') else 15
     url = f'https://api.hrfco.go.kr/{HRFCO_KEY}/fldfct/list.json'
     try:
-        r = requests.get(url, timeout=ci_timeout, headers={
+        r = shared_get('flood_fcst', url, timeout=ci_timeout, max_age=240, headers={
             'User-Agent': 'Mozilla/5.0',
             'Accept': 'application/json',
         })
@@ -2547,7 +2714,7 @@ def fetch_messages():
         return True   # 시군명 없는 경기 전역
 
     try:
-        r = requests.get(url, params={
+        r = shared_get('safety_msgs', url, max_age=240, params={
             'serviceKey': SAFETY_KEY,
             'pageNo': 1,
             'numOfRows': 100,
@@ -3459,6 +3626,7 @@ def main():
     print('[6시간 강수예측]')
     try:
         data['ultra_fcst'] = fetch_ultra_short_fcst_all()
+        _ULTRA_CACHE.update(data['ultra_fcst'] or {})
         print(f'  ✓ 6시간 예측 {len(data["ultra_fcst"])}개 관서')
     except Exception as e:
         data['ultra_fcst'] = prev.get('ultra_fcst') or {}

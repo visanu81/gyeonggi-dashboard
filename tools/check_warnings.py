@@ -19,6 +19,9 @@ from pathlib import Path
 # 같은 폴더의 update_data.py 함수 재사용 (수집·병합·발송·상태)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import update_data as ud
+# 1분 알리미는 공유 캐시를 쓰지 않고 항상 새로 받는다(특보·수위 알림이 늦으면 안 된다). 받은 건 캐시에 넣어
+# 5분 수집기들이 재사용한다(전국 확장 한도 대책, 2026-09-19).
+ud.SHARED_MAX_AGE = 0
 
 
 def collect_warnings():
