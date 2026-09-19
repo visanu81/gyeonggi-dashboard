@@ -1028,6 +1028,34 @@ def build_pm_auto(sd, sigun, msrstn, live_names, centers=None):
     return {a: sorted(v)[0][2] for a, v in cands.items()}
 
 
+def aws_neighbors(regs, n=3):
+    """단위마다 가까운 단위 n곳 — 관할 AWS 가 전부 죽어 있을 때(부산 해운대 937 처럼) 빌려 쓸 순서."""
+    out = {}
+    for r in regs:
+        if not r.get('lat'):
+            continue
+        near = sorted(((_km(r['lat'], r['lon'], o['lat'], o['lon']), o['name']) for o in regs
+                       if o.get('lat') and o['name'] != r['name']))
+        out[r['name']] = [nm for _, nm in near[:n]]
+    return out
+
+
+def live_station_codes():
+    """한강홍수통제소 일괄 조회에 '지금 값이 있는' 관측소·댐 코드. 원장엔 있어도 안 보내는 곳
+    (전북 구이댐 등)은 프로파일에 넣어 봐야 화면에 빈칸만 남는다."""
+    key = ENV.get('HRFCO_KEY', '')
+    out = set()
+    for kind, f in (('waterlevel', 'wlobscd'), ('dam', 'dmobscd')):
+        for unit in ('10M', '1H'):
+            try:
+                r = requests.get(f'https://api.hrfco.go.kr/{key}/{kind}/list/{unit}.json', timeout=30,
+                                 headers={'User-Agent': 'Mozilla/5.0'})
+                out |= {str(x.get(f)) for x in r.json().get('content', []) if x}
+            except Exception as e:
+                print(f'[경고] 일괄 조회 실패({kind}/{unit}): {type(e).__name__}', file=sys.stderr)
+    return out
+
+
 def build_sido(key, with_cctv=True, refresh=False):
     sd = SIDO[key]
     words = sd['sido_words']
@@ -1082,6 +1110,12 @@ def build_sido(key, with_cctv=True, refresh=False):
                                    'has_cctv': False, 'api': 'waterlevel',
                                    **({'nearby': True} if st.get('nearby') else {})})
     river_stations += dams
+    live = live_station_codes()
+    if live:
+        dead = [st for st in river_stations if st['code'] not in live]
+        if dead:
+            print(f'  일괄 조회에 값이 없는 관측소 제외: {[s["name"] for s in dead]}')
+            river_stations = [st for st in river_stations if st['code'] in live]
     codes = sorted({st['code'] for st in river_stations})
     print(f'하천 {len(river_stations) - len(dams)}곳 + 댐 {len(dams)}곳 — 상세{"·CCTV" if with_cctv else ""} 조회 중…')
     meta = build_river_meta(codes, riv_inv, fetch_dam_inventory(), with_cctv=with_cctv)
@@ -1141,6 +1175,7 @@ def build_sido(key, with_cctv=True, refresh=False):
         'pm_stations': pm,
         'aws_stations': {a: [[r['stn'], r['name']] for r in st] for a, st in aws.items()},
         'aws_fallback': aws_fallback,
+        'aws_neighbors': aws_neighbors(regs),
         'river_stations': river_stations,
         'river_meta': meta,
         'keywords': [sd['label'], sd['full']] + wide_names + list(sigun) + list((sd.get('unit_alias') or {})),
