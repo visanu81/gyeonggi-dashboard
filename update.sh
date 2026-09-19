@@ -87,13 +87,23 @@ fi
 # --no-push로 파일만 만들고, 마지막 --push-only가 한꺼번에 커밋·푸시·배포한다.
 /usr/bin/python3 tools/update_data.py --profile south --no-push >> cron.log 2>&1 &
 SOUTH_PID=$!
-# 강원(전국 확장 시범, 2026-09-18) — 상태폴더 .tmp/gangwon/, 이미지는 북부 것 재사용. 남부와 같은 방식.
-# 나머지 시도는 이 회차의 소요시간을 보고 배치 설계 후 추가한다(운영현황.md '서버 수집 설계').
-/usr/bin/python3 tools/update_data.py --profile gangwon --no-push >> cron.log 2>&1 &
-GANGWON_PID=$!
 /usr/bin/python3 tools/update_data.py --no-push >> cron.log 2>&1
 wait $SOUTH_PID
-wait $GANGWON_PID
+
+# ── 전국 시도 수집 (2026-09-19 전국 확장) ───────────────────────────────
+# 시도 15개를 5개씩 세 묶음으로 나눠 묶음 안에서는 동시에, 묶음끼리는 차례로 돌린다.
+#   · 전국 공통 자료(특보·재난문자·산불·AWS·하천)는 .tmp/shared/ 공유 캐시로 한 회차에 한 번만 받는다
+#     → 시도 하나당 호출은 시군별 예보(시간 캐시)뿐이라 캐시가 따뜻하면 회차당 5~20초.
+#   · 동시 17개는 메모리 부담이라 5개씩. 새 예보가 나오는 시각(3시간마다)엔 묶음당 1분쯤 걸린다.
+#   · 상태폴더 .tmp/<키>/, 이미지는 북부 것 재사용(share_images_from). 알림은 북부만.
+for GROUP in "gangwon seoul incheon busan daegu"              "daejeon ulsan sejong chungbuk chungnam"              "jeonbuk jngj gyeongbuk gyeongnam jeju"; do
+  PIDS=""
+  for KEY in $GROUP; do
+    /usr/bin/python3 tools/update_data.py --profile $KEY --no-push >> cron.log 2>&1 &
+    PIDS="$PIDS $!"
+  done
+  wait $PIDS
+done
 /usr/bin/python3 tools/update_data.py --push-only >> cron.log 2>&1
 
 # ── 교통상황판 돌리기 (2026-08-28 추가) ────────────────────────────
