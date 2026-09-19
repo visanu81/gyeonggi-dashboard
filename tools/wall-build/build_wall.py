@@ -1175,9 +1175,11 @@ patch("    this.fit(); window.addEventListener('resize', this._fit = ()=>this.fi
 # (L6) 편집기 스크립트 삽입 — region.js 다음(REGION_CONF 필요), 화면 마운트 전.
 import pathlib as _pl
 _wl = (_pl.Path(__file__).parent / 'wall_layout.js').read_text(encoding='utf-8')
+_ws = (_pl.Path(__file__).parent / 'wall_sido.js').read_text(encoding='utf-8')
 patch('<script src="./region.js"></script>',
-      '<script src="./region.js"></script>\n<script>\n' + _wl + '\n</script>',
-      '배치 편집기 삽입')
+      '<script src="./region.js"></script>\n<script>\n' + _wl + '\n</script>\n'
+      '<script>\n' + _ws + '\n</script>',
+      '배치 편집기·시도 선택 삽입')
 
 h = h.replace('</body>', INJECT + '\n</body>', 1)
 

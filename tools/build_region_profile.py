@@ -701,7 +701,8 @@ SIDO = {
                            '옹진': {'admin': '옹진군', 'prefixes': ['2872'], 'kind': 'sigun'},
                        },
                        map_alias={'미추홀구': ['남구']},
-                       unit_alias={'제물포구': '중구', '영종구': '중구', '서해구': '서구', '검단구': '서구'}),
+                       unit_alias={'제물포구': '중구', '영종구': '중구', '서해구': '서구', '검단구': '서구'},
+                       map_inset_units=['옹진']),      # 옹진은 섬뿐이라 지도에선 '먼 섬 상자'로
     'daejeon':   _sido('daejeon', '대전', '대전광역시', '30', '25', 'L1120000', 133, '대전', ['대전'], '서구'),
     'ulsan':     _sido('ulsan', '울산', '울산광역시', '31', '26', 'L1160000', 159, '울산', ['울산'], '남구'),
     'sejong':    _sido('sejong', '세종', '세종특별자치시', '36', '29', 'L1170000', 133, '세종', ['세종'], '세종',
@@ -1135,6 +1136,7 @@ def build_sido(key, with_cctv=True, refresh=False):
         'kostat': sd['kostat'], 'map_alias': sd.get('map_alias') or {},
         'unit_alias': sd.get('unit_alias') or {},
         'map_any_prefix': sd.get('map_any_prefix') or [],
+        'map_inset_units': sd.get('map_inset_units') or [],
         'regions': [{k: r[k] for k in ('name', 'nx', 'ny', 'sgg', 'lat', 'lon', 'admin')} for r in regs],
         'pm_stations': pm,
         'aws_stations': {a: [[r['stn'], r['name']] for r in st] for a, st in aws.items()},

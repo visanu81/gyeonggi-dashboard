@@ -252,6 +252,11 @@
           <div style="position:absolute; inset:0;">
             <svg viewBox="{{mapViewBox}}" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; display:block; overflow:visible;">
               <g>
+                <!-- 먼 섬 상자(백령도·울릉도·흑산도…) — map-geo 의 insets. 종이 지도의 '울릉도·독도' 상자처럼 구석에 따로 -->
+                <sc-for list="{{mapInsets}}" as="ib" hint-placeholder-count="0">
+                  <rect x="{{ib.x}}" y="{{ib.y}}" width="{{ib.w}}" height="{{ib.h}}" rx="10" fill="var(--surface2)" fill-opacity=".55" stroke="var(--border2)" stroke-width="1.5" stroke-dasharray="6 5"></rect>
+                  <text x="{{ib.tx}}" y="{{ib.ty}}" font-size="22" font-weight="700" fill="var(--ink3)">{{ib.label}}</text>
+                </sc-for>
                 <sc-for list="{{mapRegions}}" as="r" hint-placeholder-count="11">
                   <path d="{{r.d}}" fill="{{r.fill}}" stroke="{{r.stroke}}" stroke-width="{{r.strokeW}}" stroke-linejoin="round" opacity="{{r.pathOpacity}}" onClick="{{r.open}}" style="cursor:pointer; transition:fill .3s ease, opacity .3s ease, filter .15s ease;" style-hover="filter:brightness(0.93)"></path>
                 </sc-for>
@@ -776,7 +781,10 @@ class Component extends DCLogic {
   _setRiskBasemap(bm){ this._applyRiskBasemap(bm); }
   _destroyRiskMap(){ if(this._riskMap){ try{this._riskMap.remove();}catch(e){} } this._riskMap=null; this._riskLayers=null; this._lastRiskBm=null; }
   _fbtn(active){ return 'padding:6px 11px;border-radius:8px;border:1px solid '+(active?'var(--brand)':'var(--border2)')+';background:'+(active?'var(--brand)':'var(--surface)')+';color:'+(active?'#fff':'var(--ink2)')+';font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:var(--sh1);'; }
-  _svgToLatLng(x,y){ const g=window.MAPGEO, p=g&&g.proj; if(!p) return [37.9,127.05]; return [p.maxLat-(y-p.pad)/p.scale, p.minLon+(x-p.pad)/(p.scale*p.kx)]; }
+  _svgToLatLng(x,y){ const g=window.MAPGEO, p=g&&g.proj; if(!p) return [37.9,127.05];
+    const ib=(g.insets||[]).find(b=>x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h);
+    if(ib&&ib.proj){ const q=ib.proj; return [q.maxLat-(y-ib.y-q.pad)/q.scale, q.minLon+(x-ib.x-q.pad)/(q.scale*q.kx)]; }
+    const py=(p.padY!=null?p.padY:p.pad); return [p.maxLat-(y-py)/p.scale, p.minLon+(x-p.pad)/(p.scale*p.kx)]; }
   _regionBounds(name){ const g=window.MAPGEO; if(!g||!window.L) return null; const r=(g.regions||[]).find(rr=>rr.name===name); if(!r) return null; return window.L.latLngBounds([this._svgToLatLng(r.bx,r.by), this._svgToLatLng(r.bx+r.bw, r.by+r.bh)]); }
   _applyFocusBasemap(bm){ if(!this._focusMap) return; if(this._focusLayers){ this._focusLayers.forEach(l=>{try{this._focusMap.removeLayer(l);}catch(e){}}); } this._focusLayers=[]; const K=window.VWORLD_KEY||'', mk=u=>window.L.tileLayer(u,{maxZoom:19,minZoom:6}); if(bm==='Hybrid'){ this._focusLayers.push(mk('https://api.vworld.kr/req/wmts/1.0.0/'+K+'/Satellite/{z}/{y}/{x}.jpeg')); this._focusLayers.push(mk('https://api.vworld.kr/req/wmts/1.0.0/'+K+'/Hybrid/{z}/{y}/{x}.png')); } else { this._focusLayers.push(mk('https://api.vworld.kr/req/wmts/1.0.0/'+K+'/Base/{z}/{y}/{x}.png')); } this._focusLayers.forEach(l=>l.addTo(this._focusMap)); this._lastFocusBm=bm; }
   _regionRing(name){ const g=window.MAPGEO; if(!g) return null; const r=(g.regions||[]).find(rr=>rr.name===name); if(!r||!r.d) return null; const m=r.d.match(/(-?\d+\.?\d*),(-?\d+\.?\d*)/g); if(!m) return null; return m.map(pr=>{ const a=pr.split(','); return this._svgToLatLng(parseFloat(a[0]),parseFloat(a[1])); }); }
@@ -1846,6 +1854,8 @@ class Component extends DCLogic {
       // map
       stations,
       mapRegions:this.mapRegions(stations),
+      mapInsets:(((typeof window!=='undefined'&&window.MAPGEO)||{}).insets||[]).map(function(ib){
+        return { x:ib.x, y:ib.y, w:ib.w, h:ib.h, tx:ib.x+10, ty:ib.y+26, label:'먼 섬 · '+(ib.areas||[]).join('·')+' (축척 다름)' }; }),
       mapViewBox:(function(self){
         const b=self.scopeBox();
         if(b) return b.x.toFixed(1)+' '+b.y.toFixed(1)+' '+b.w.toFixed(1)+' '+b.h.toFixed(1);
