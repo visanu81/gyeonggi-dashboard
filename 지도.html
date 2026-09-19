@@ -135,7 +135,15 @@
         <button onClick="{{toggleStationPicker}}" style="display:inline-flex; align-items:center; gap:8px; height:38px; padding:0 16px; border-radius:11px; border:1px solid var(--brand2); background:var(--brandSoft); color:var(--brand); font-size:13.5px; font-weight:800; font-family:inherit; cursor:pointer; white-space:nowrap; box-shadow:var(--sh1);" style-hover="filter:brightness(.97)">📍 {{myStation}} <span style="font-size:9px; opacity:.8;">▼</span></button>
         <sc-if value="{{stationPickerOpen}}" hint-placeholder-val="{{false}}">
           <div onClick="{{toggleStationPicker}}" style="position:fixed; inset:0; z-index:59;"></div>
-          <div style="position:absolute; top:calc(100% + 7px); left:0; z-index:61; background:var(--surface); border:1px solid var(--border); border-radius:13px; box-shadow:var(--sh3); padding:7px; min-width:158px; max-height:70vh; overflow:auto;">
+          <div style="position:absolute; top:calc(100% + 7px); left:0; z-index:61; background:var(--surface); border:1px solid var(--border); border-radius:13px; box-shadow:var(--sh3); padding:7px; min-width:{{pickerMinW}}; max-height:70vh; overflow:auto;">
+            <sc-if value="{{hasSido}}" hint-placeholder-val="{{false}}">
+              <div style="font-size:10px; color:var(--ink3); font-weight:800; padding:5px 10px 6px;">시도</div>
+              <div style="display:flex; flex-wrap:wrap; gap:4px; padding:0 6px 8px; border-bottom:1px solid var(--border); margin-bottom:6px; max-width:330px;">
+                <sc-for list="{{sidoList}}" as="sd" hint-placeholder-count="16">
+                  <div onClick="{{sd.pick}}" style="padding:6px 9px; border-radius:8px; cursor:pointer; font-size:11.5px; font-weight:800; white-space:nowrap; background:{{sd.bg}}; color:{{sd.fg}}; border:1px solid {{sd.bd}};">{{sd.label}}</div>
+                </sc-for>
+              </div>
+            </sc-if>
             <sc-if value="{{hasScopes}}" hint-placeholder-val="{{false}}">
               <div style="font-size:10px; color:var(--ink3); font-weight:800; padding:5px 10px 6px;">권역</div>
               <div style="display:flex; gap:5px; padding:0 6px 8px; border-bottom:1px solid var(--border); margin-bottom:6px;">
@@ -145,12 +153,14 @@
               </div>
             </sc-if>
             <div style="font-size:10px; color:var(--ink3); font-weight:800; padding:5px 10px 7px;">내 관서 선택</div>
+            <div style="display:grid; grid-template-columns:repeat({{stationCols}}, minmax(0,1fr)); gap:0 4px;">
             <sc-for list="{{stationList}}" as="s" hint-placeholder-count="11">
               <div onClick="{{s.pick}}" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 11px; border-radius:9px; cursor:pointer; background:{{s.selBg}};" style-hover="background:var(--surface2)">
                 <span style="font-size:13px; font-weight:{{s.selW}}; color:{{s.selColor}};">{{s.name}}</span>
                 <sc-if value="{{s.isSel}}" hint-placeholder-val="{{false}}"><span style="font-size:12px; color:var(--brand); font-weight:800;">✓</span></sc-if>
               </div>
             </sc-for>
+            </div>
           </div>
         </sc-if>
       </div>
@@ -660,7 +670,9 @@ class Component extends DCLogic {
       openRiskTypes: {},
       myStation: (function(){ var RC=(window.REGION_CONF||{}); var h=null;
         try{ h=(RC.hostHome||{})[location.hostname.split('.')[0]]; }catch(e){}
-        h=h||RC.home||'동두천'; try{ return (typeof localStorage!=='undefined' && localStorage.getItem('ggMyStation')) || h; }catch(e){ return h; } })(),
+        h=h||RC.home||'동두천'; try{ var sv=(typeof localStorage!=='undefined' && localStorage.getItem('ggMyStation')) || h;
+          /* 전국판: 다른 시도에서 고른 관서 이름이 남아 있으면 이 시도 기본 관서로 (2026-09-19) */
+          if(RC.order && RC.order.length && RC.order.indexOf(sv)<0) sv=h; return sv; }catch(e){ return h; } })(),
       /* 마지막에 고른 권역을 기억한다. 저장된 값이 지금 지역에 없는 권역이면(예: 북부
          전용 사이트에서 옛 값이 남아 있으면) 전체로 되돌린다. */
       scope: (function(){ var RC=(window.REGION_CONF||{}), g=RC.scopes||null; if(!g) return '전체';
@@ -1898,6 +1910,19 @@ class Component extends DCLogic {
         });
       })(this),
       hasScopes:!!((window.REGION_CONF||{}).scopes),
+      /* 시도 선택 — 전국판에서만(region.js 에 sidoList 가 주입됨). 시도를 고르면 그 시도 폴더의
+         같은 화면으로 이동한다(시도마다 데이터·지도·설정 파일이 달라 한 페이지 안에서는 못 바꾼다). */
+      hasSido:!!(((window.REGION_CONF||{}).sidoList||[]).length),
+      /* 시도 줄이 있으면 창을 넓히고(칩 4열), 관서가 많으면 2열로 — 서울 25개 구가 한 줄로 늘어지지 않게 */
+      pickerMinW:(((window.REGION_CONF||{}).sidoList||[]).length ? '352px' : '158px'),
+      stationCols:((((window.REGION_CONF||{}).sidoList||[]).length && (d.stations||[]).length > 12) ? 2 : 1),
+      sidoList:(((window.REGION_CONF||{}).sidoList)||[]).map(function(sd){
+        const on=(sd.label===(window.REGION_CONF||{}).sidoCurrent);
+        return { label:sd.label, bg:(on?'var(--brand)':'var(--surface2)'), fg:(on?'#fff':'var(--ink2)'),
+          bd:(on?'var(--brand)':'var(--border2)'),
+          pick:function(){ if(on) return; try{ localStorage.setItem('ggSido', sd.base); }catch(e){}
+            location.href = sd.base + location.pathname.split('/').pop(); } };
+      }),
       /* 머리말·지도 부제의 '○○ · N개' 문구. 권역을 고르면 그 권역·개수로 바뀐다.
          권역 필터가 없는 지역에서는 region.js 의 office·countText 그대로라
          경기북부·남부 사이트 문구는 지금과 똑같다. */

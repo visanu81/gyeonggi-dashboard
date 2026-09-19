@@ -153,6 +153,32 @@ def build_sido_sites():
     return out
 
 
+# 관서 선택창의 '시도' 줄 순서 — 북→남. 경기는 루트(/new/)에 있다.
+SIDO_ORDER = ['seoul', 'incheon', 'gyeonggi', 'gangwon', 'sejong', 'daejeon', 'chungbuk', 'chungnam',
+              'jeonbuk', 'jngj', 'gyeongbuk', 'daegu', 'gyeongnam', 'busan', 'ulsan', 'jeju']
+
+
+def inject_sido_list(root, sidos):
+    """각 폴더의 region.js 끝에 시도 목록(sidoList)과 현재 시도(sidoCurrent)를 붙인다.
+    지도·호우 화면의 관서 선택창이 이걸 읽어 '시도' 줄을 그린다(2026-09-19 사장님 지시)."""
+    import json
+    entries = {'gyeonggi': {'label': '경기도', 'base': f'/{DEV_DIR}/'}}
+    for key, wide, folder, src in sidos:
+        entries[key] = {'label': wide, 'base': f'/{DEV_DIR}/{folder}/'}
+    ordered = [entries[k] for k in SIDO_ORDER if k in entries] + \
+              [v for k, v in entries.items() if k not in SIDO_ORDER]
+    lst = json.dumps(ordered, ensure_ascii=False)
+    targets = [(root / 'region.js', '경기도')] + [(root / folder / 'region.js', wide) for _, wide, folder, _ in sidos]
+    for path, cur in targets:
+        if not path.exists():
+            continue
+        body = path.read_text(encoding='utf-8')
+        body += (f'\n// 전국판 시도 선택 — tools/build_weather_dev.py 가 배포할 때 붙인다\n'
+                 f'window.REGION_CONF.sidoList = {lst};\n'
+                 f'window.REGION_CONF.sidoCurrent = {json.dumps(cur, ensure_ascii=False)};\n')
+        path.write_text(body, encoding='utf-8')
+
+
 def landing_html(sidos):
     rows = ''.join(
         f'<a class="row" href="./{folder}/지도.html"><b>{wide}</b>'
@@ -169,10 +195,25 @@ def landing_html(sidos):
         background:#141e33;border:1px solid #28313f;border-radius:14px;color:#f3f6fc;text-decoration:none;}}
   a.row span{{color:#93a5c4;font-size:13px;}} a.row.gg b{{color:#ffb020;}}
 </style></head><body><div class="wrap">
-<h1>전국 기상·재난 상황판</h1><p>시도를 고르세요. "5분마다 갱신"은 서버가 수집 중, "시험판"은 화면 확인용 1회 수집본입니다.</p>
+<h1>전국 기상·재난 상황판</h1><p>시도를 고르세요. 화면 안의 '내 관서 선택'에서도 시도를 바꿀 수 있습니다.</p>
+<div id="recent"></div>
 <a class="row gg" href="./지도.html"><b>경기도</b><span>34개 소방서 · 운영과 같은 데이터</span></a>
 {rows}
-</div></body></html>
+</div>
+<script>
+/* 마지막에 본 시도를 맨 위에 — 지도·호우 화면의 시도 선택이 localStorage.ggSido 에 남긴다 */
+try {{
+  var b = localStorage.getItem('ggSido');
+  if (b) {{
+    var a = document.querySelector('a.row[href="./' + b.replace('/{DEV_DIR}/', '') + '지도.html"]');
+    if (a) {{
+      var r = document.getElementById('recent');
+      r.innerHTML = '<a class="row" style="border-color:#ffb020" href="' + b + '지도.html"><b>최근 본 시도 · ' + a.querySelector('b').textContent + '</b><span>바로가기</span></a>';
+    }}
+  }}
+}} catch (e) {{}}
+</script>
+</body></html>
 """
 
 
@@ -267,6 +308,7 @@ def main():
         (PUB / name).write_text(NOTICE, encoding='utf-8')
     shutil.copytree(SITE, PUB / DEV_DIR)
     (PUB / DEV_DIR / '전국.html').write_text(landing_html(sidos), encoding='utf-8')
+    inject_sido_list(PUB / DEV_DIR, sidos)
     (DEPLOY / 'wrangler.toml').write_text(WRANGLER, encoding='utf-8')
 
     left = []

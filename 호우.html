@@ -75,10 +75,21 @@
           <button onClick="{{toggleStationPicker}}" style="height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--border2); background:var(--surface); color:var(--ink); font-size:13px; font-weight:800; font-family:inherit; cursor:pointer;">{{myStation}} ▾</button>
           <sc-if value="{{stationPickerOpen}}">
             <div onClick="{{toggleStationPicker}}" style="position:fixed; inset:0; z-index:59;"></div>
-            <div style="position:absolute; top:calc(100% + 7px); left:0; z-index:61; background:var(--surface); border:1px solid var(--border2); border-radius:12px; box-shadow:var(--sh2); padding:6px; min-width:130px; max-height:70vh; overflow:auto;">
+            <div style="position:absolute; top:calc(100% + 7px); left:0; z-index:61; background:var(--surface); border:1px solid var(--border2); border-radius:12px; box-shadow:var(--sh2); padding:6px; min-width:{{pickerMinW}}; max-height:70vh; overflow:auto;">
+              <sc-if value="{{hasSido}}">
+                <div style="font-size:10px; color:var(--ink3); font-weight:800; padding:4px 10px 6px;">시도</div>
+                <div style="display:flex; flex-wrap:wrap; gap:4px; padding:0 5px 8px; border-bottom:1px solid var(--border); margin-bottom:6px; max-width:330px;">
+                  <sc-for list="{{sidoList}}" as="sd">
+                    <div onClick="{{sd.pick}}" style="padding:6px 9px; border-radius:8px; cursor:pointer; font-size:11.5px; font-weight:800; white-space:nowrap; background:{{sd.bg}}; color:{{sd.fg}}; border:1px solid {{sd.bd}};">{{sd.label}}</div>
+                  </sc-for>
+                </div>
+                <div style="font-size:10px; color:var(--ink3); font-weight:800; padding:4px 10px 6px;">내 관서 선택</div>
+              </sc-if>
+              <div style="display:grid; grid-template-columns:repeat({{stationCols}}, minmax(0,1fr)); gap:0 4px;">
               <sc-for list="{{stationList}}" as="s">
                 <div onClick="{{s.pick}}" style="padding:8px 11px; border-radius:8px; font-size:13px; cursor:pointer; background:{{s.selBg}}; color:{{s.selColor}}; font-weight:{{s.selW}};" style-hover="background:var(--surface2)">{{s.name}}</div>
               </sc-for>
+              </div>
             </div>
           </sc-if>
         </div>
@@ -262,7 +273,8 @@ class Component extends DCLogic {
       now: new Date(),
       w: (typeof window !== 'undefined' ? window.innerWidth : 1440),
       rankTab: '12h',
-      myStation: (function(){ var h=((window.REGION_CONF||{}).home)||'동두천'; try{ return (typeof localStorage!=='undefined' && localStorage.getItem('ggMyStation')) || h; }catch(e){ return h; } })(),
+      myStation: (function(){ var RC=(window.REGION_CONF||{}); var h=RC.home||'동두천'; try{ var sv=(typeof localStorage!=='undefined' && localStorage.getItem('ggMyStation')) || h;
+        if(RC.order && RC.order.length && RC.order.indexOf(sv)<0) sv=h; return sv; }catch(e){ return h; } })(),
       stationPickerOpen: false
     };
   }
@@ -528,6 +540,16 @@ class Component extends DCLogic {
       clockTime, myStation,
       updatedTxt:(d.updated||'--').replace(/:\d\d$/,''),
       // 관서 선택
+      hasSido:!!(((window.REGION_CONF||{}).sidoList||[]).length),
+      pickerMinW:(((window.REGION_CONF||{}).sidoList||[]).length ? '352px' : '130px'),
+      stationCols:((((window.REGION_CONF||{}).sidoList||[]).length && stations.length > 12) ? 2 : 1),
+      sidoList:(((window.REGION_CONF||{}).sidoList)||[]).map(function(sd){
+        const on=(sd.label===(window.REGION_CONF||{}).sidoCurrent);
+        return { label:sd.label, bg:(on?'var(--brand)':'var(--surface2)'), fg:(on?'#fff':'var(--ink2)'),
+          bd:(on?'var(--brand)':'var(--border2)'),
+          pick:function(){ if(on) return; try{ localStorage.setItem('ggSido', sd.base); }catch(e){}
+            location.href = sd.base + location.pathname.split('/').pop(); } };
+      }),
       stationPickerOpen:st.stationPickerOpen,
       toggleStationPicker:()=>this.toggleStationPicker(),
       stationList: stations.map(s=>({ name:s.name,
