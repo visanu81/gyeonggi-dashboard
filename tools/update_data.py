@@ -2090,23 +2090,61 @@ def pm_grade(pm10, pm25):
     return [('good', '좋음'), ('normal', '보통'), ('bad', '나쁨'), ('vbad', '매우나쁨')][lvl]
 
 
+PM_CACHE_AGE = 7200     # 시각 칸 키와 함께 — 한 시간 칸 안에서는 다시 안 받는다(한도 대책, 2026-09-20)
+
+
+def _pm_bucket():
+    """에어코리아는 정시 측정값을 :10~:20 쯤 낸다 → '지금−20분'의 시(時)를 칸으로. 13:25 부터 13시 자료를 새로 받고,
+    13:05 엔 12시 칸(이미 받은 것)을 그대로 쓴다 → 시간마다 정확히 1회."""
+    return (datetime.now() - timedelta(minutes=20)).strftime('%Y%m%d%H')
+
+
+def _pm_items_nationwide(url, sidos):
+    """전국 1회 호출(sidoName=전국) → 우리 시도 항목만. 회차당 1회를 모든 프로파일이 공유한다(한도 대책).
+    응답이 이상하거나(시도 표시 없음·빈 결과) 우리 시도가 하나도 없으면 None → 호출측이 시도별 호출로 되돌아간다."""
+    params = {'serviceKey': DATA_KEY, 'returnType': 'json', 'numOfRows': 1000, 'pageNo': 1,
+              'sidoName': '전국', 'ver': '1.3'}
+    r = shared_get(f'pm_전국_{_pm_bucket()}', url, params=params, timeout=20, max_age=PM_CACHE_AGE)
+    r.raise_for_status()
+    body = (r.json().get('response') or {}).get('body') or {}
+    items = body.get('items') or []
+    if not items or not any(it.get('sidoName') for it in items):
+        return None
+    try:
+        total = int(body.get('totalCount') or 0)
+    except (TypeError, ValueError):
+        total = 0
+    if total and len(items) < total:          # 한 쪽에 다 안 담김(numOfRows 상한) → 일부 시도가 빠질 수 있어 못 쓴다
+        return None
+    mine = [it for it in items if it.get('sidoName') in sidos]
+    return mine or None
+
+
 def fetch_pm():
     url = 'https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty'
-    # 통합시(전남광주)는 에어코리아가 아직 광주·전남으로 나눠 준다 → 시도마다 한 번씩 받아 합친다
-    items = []
-    for sido in ([PM_SIDO] if isinstance(PM_SIDO, str) else PM_SIDO):
-        params = {
-            'serviceKey': DATA_KEY,
-            'returnType': 'json',
-            'numOfRows': 200,
-            'pageNo': 1,
-            'sidoName': sido,
-            'ver': '1.3',
-        }
-        r = shared_get(f'pm_{sido}', url, params=params, timeout=15, max_age=1500)
-        r.raise_for_status()
-        body = r.json()['response']['body']
-        items += body.get('items', []) or []
+    # 통합시(전남광주)는 에어코리아가 아직 광주·전남으로 나눠 준다 → 시도 목록으로 거른다
+    sidos = [PM_SIDO] if isinstance(PM_SIDO, str) else list(PM_SIDO)
+    # 2026-09-20 일일 한도 초과(429): 시도 16곳 × 25분 ≈ 930회/일 > 한도. 전국 1회 호출을 먼저, 안 되면 시도별.
+    items = None
+    try:
+        items = _pm_items_nationwide(url, sidos)
+    except Exception as e:
+        print(f'  · 미세먼지 전국 호출 실패({type(e).__name__}) — 시도별 호출로')
+    if items is None:
+        items = []
+        for sido in sidos:
+            params = {
+                'serviceKey': DATA_KEY,
+                'returnType': 'json',
+                'numOfRows': 200,
+                'pageNo': 1,
+                'sidoName': sido,
+                'ver': '1.3',
+            }
+            r = shared_get(f'pm_{sido}_{_pm_bucket()}', url, params=params, timeout=15, max_age=PM_CACHE_AGE)
+            r.raise_for_status()
+            body = r.json()['response']['body']
+            items += body.get('items', []) or []
 
     by_station = {it['stationName']: it for it in items if it.get('stationName')}
 
