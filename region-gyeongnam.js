@@ -6,8 +6,8 @@ window.REGION_CONF = {
  "key": "gyeongnam",
  "label": "경상남도",
  "office": "경상남도",
- "home": "창원",
- "countText": "20개 관서",
+ "home": "의창",
+ "countText": "21개 관서",
  "dataHost": "https://weather.visanu81.workers.dev",
  "wideNames": [
   "경남",
@@ -33,7 +33,8 @@ window.REGION_CONF = {
   "의령",
   "함안",
   "김해",
-  "창원",
+  "성산",
+  "의창",
   "마산",
   "진주",
   "진해",
@@ -56,7 +57,8 @@ window.REGION_CONF = {
   "의령",
   "함안",
   "김해",
-  "창원",
+  "성산",
+  "의창",
   "마산",
   "진주",
   "진해",
@@ -81,10 +83,14 @@ window.REGION_CONF = {
    0
   ],
   "창녕": [
-   4,
+   3,
    0
   ],
   "밀양": [
+   4,
+   0
+  ],
+  "양산": [
    5,
    0
   ],
@@ -100,11 +106,11 @@ window.REGION_CONF = {
    2,
    1
   ],
-  "창원": [
+  "의창": [
    4,
    1
   ],
-  "양산": [
+  "김해": [
    5,
    1
   ],
@@ -120,11 +126,11 @@ window.REGION_CONF = {
    2,
    2
   ],
-  "진해": [
+  "성산": [
    4,
    2
   ],
-  "김해": [
+  "진해": [
    5,
    2
   ],
@@ -167,7 +173,8 @@ window.REGION_CONF = {
   "함안": "함안군",
   "함양": "함양군",
   "합천": "합천군",
-  "창원": "창원시",
+  "의창": "창원시",
+  "성산": "창원시",
   "마산": "창원시",
   "진해": "창원시"
  },
@@ -202,8 +209,11 @@ window.REGION_CONF = {
   "김해": [
    "김해"
   ],
-  "창원": [
-   "창원"
+  "성산": [
+   "성산"
+  ],
+  "의창": [
+   "의창"
   ],
   "마산": [
    "마산"
@@ -243,27 +253,32 @@ window.REGION_CONF = {
   "양산": "양산·의령·함안",
   "의령": "양산·의령·함안",
   "함안": "양산·의령·함안",
-  "김해": "김해·창원·진주",
-  "창원": "김해·창원·진주",
-  "진주": "김해·창원·진주",
+  "김해": "김해·의창·진주",
+  "의창": "김해·의창·진주",
+  "진주": "김해·의창·진주",
   "하동": "하동·사천·고성",
   "사천": "하동·사천·고성",
   "고성": "하동·사천·고성",
   "거제": "거제·통영·남해",
   "통영": "거제·통영·남해",
   "남해": "거제·통영·남해",
-  "마산": "김해·창원·진주",
-  "진해": "김해·창원·진주"
+  "성산": "김해·의창·진주",
+  "마산": "김해·의창·진주",
+  "진해": "김해·의창·진주"
  },
  "alias": {
-  "마산": "창원",
-  "진해": "창원"
+  "성산": "의창",
+  "마산": "의창",
+  "진해": "의창"
  },
  "riverCodes": {
-  "창원": [
+  "의창": [
    "2020660",
    "2020675",
    "2504660",
+   "2504665"
+  ],
+  "성산": [
    "2504665"
   ],
   "마산": [
@@ -303,6 +318,7 @@ window.REGION_CONF = {
   "삼호천",
   "서상천",
   "섬진강",
+  "성산",
   "신등천",
   "신반천",
   "신천",
@@ -311,6 +327,7 @@ window.REGION_CONF = {
   "영천강",
   "의령",
   "의령천",
+  "의창",
   "임천",
   "조만강",
   "주천강",
@@ -318,7 +335,6 @@ window.REGION_CONF = {
   "진주",
   "진해",
   "창녕",
-  "창원",
   "창원천",
   "토평천",
   "통영",
@@ -346,15 +362,13 @@ window.REGION_CONF = {
    "alm": 4.5,
    "srs": 5.3,
    "pfh": 5.3,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2015110": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상남도 합천군 대병면 상천리",
-   "pfh": 179,
-   "cctv": false
+   "pfh": 179
   },
   "2015623": {
    "agc": "기후에너지환경부",
@@ -365,8 +379,7 @@ window.REGION_CONF = {
    "alm": 5,
    "srs": 5.74,
    "pfh": 5.74,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2015630": {
    "agc": "기후에너지환경부",
@@ -389,8 +402,7 @@ window.REGION_CONF = {
    "alm": 4.7,
    "srs": 5.24,
    "pfh": 5.24,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2016680": {
    "agc": "기후에너지환경부",
@@ -425,8 +437,7 @@ window.REGION_CONF = {
    "alm": 8.7,
    "srs": 10.6,
    "pfh": 10.6,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2017640": {
    "agc": "기후에너지환경부",
@@ -437,15 +448,13 @@ window.REGION_CONF = {
    "alm": 12.1,
    "srs": 14.71,
    "pfh": 14.72,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2018110": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상남도 진주시 판문동",
-   "pfh": 46,
-   "cctv": false
+   "pfh": 46
   },
   "2018606": {
    "agc": "기후에너지환경부",
@@ -456,8 +465,7 @@ window.REGION_CONF = {
    "alm": 5.7,
    "srs": 6.77,
    "pfh": 6.77,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2018609": {
    "agc": "기후에너지환경부",
@@ -475,8 +483,7 @@ window.REGION_CONF = {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상남도 합천군 용주면 내가리",
-   "pfh": 65.5,
-   "cctv": false
+   "pfh": 65.5
   },
   "2018635": {
    "agc": "한국수자원공사",
@@ -523,8 +530,7 @@ window.REGION_CONF = {
    "alm": 5.1,
    "srs": 6.04,
    "pfh": 6.04,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2018688": {
    "agc": "기후에너지환경부",
@@ -535,8 +541,7 @@ window.REGION_CONF = {
    "alm": 4.9,
    "srs": 5.68,
    "pfh": 5.68,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2018692": {
    "agc": "한국수자원공사",
@@ -547,8 +552,7 @@ window.REGION_CONF = {
    "alm": 5.8,
    "srs": 6.89,
    "pfh": 6.89,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2019610": {
    "agc": "기후에너지환경부",
@@ -571,8 +575,7 @@ window.REGION_CONF = {
    "alm": 13,
    "srs": 15.29,
    "pfh": 15.29,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2019625": {
    "agc": "기후에너지환경부",
@@ -595,8 +598,7 @@ window.REGION_CONF = {
    "alm": 7.2,
    "srs": 8.56,
    "pfh": 8.56,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2019653": {
    "agc": "기후에너지환경부",
@@ -643,8 +645,7 @@ window.REGION_CONF = {
    "alm": 5.1,
    "srs": 6.25,
    "pfh": 6.25,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2020615": {
    "agc": "기후에너지환경부",
@@ -667,8 +668,7 @@ window.REGION_CONF = {
    "alm": 11,
    "srs": 13.3,
    "pfh": 13.3,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2020660": {
    "agc": "기후에너지환경부",
@@ -679,8 +679,7 @@ window.REGION_CONF = {
    "alm": 7.6,
    "srs": 9.15,
    "pfh": 9.15,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2020671": {
    "agc": "기후에너지환경부",
@@ -691,8 +690,7 @@ window.REGION_CONF = {
    "alm": 5.9,
    "srs": 6.97,
    "pfh": 6.97,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2020675": {
    "agc": "기후에너지환경부",
@@ -722,8 +720,7 @@ window.REGION_CONF = {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상남도 밀양시 단장면 고례리",
-   "pfh": 210.2,
-   "cctv": false
+   "pfh": 210.2
   },
   "2021670": {
    "agc": "기후에너지환경부",
@@ -770,8 +767,7 @@ window.REGION_CONF = {
    "alm": 4.5,
    "srs": 5.18,
    "pfh": 5.18,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2022655": {
    "agc": "기후에너지환경부",
@@ -806,8 +802,7 @@ window.REGION_CONF = {
    "alm": 3.9,
    "srs": 4.45,
    "pfh": 4.45,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2022685": {
    "agc": "기후에너지환경부",
@@ -830,8 +825,7 @@ window.REGION_CONF = {
    "alm": 5,
    "srs": 5.75,
    "pfh": 5.75,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2502610": {
    "agc": "기후에너지환경부",
@@ -842,8 +836,7 @@ window.REGION_CONF = {
    "alm": 3,
    "srs": 3.36,
    "pfh": 3.36,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2502630": {
    "agc": "기후에너지환경부",
@@ -854,8 +847,7 @@ window.REGION_CONF = {
    "alm": 4.1,
    "srs": 4.75,
    "pfh": 4.75,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2502660": {
    "agc": "기후에너지환경부",
@@ -866,22 +858,19 @@ window.REGION_CONF = {
    "alm": 3.9,
    "srs": 4.45,
    "pfh": 4.45,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2503210": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상남도 거제시 연초면 덕치리",
-   "pfh": 49.6,
-   "cctv": false
+   "pfh": 49.6
   },
   "2503220": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상남도 거제시 동부면 구천리",
-   "pfh": 94.54,
-   "cctv": false
+   "pfh": 94.54
   },
   "2503623": {
    "agc": "기후에너지환경부",
@@ -892,8 +881,7 @@ window.REGION_CONF = {
    "alm": 3,
    "srs": 3.47,
    "pfh": 3.47,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2503635": {
    "agc": "기후에너지환경부",
@@ -904,8 +892,7 @@ window.REGION_CONF = {
    "alm": 2.7,
    "srs": 3.07,
    "pfh": 3.07,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2504655": {
    "agc": "기후에너지환경부",
@@ -916,8 +903,7 @@ window.REGION_CONF = {
    "alm": 4.7,
    "srs": 5.55,
    "pfh": 5.55,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2504660": {
    "agc": "기후에너지환경부",
@@ -940,8 +926,7 @@ window.REGION_CONF = {
    "alm": 12.1,
    "srs": 14.78,
    "pfh": 14.78,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2504665": {
    "agc": "기후에너지환경부",
@@ -952,8 +937,7 @@ window.REGION_CONF = {
    "alm": 3.3,
    "srs": 3.74,
    "pfh": 3.74,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "4009638": {
    "agc": "기후에너지환경부",

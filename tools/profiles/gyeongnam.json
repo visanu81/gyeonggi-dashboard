@@ -3,8 +3,8 @@
  "label": "경남",
  "title": "경남 기상·재난 상황판",
  "full": "경상남도",
- "home": "창원",
- "home_office": "창원소방서",
+ "home": "의창",
+ "home_office": "의창소방서",
  "host": "weather.visanu81.workers.dev",
  "data_file": "data-gyeongnam.js",
  "map_file": "map-geo-gyeongnam.js",
@@ -31,8 +31,10 @@
   "38"
  ],
  "map_alias": {
-  "창원": [
-   "창원시의창구",
+  "의창": [
+   "창원시의창구"
+  ],
+  "성산": [
    "창원시성산구"
   ],
   "마산": [
@@ -44,17 +46,22 @@
   ]
  },
  "alias": {
-  "마산": "창원",
-  "진해": "창원"
+  "성산": "의창",
+  "마산": "의창",
+  "진해": "의창"
  },
  "splits": {
   "창원": [
-   "창원",
+   "의창",
+   "성산",
    "마산",
    "진해"
   ]
  },
- "unit_alias": {},
+ "unit_alias": {
+  "창원": "의창"
+ },
+ "wrn_areas": {},
  "map_any_prefix": [],
  "map_inset_units": [],
  "regions": [
@@ -212,12 +219,12 @@
    "admin": "합천군"
   },
   {
-   "name": "창원",
-   "nx": 91,
-   "ny": 77,
+   "name": "의창",
+   "nx": 89,
+   "ny": 76,
    "sgg": "4812100000",
-   "lat": 35.22655,
-   "lon": 128.6726,
+   "lat": 35.19489,
+   "lon": 128.60487,
    "admin": "창원시"
   }
  ],
@@ -325,7 +332,13 @@
    "admin": "합천군"
   },
   {
-   "name": "창원",
+   "name": "의창",
+   "lat": 35.19489,
+   "lon": 128.60487,
+   "admin": "창원시"
+  },
+  {
+   "name": "성산",
    "lat": 35.22655,
    "lon": 128.6726,
    "admin": "창원시"
@@ -352,13 +365,14 @@
   "의령": "의령읍",
   "창녕": "창녕읍",
   "합천": "합천읍",
-  "창원": "용지동",
+  "성산": "웅남동",
   "하동": "하동읍",
   "사천": "사천읍",
   "진해": "경화동",
   "마산": "월영동",
   "김해": "진영읍",
   "거제": "고현동",
+  "의창": "명서동",
   "양산": "북부동",
   "밀양": "내일동",
   "통영": "무전동",
@@ -608,7 +622,8 @@
     "대병"
    ]
   ],
-  "창원": [
+  "의창": [],
+  "성산": [
    [
     255,
     "북창원"
@@ -635,7 +650,9 @@
    ]
   ]
  },
- "aws_fallback": {},
+ "aws_fallback": {
+  "의창": "마산"
+ },
  "aws_neighbors": {
   "거제": [
    "통영",
@@ -653,9 +670,9 @@
    "거제"
   ],
   "김해": [
-   "창원",
+   "성산",
    "진해",
-   "양산"
+   "의창"
   ],
   "남해": [
    "사천",
@@ -680,7 +697,7 @@
   "양산": [
    "김해",
    "밀양",
-   "창원"
+   "성산"
   ],
   "의령": [
    "함안",
@@ -710,7 +727,7 @@
   "함안": [
    "의령",
    "마산",
-   "창원"
+   "의창"
   ],
   "함양": [
    "거창",
@@ -722,20 +739,25 @@
    "창녕",
    "의령"
   ],
-  "창원": [
+  "의창": [
    "마산",
-   "김해",
+   "성산",
    "진해"
   ],
-  "마산": [
-   "창원",
-   "함안",
-   "진해"
-  ],
-  "진해": [
-   "창원",
+  "성산": [
+   "의창",
    "마산",
    "김해"
+  ],
+  "마산": [
+   "의창",
+   "성산",
+   "함안"
+  ],
+  "진해": [
+   "성산",
+   "의창",
+   "마산"
   ]
  },
  "river_stations": [
@@ -763,7 +785,7 @@
    "sigun": "거창",
    "warning": 3.4,
    "danger": 5.4,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -790,7 +812,7 @@
    "sigun": "고성",
    "warning": 2.9,
    "danger": 4.1,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -799,7 +821,7 @@
    "sigun": "김해",
    "warning": 3.25,
    "danger": 4.9,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -817,7 +839,7 @@
    "sigun": "김해",
    "warning": 4.5,
    "danger": 7.5,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -853,7 +875,7 @@
    "sigun": "밀양",
    "warning": 4.2,
    "danger": 5.4,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -862,7 +884,7 @@
    "sigun": "밀양",
    "warning": 7.3,
    "danger": 9.4,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -871,7 +893,7 @@
    "sigun": "밀양",
    "warning": 18.79,
    "danger": 22.9,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -898,7 +920,7 @@
    "sigun": "산청",
    "warning": 4.47,
    "danger": 8.7,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -907,7 +929,7 @@
    "sigun": "산청",
    "warning": 5.5,
    "danger": 8.1,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -925,7 +947,7 @@
    "sigun": "양산",
    "warning": 2.8,
    "danger": 5.1,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -943,7 +965,7 @@
    "sigun": "양산",
    "warning": 3.5,
    "danger": 5.9,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -952,7 +974,7 @@
    "sigun": "의령",
    "warning": 3.3,
    "danger": 5.3,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -961,7 +983,7 @@
    "sigun": "의령",
    "warning": 6.6,
    "danger": 11.1,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -979,7 +1001,7 @@
    "sigun": "진주",
    "warning": 3.9,
    "danger": 5.5,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -1033,7 +1055,7 @@
    "sigun": "하동",
    "warning": 2.0,
    "danger": 4.9,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -1042,7 +1064,7 @@
    "sigun": "하동",
    "warning": 11.0,
    "danger": 14.0,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -1051,7 +1073,7 @@
    "sigun": "하동",
    "warning": 2.2,
    "danger": 5.0,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -1060,7 +1082,7 @@
    "sigun": "함안",
    "warning": 8.0,
    "danger": 12.6,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -1069,7 +1091,7 @@
    "sigun": "함안",
    "warning": 26.85,
    "danger": 32.3,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -1087,7 +1109,7 @@
    "sigun": "함양",
    "warning": 3.02,
    "danger": 4.4,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -1096,7 +1118,7 @@
    "sigun": "함양",
    "warning": 4.8,
    "danger": 6.4,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -1114,7 +1136,7 @@
    "sigun": "합천",
    "warning": 5.1,
    "danger": 9.0,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -1123,7 +1145,7 @@
    "sigun": "합천",
    "warning": 10.02,
    "danger": 19.1,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
@@ -1137,8 +1159,8 @@
   },
   {
    "code": "2020660",
-   "name": "신천 (창원 마산교)",
-   "sigun": "창원",
+   "name": "신천 (의창 마산교)",
+   "sigun": "의창",
    "warning": 4.4,
    "danger": 7.6,
    "has_cctv": false,
@@ -1146,30 +1168,40 @@
   },
   {
    "code": "2020675",
-   "name": "낙동강 (창원 수산대교)",
-   "sigun": "창원",
+   "name": "낙동강 (의창 수산대교)",
+   "sigun": "의창",
    "warning": 5.4,
    "danger": 9.6,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
    "code": "2504660",
-   "name": "창원 창원천제1호교",
-   "sigun": "창원",
+   "name": "의창 창원천제1호교",
+   "sigun": "의창",
    "warning": 2.3,
    "danger": 3.6,
-   "has_cctv": true,
+   "has_cctv": false,
    "api": "waterlevel"
   },
   {
    "code": "2504665",
-   "name": "창원천 (창원 퇴촌3호교)",
-   "sigun": "창원",
+   "name": "창원천 (의창 퇴촌3호교)",
+   "sigun": "의창",
    "warning": 2.5,
    "danger": 3.3,
    "has_cctv": false,
    "api": "waterlevel"
+  },
+  {
+   "code": "2504665",
+   "name": "창원천 (성산 인근 · 창원 퇴촌3호교)",
+   "sigun": "성산",
+   "warning": 2.5,
+   "danger": 3.3,
+   "has_cctv": false,
+   "api": "waterlevel",
+   "nearby": true
   },
   {
    "code": "2504655",
@@ -1264,15 +1296,13 @@
    "alm": 4.5,
    "srs": 5.3,
    "pfh": 5.3,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2015110": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상남도 합천군 대병면 상천리",
-   "pfh": 179,
-   "cctv": false
+   "pfh": 179
   },
   "2015623": {
    "agc": "기후에너지환경부",
@@ -1283,8 +1313,7 @@
    "alm": 5,
    "srs": 5.74,
    "pfh": 5.74,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2015630": {
    "agc": "기후에너지환경부",
@@ -1307,8 +1336,7 @@
    "alm": 4.7,
    "srs": 5.24,
    "pfh": 5.24,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2016680": {
    "agc": "기후에너지환경부",
@@ -1343,8 +1371,7 @@
    "alm": 8.7,
    "srs": 10.6,
    "pfh": 10.6,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2017640": {
    "agc": "기후에너지환경부",
@@ -1355,15 +1382,13 @@
    "alm": 12.1,
    "srs": 14.71,
    "pfh": 14.72,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2018110": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상남도 진주시 판문동",
-   "pfh": 46,
-   "cctv": false
+   "pfh": 46
   },
   "2018606": {
    "agc": "기후에너지환경부",
@@ -1374,8 +1399,7 @@
    "alm": 5.7,
    "srs": 6.77,
    "pfh": 6.77,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2018609": {
    "agc": "기후에너지환경부",
@@ -1393,8 +1417,7 @@
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상남도 합천군 용주면 내가리",
-   "pfh": 65.5,
-   "cctv": false
+   "pfh": 65.5
   },
   "2018635": {
    "agc": "한국수자원공사",
@@ -1441,8 +1464,7 @@
    "alm": 5.1,
    "srs": 6.04,
    "pfh": 6.04,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2018688": {
    "agc": "기후에너지환경부",
@@ -1453,8 +1475,7 @@
    "alm": 4.9,
    "srs": 5.68,
    "pfh": 5.68,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2018692": {
    "agc": "한국수자원공사",
@@ -1465,8 +1486,7 @@
    "alm": 5.8,
    "srs": 6.89,
    "pfh": 6.89,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2019610": {
    "agc": "기후에너지환경부",
@@ -1489,8 +1509,7 @@
    "alm": 13,
    "srs": 15.29,
    "pfh": 15.29,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2019625": {
    "agc": "기후에너지환경부",
@@ -1513,8 +1532,7 @@
    "alm": 7.2,
    "srs": 8.56,
    "pfh": 8.56,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2019653": {
    "agc": "기후에너지환경부",
@@ -1561,8 +1579,7 @@
    "alm": 5.1,
    "srs": 6.25,
    "pfh": 6.25,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2020615": {
    "agc": "기후에너지환경부",
@@ -1585,8 +1602,7 @@
    "alm": 11,
    "srs": 13.3,
    "pfh": 13.3,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2020660": {
    "agc": "기후에너지환경부",
@@ -1597,8 +1613,7 @@
    "alm": 7.6,
    "srs": 9.15,
    "pfh": 9.15,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2020671": {
    "agc": "기후에너지환경부",
@@ -1609,8 +1624,7 @@
    "alm": 5.9,
    "srs": 6.97,
    "pfh": 6.97,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2020675": {
    "agc": "기후에너지환경부",
@@ -1640,8 +1654,7 @@
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상남도 밀양시 단장면 고례리",
-   "pfh": 210.2,
-   "cctv": false
+   "pfh": 210.2
   },
   "2021670": {
    "agc": "기후에너지환경부",
@@ -1688,8 +1701,7 @@
    "alm": 4.5,
    "srs": 5.18,
    "pfh": 5.18,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2022655": {
    "agc": "기후에너지환경부",
@@ -1724,8 +1736,7 @@
    "alm": 3.9,
    "srs": 4.45,
    "pfh": 4.45,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2022685": {
    "agc": "기후에너지환경부",
@@ -1748,8 +1759,7 @@
    "alm": 5,
    "srs": 5.75,
    "pfh": 5.75,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2502610": {
    "agc": "기후에너지환경부",
@@ -1760,8 +1770,7 @@
    "alm": 3,
    "srs": 3.36,
    "pfh": 3.36,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2502630": {
    "agc": "기후에너지환경부",
@@ -1772,8 +1781,7 @@
    "alm": 4.1,
    "srs": 4.75,
    "pfh": 4.75,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2502660": {
    "agc": "기후에너지환경부",
@@ -1784,22 +1792,19 @@
    "alm": 3.9,
    "srs": 4.45,
    "pfh": 4.45,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2503210": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상남도 거제시 연초면 덕치리",
-   "pfh": 49.6,
-   "cctv": false
+   "pfh": 49.6
   },
   "2503220": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "경상남도 거제시 동부면 구천리",
-   "pfh": 94.54,
-   "cctv": false
+   "pfh": 94.54
   },
   "2503623": {
    "agc": "기후에너지환경부",
@@ -1810,8 +1815,7 @@
    "alm": 3,
    "srs": 3.47,
    "pfh": 3.47,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2503635": {
    "agc": "기후에너지환경부",
@@ -1822,8 +1826,7 @@
    "alm": 2.7,
    "srs": 3.07,
    "pfh": 3.07,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2504655": {
    "agc": "기후에너지환경부",
@@ -1834,8 +1837,7 @@
    "alm": 4.7,
    "srs": 5.55,
    "pfh": 5.55,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2504660": {
    "agc": "기후에너지환경부",
@@ -1858,8 +1860,7 @@
    "alm": 12.1,
    "srs": 14.78,
    "pfh": 14.78,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "2504665": {
    "agc": "기후에너지환경부",
@@ -1870,8 +1871,7 @@
    "alm": 3.3,
    "srs": 3.74,
    "pfh": 3.74,
-   "fstn": false,
-   "cctv": false
+   "fstn": false
   },
   "4009638": {
    "agc": "기후에너지환경부",
@@ -1931,14 +1931,15 @@
   "함안",
   "함양",
   "합천",
-  "창원",
+  "의창",
+  "성산",
   "마산",
   "진해",
   "창원"
  ],
  "reg_map": {
   "L1080500": "양산",
-  "L1080600": "창원",
+  "L1080600": "의창",
   "L1080900": "김해",
   "L1081000": "밀양",
   "L1081100": "의령",
@@ -1981,7 +1982,8 @@
   "의령",
   "함안",
   "김해",
-  "창원",
+  "성산",
+  "의창",
   "마산",
   "진주",
   "진해",
@@ -2010,7 +2012,7 @@
   "함안군": "함안",
   "함양군": "함양",
   "합천군": "합천",
-  "창원시": "창원"
+  "창원시": "의창"
  },
  "fire_groups": {
   "거창·합천·함양": [
@@ -2028,9 +2030,9 @@
    "의령",
    "함안"
   ],
-  "김해·창원·진주": [
+  "김해·의창·진주": [
    "김해",
-   "창원",
+   "의창",
    "진주"
   ],
   "하동·사천·고성": [
@@ -2073,6 +2075,7 @@
   "삼호천",
   "서상천",
   "섬진강",
+  "성산",
   "신등천",
   "신반천",
   "신천",
@@ -2081,6 +2084,7 @@
   "영천강",
   "의령",
   "의령천",
+  "의창",
   "임천",
   "조만강",
   "주천강",
@@ -2088,7 +2092,6 @@
   "진주",
   "진해",
   "창녕",
-  "창원",
   "창원천",
   "토평천",
   "통영",
@@ -2134,9 +2137,10 @@
   "함안": "함안군",
   "함양": "함양군",
   "합천": "합천군",
-  "창원": "창원시",
+  "의창": "창원시",
+  "성산": "창원시",
   "마산": "창원시",
   "진해": "창원시"
  },
- "generated": "2026-09-20 07:37"
+ "generated": "2026-09-20 12:28"
 }
