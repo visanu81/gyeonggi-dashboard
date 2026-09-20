@@ -1478,6 +1478,20 @@ WRN_AREAS = P.get('wrn_areas') or {}
 NORTH_GG_KEYWORDS = list(dict.fromkeys(list(P['keywords']) + list(WRN_AREAS)))
 
 
+_SEA_ZONE_RE = r'(앞바다|먼바다|전해상|해상|연안바다|평수구역)'
+
+
+def _drop_sea_zones(text):
+    """바다 특보구역을 본문에서 통째로 뺀다 — 육상 관서 매칭 근거가 아니다(2026-09-20 사장님 결정).
+    기상청 바다 구역 이름엔 육상 이름이 그대로 들어간다: '인천·경기북부앞바다'→경기북부 전역, '제주도앞바다'→제주 전역,
+    '남해동부안쪽먼바다'→남해군, '거제시동부앞바다'→거제, '충남북부앞바다(당진, 태안·서산)'→당진·태안·서산.
+    ① '바다구역(세부, 세부)' 묶음은 괄호까지 통째로 ② 남은 조각 중 바다 이름 조각 제거. 허브(S코드) 경로와 같은 결과."""
+    import re as _re
+    t = _re.sub(r'[^,()]*' + _SEA_ZONE_RE + r'[^,()]*\([^()]*\)', '', text or '')
+    parts = [p.strip() for p in t.split(',')]
+    return ', '.join(p for p in parts if p and not _re.search(_SEA_ZONE_RE, p))
+
+
 def _strip_area_wrappers(text):
     """기상청 특보 본문의 '광역(세부, 세부)' 꼴에서 광역 껍데기를 벗긴다 — 세부구역이 적혀 있으면 광역명은
     매칭 근거가 아니다. '경기도(파주시, 양주시), 서울(서울동북권)' → '파주시, 양주시, 서울동북권'.
@@ -1957,7 +1971,7 @@ def parse_prelim_warnings(t7_text, tmFc=''):
         if m and cur is not None:
             time_str = m.group(1).strip()
             area = m.group(2).strip()
-            north_match = any(k in area for k in NORTH_GG_KEYWORDS)
+            north_match = any(k in _drop_sea_zones(area) for k in NORTH_GG_KEYWORDS)   # 바다 예비특보는 관내 아님
             cur['items'].append({'time': time_str, 'area': area, 'north_match': north_match})
 
     # 발표 시각 형식 변환
@@ -2024,7 +2038,7 @@ def fetch_warnings():
             wrn_type = next((w for w in WRN_TYPES if w in head), None)
             if not wrn_type:
                 continue
-            body_text = _strip_area_wrappers(body_text)   # '경기도(수원)' 의 '경기도'는 근거가 아니다
+            body_text = _strip_area_wrappers(_drop_sea_zones(body_text))   # 바다 구역 제외, '경기도(수원)' 의 '경기도'는 근거가 아니다
             matched = [k for k in NORTH_GG_KEYWORDS if _kw_in_text(body_text, k)]
             if not matched:
                 continue
