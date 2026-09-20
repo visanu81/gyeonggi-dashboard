@@ -68,6 +68,13 @@ def main():
     except Exception as e:
         print(f'  하천 수위 확인 실패: {e}')
 
+    # ③ AWS 매분자료 미리 받기 — 5분 수집기(17개 프로세스)가 이 캐시를 쓴다. API허브가 간헐적으로 15~30초 멈춰
+    #    수집기가 이전 값 보존으로 빠지던 것(2026-09-20, 최대 35분 정체)을 매분 시도로 막는다. 실패는 조용히.
+    try:
+        ud.prefetch_aws()
+    except Exception as e:
+        print(f'  AWS 미리 받기 실패: {type(e).__name__}')
+
 
 if __name__ == '__main__':
     main()

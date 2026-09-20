@@ -355,6 +355,29 @@ def shared_get(key, url, params=None, timeout=15, max_age=240, headers=None):
                 pass
 
 
+def _aws_request():
+    """AWS 매분자료 요청 주소와 공유 캐시 키. tm2 = 지금−10분(완결 자료), 키는 5분 칸.
+    캐시 키에 5분 칸을 넣는 이유: 키가 'aws_min' 하나면 다음 회차(5분 뒤)가 앞 회차 묶음이 3~4분 전에 쓴 응답을
+    물려받아 자료가 설계(10분)보다 5~8분 더 늦었다(2026-09-20 실측: 12:36 회차가 12:21 자료). 같은 회차의
+    북부·남부·시도 15 프로세스는 같은 칸이라 한 번만 받는다."""
+    tm = (datetime.now() - timedelta(minutes=10)).strftime('%Y%m%d%H%M')
+    url = ('https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-aws2_min'
+           f'?tm2={tm}&stn=0&disp=0&help=0&authKey={KMA_APIHUB_KEY}')
+    bucket = tm[:-2] + f'{int(tm[-2:]) // 5 * 5:02d}'
+    return f'aws_min_{bucket}', url
+
+
+def prefetch_aws():
+    """1분 알리미용 — AWS 매분자료를 미리 받아 공유 캐시에 넣기만 한다(파싱 없음).
+    5분 수집기는 ≤4분 캐시를 그대로 쓰므로 API허브가 그 순간 멈춰도(간헐적 15~30초 무응답) 이전 값 보존으로 빠지지 않고,
+    자료도 '지금−10분'에 최대 1분 더 늦은 정도. 실패하면 다음 분에 다시. 알리미는 SHARED_MAX_AGE=0 이라 매분 새로 받는다."""
+    if not KMA_APIHUB_KEY:
+        return False
+    key, url = _aws_request()
+    r = shared_get(key, url, timeout=15, max_age=240)
+    return r.status_code == 200
+
+
 def fetch_aws_rain():
     """AWS 매분자료 1회 호출로 전 관서 실측 강수·돌풍 수집.
 
@@ -366,14 +389,8 @@ def fetch_aws_rain():
     """
     if not KMA_APIHUB_KEY:
         return {}
-    tm = (datetime.now() - timedelta(minutes=10)).strftime('%Y%m%d%H%M')
-    url = ('https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-aws2_min'
-           f'?tm2={tm}&stn=0&disp=0&help=0&authKey={KMA_APIHUB_KEY}')
-    # 캐시 키에 5분 칸을 넣는다 — 키가 'aws_min' 하나면 다음 회차(5분 뒤)가 앞 회차 묶음이 3~4분 전에 쓴 응답을
-    # 물려받아 자료가 설계(10분)보다 5~8분 더 늦었다(2026-09-20 실측: 12:36 회차가 12:21 자료). 같은 회차의
-    # 북부·남부·시도 15 프로세스는 같은 칸이라 한 번만 받는다.
-    bucket = tm[:-2] + f'{int(tm[-2:]) // 5 * 5:02d}'
-    r = shared_get(f'aws_min_{bucket}', url, timeout=15, max_age=240)
+    key, url = _aws_request()     # 평소엔 1분 알리미(prefetch_aws)가 방금 넣어 둔 캐시를 그대로 쓴다
+    r = shared_get(key, url, timeout=15, max_age=240)
     r.raise_for_status()
     r.encoding = 'euc-kr'
     text = r.text
