@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """weather 개조 작업장 빌드 — 2026-09-17 사장님 지시.
 
-weather.visanu81.workers.dev 를 두 층으로 만든다:
-  /            → '서비스 개편 중' 안내 (기존 북마크 전부 이 안내로)
-  /new/        → 실제 작업 중인 화면 = 경기 전체판(권역 선택 포함)
+weather.visanu81.workers.dev:
+  /            → 경기 전체판(권역 선택 포함) — 2026-09-20 사장님 지시로 /new/ 에서 루트로 올림
+  /<시도>/     → 시도판(강원·서울·…), /전국.html → 시도 고르기
+  /new/*       → 옛 주소. _redirects 로 같은 경로의 루트로 301 (북마크 보호)
+(2026-09-17~19 에는 루트가 '서비스 개편 중' 안내였고 작업 화면은 /new/ 아래였다.)
 
 코드는 작업 트리(release, 통일판)에서, 데이터(data.js·data-south.js)만
 origin/main(서버가 방금 올린 최신)에서 가져와 합친다. 변환 규칙은
@@ -31,38 +33,13 @@ WORK = ROOT / '.tmp' / 'weather-dev'
 SITE = WORK / 'site'
 DEPLOY = WORK / 'deploy'
 PUB = DEPLOY / 'public'
-DEV_DIR = 'new'                 # 작업 화면이 사는 하위 경로
+DEV_DIR = ''                    # 작업 화면이 사는 하위 경로 — '' = 루트 (2026-09-20). 예전엔 'new'
+BASE = '/' + (DEV_DIR + '/' if DEV_DIR else '')       # '/' 또는 '/new/'
+OLD_DIRS = ['new']              # 예전 하위 경로 — 같은 경로의 루트로 301
 
-PAGES = ['index.html', '광역.html', '도움말.html', '상황실.html',
-         '상황판.html', '지도.html', '호우.html']
+# Cloudflare Workers 정적 자산의 _redirects (Pages 와 같은 문법). 옛 /new/상황실.html 북마크가 계속 열리게.
+REDIRECTS = ''.join(f'/{d}/* /:splat 301\n' for d in OLD_DIRS)
 
-NOTICE = """<!doctype html>
-<html lang="ko"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>서비스 개편 중 — 경기남부 기상·재난 상황판</title>
-<style>
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-       background:#0b1220;color:#f3f6fc;font-family:'Pretendard Variable',Pretendard,'맑은 고딕',system-ui,sans-serif;}
-  .card{max-width:520px;margin:24px;padding:44px 36px;background:#141e33;border:1px solid #28313f;
-        border-radius:22px;text-align:center;}
-  .icon{font-size:52px;margin-bottom:14px;}
-  h1{font-size:24px;margin:0 0 14px;}
-  p{font-size:15px;line-height:1.7;color:#93a5c4;margin:0 0 26px;}
-  a.btn{display:inline-block;padding:13px 26px;border-radius:12px;background:#ffb020;color:#101725;
-        font-weight:700;font-size:15px;text-decoration:none;}
-  .foot{margin-top:30px;font-size:12px;color:#5d6b83;}
-</style></head><body>
-<div class="card">
-  <div class="icon">🚧</div>
-  <h1>서비스 개편 중입니다</h1>
-  <p>경기남부 기상·재난 상황판을 더 나은 모습으로 다듬고 있습니다.<br>
-     그동안 <b style="color:#f3f6fc">경기 전체 상황판</b>에서<br>같은 정보를 보실 수 있습니다.</p>
-  <a class="btn" href="https://ggweather.visanu81.workers.dev/">경기 전체 상황판 열기 →</a>
-  <div class="foot">동두천소방서 소방위 한경승</div>
-</div>
-</body></html>
-"""
 
 WRANGLER = """# weather 개조 작업장 배포 설정 — tools/build_weather_dev.py 가 만든다.
 name = "weather"
@@ -153,7 +130,7 @@ def build_sido_sites():
     return out
 
 
-# 관서 선택창의 '시도' 줄 순서 — 북→남. 경기는 루트(/new/)에 있다.
+# 관서 선택창의 '시도' 줄 순서 — 북→남. 경기는 루트(BASE)에 있다.
 SIDO_ORDER = ['seoul', 'incheon', 'gyeonggi', 'gangwon', 'sejong', 'daejeon', 'chungbuk', 'chungnam',
               'jeonbuk', 'jngj', 'gyeongbuk', 'daegu', 'gyeongnam', 'busan', 'ulsan', 'jeju']
 
@@ -162,9 +139,9 @@ def inject_sido_list(root, sidos):
     """각 폴더의 region.js 끝에 시도 목록(sidoList)과 현재 시도(sidoCurrent)를 붙인다.
     지도·호우 화면의 관서 선택창이 이걸 읽어 '시도' 줄을 그린다(2026-09-19 사장님 지시)."""
     import json
-    entries = {'gyeonggi': {'label': '경기도', 'base': f'/{DEV_DIR}/'}}
+    entries = {'gyeonggi': {'label': '경기도', 'base': BASE}}
     for key, wide, folder, src in sidos:
-        entries[key] = {'label': wide, 'base': f'/{DEV_DIR}/{folder}/'}
+        entries[key] = {'label': wide, 'base': f'{BASE}{folder}/'}
     ordered = [entries[k] for k in SIDO_ORDER if k in entries] + \
               [v for k, v in entries.items() if k not in SIDO_ORDER]
     lst = json.dumps(ordered, ensure_ascii=False)
@@ -205,7 +182,7 @@ def landing_html(sidos):
 try {{
   var b = localStorage.getItem('ggSido');
   if (b) {{
-    var a = document.querySelector('a.row[href="./' + b.replace('/{DEV_DIR}/', '') + '지도.html"]');
+    var a = document.querySelector('a.row[href="./' + b.replace('{BASE}', '') + '지도.html"]');
     if (a) {{
       var r = document.getElementById('recent');
       r.innerHTML = '<a class="row" style="border-color:#ffb020" href="' + b + '지도.html"><b>최근 본 시도 · ' + a.querySelector('b').textContent + '</b><span>바로가기</span></a>';
@@ -302,12 +279,11 @@ def main():
     sidos = build_sido_sites()
     _drop_profile_files(SITE)      # 경기 전체판에는 다른 시도 파일이 필요 없다
 
-    # 4) 배포 폴더 조립: 루트 = 안내, /new/ = 작업 화면
+    # 4) 배포 폴더 조립: 루트(BASE) = 작업 화면, 옛 /new/* 는 _redirects 로 루트로
     PUB.mkdir(parents=True, exist_ok=True)
-    for name in PAGES:
-        (PUB / name).write_text(NOTICE, encoding='utf-8')
-    shutil.copytree(SITE, PUB / DEV_DIR)
-    # 경기 전체판(/new/ 루트)도 운영 ggweather 의 데이터·이미지를 직접 읽게 — 빌드 시점 스냅샷이 아니라 5분 갱신.
+    shutil.copytree(SITE, PUB / DEV_DIR, dirs_exist_ok=True)
+    (PUB / '_redirects').write_text(REDIRECTS, encoding='utf-8')
+    # 경기 전체판(BASE 루트)도 운영 ggweather 의 데이터·이미지를 직접 읽게 — 빌드 시점 스냅샷이 아니라 5분 갱신.
     # (시도판은 build_sido_sites 에서 같은 방식으로 gyeonggi-dashboard 의 data-<key>.js 를 읽는다)
     for f in (PUB / DEV_DIR).glob('*.html'):
         body = f.read_text(encoding='utf-8')
