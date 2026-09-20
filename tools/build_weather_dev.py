@@ -206,8 +206,8 @@ def inject_sido_list(root, sidos):
 
 def landing_html(sidos):
     rows = ''.join(
-        f'<a class="row" href="./{folder}/" onclick="remember(\'{BASE}{folder}/\')"><b>{wide}</b>'
-        f'<span>{"5분마다 갱신" if src == "서버" else "시험판 · 갱신 안 됨"}</span></a>'
+        f'<a class="row" data-key="{key}" href="./{folder}/" onclick="remember(\'{BASE}{folder}/\')"><b>{wide}</b>'
+        f'<span id="st-{key}">{"5분마다 갱신" if src == "서버" else "시험판 · 갱신 안 됨"}</span></a>'
         for key, wide, folder, src in sorted(sidos, key=lambda s: (s[3] != '서버', s[2])))
     return f"""<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -218,14 +218,45 @@ def landing_html(sidos):
   h1{{font-size:22px;margin:0 0 6px;}} p{{color:#93a5c4;font-size:14px;margin:0 0 22px;}}
   a.row{{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;margin:8px 0;
         background:#141e33;border:1px solid #28313f;border-radius:14px;color:#f3f6fc;text-decoration:none;}}
-  a.row span{{color:#93a5c4;font-size:13px;}} a.row.gg b{{color:#ffb020;}}
+  a.row b{{flex:0 0 auto;white-space:nowrap;margin-right:12px;}} a.row span{{flex:1;min-width:0;color:#93a5c4;font-size:13px;text-align:right;line-height:1.6;}} a.row.gg b{{color:#ffb020;}}
+  a.row.warn{{border-color:#ff9a3c;}} a.row.sev{{border-color:#ff5a5a;}}
+  a.row span i{{font-style:normal;font-weight:700;padding:2px 7px;border-radius:7px;margin-left:4px;}}
+  a.row span i.w{{background:rgba(255,154,60,.18);color:#ffb26b;}} a.row span i.s{{background:rgba(255,90,90,.2);color:#ff7a7a;}}
+  a.row span i.r{{background:rgba(84,170,255,.18);color:#8cc6ff;}}
+  #nation{{font-size:13px;color:#93a5c4;margin:-14px 0 16px;}}
 </style></head><body><div class="wrap">
 <h1>전국 기상·재난 상황판</h1><p>시도를 고르세요. 화면 안의 '내 관서 선택'에서도 시도를 바꿀 수 있습니다.</p>
+<div id="nation">전국 현황 불러오는 중…</div>
 <div id="recent"></div>
-<a class="row gg" href="./" onclick="remember('{BASE}')"><b>경기도</b><span>34개 소방서 · 운영과 같은 데이터</span></a>
+<a class="row gg" data-key="gyeonggi" href="./" onclick="remember('{BASE}')"><b>경기도</b><span id="st-gyeonggi">34개 소방서 · 운영과 같은 데이터</span></a>
 {rows}
 </div>
 <script>
+/* 시도별 현황 — 서버가 배포 회차마다 올리는 data-summary.js(전국 요약, 2026-09-20). script 로 읽어 60초마다 새로. */
+function renderSummary() {{
+  var S = window.NATION_SUMMARY; if (!S || !S.sido) return;
+  var nWarn = 0, nRiver = 0;
+  S.sido.forEach(function (r) {{
+    var el = document.getElementById('st-' + r.key); if (!el) return;
+    var row = el.parentNode, parts = [];
+    if (r.warn) {{ parts.push('<i class="' + (r.severe ? 's' : 'w') + '">특보 ' + r.warn + (r.warn_types && r.warn_types.length ? ' · ' + r.warn_types.join('·') : '') + '</i>'); nWarn++; }}
+    if (r.river_risk) {{ parts.push('<i class="r">하천 주의↑ ' + r.river_risk + '</i>'); nRiver += r.river_risk; }}
+    if (r.rain_max >= 1) parts.push('비 ' + r.rain_max + 'mm/h · ' + (r.rain_where || ''));
+    if (r.msgs) parts.push('재난문자 ' + r.msgs);
+    parts.push(String(r.updated || '').slice(11, 16) + ' 갱신');
+    el.innerHTML = parts.join(' · ');
+    row.className = 'row' + (row.classList.contains('gg') ? ' gg' : '') + (r.warn ? (r.severe ? ' sev' : ' warn') : '');
+  }});
+  var n = document.getElementById('nation');
+  if (n) n.textContent = '전국 ' + S.sido.length + '개 시도 · 특보 ' + nWarn + '곳 · 하천 주의 이상 ' + nRiver + '지점 · ' + String(S.generated || '').slice(11, 16) + ' 기준';
+}}
+function loadSummary() {{
+  var s = document.createElement('script');
+  s.src = 'https://gyeonggi-dashboard.visanu81.workers.dev/data-summary.js?_t=' + Date.now();
+  s.onload = renderSummary; s.onerror = function () {{ var n = document.getElementById('nation'); if (n && !window.NATION_SUMMARY) n.textContent = '전국 현황은 서버가 다음 배포 회차에 올립니다'; }};
+  document.head.appendChild(s);
+}}
+loadSummary(); setInterval(loadSummary, 60000);
 /* 고른 시도를 기억 — 다음부터 대문(/)이 바로 그 시도로 간다. 시도 폴더의 region.js 도 열릴 때 같은 값을 쓴다. */
 function remember(base) {{ try {{ localStorage.setItem('ggSido', base); }} catch (e) {{}} }}
 /* 마지막에 본 시도를 맨 위에 */

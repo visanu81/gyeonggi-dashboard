@@ -3696,6 +3696,56 @@ def apply_effective_humidity(regions):
         pass
 
 
+SUMMARY_PATH = ROOT / 'data-summary.js'
+
+
+def _summarize(key, label, d):
+    """시도 데이터 한 벌 → 대문용 한 줄. 화면이 쓰는 판정과 같은 기준(하천 level, 특보 type, 관서 rain)."""
+    regs = d.get('regions') or []
+    rivers = d.get('rivers') or []
+    warns = d.get('warnings') or []
+    types = list(dict.fromkeys(str(w.get('type') or '') for w in warns if w.get('type')))
+    risk = [r for r in rivers if r.get('level') in ('warning', 'danger')]
+    risk.sort(key=lambda r: (r.get('level') != 'danger', -(r.get('value') or 0)))
+    rain = [(float(r.get('rain') or 0), r.get('name')) for r in regs if r.get('rain') is not None]
+    rmax = max(rain) if rain else (0.0, None)
+    prelim = sum(1 for g in (d.get('prelim_warnings') or []) if g.get('north_count'))
+    return {
+        'key': key, 'label': label, 'updated': d.get('updated'), 'stations': len(regs),
+        'warn': len(types), 'warn_types': types[:4],
+        'severe': any(w.get('level') == 'severe' or '경보' in str(w.get('type') or '') for w in warns),
+        'prelim': prelim,
+        'river_risk': len(risk), 'river_top': [{'name': r.get('name'), 'level': r.get('level')} for r in risk[:3]],
+        'rain_max': round(rmax[0], 1), 'rain_where': rmax[1],
+        'msgs': len(d.get('messages') or []),
+    }
+
+
+def build_summary():
+    """전국 요약 data-summary.js — 배포 회차(push_only)마다 모든 프로파일 데이터에서 한 줄씩(2026-09-20).
+    경기는 북부+남부를 합쳐 한 줄(전국 대문의 경기 항목 = 전체판). 파일이 없는 시도는 건너뛴다.
+    git add -A 로 데이터와 같이 커밋되고, _headers 의 /data-*.js 규칙으로 CORS 도 열린다."""
+    rows, gg = [], []
+    for k, p in _rp.PROFILES.items():
+        d = load_previous_data(ROOT / p['data_file'])
+        if not d:
+            continue
+        if k in ('north', 'south'):
+            gg.append(d)
+            continue
+        rows.append(_summarize(k, p.get('wide_label') or p.get('label') or k, d))
+    if gg:
+        merged = {'regions': [], 'rivers': [], 'warnings': [], 'prelim_warnings': [], 'messages': [],
+                  'updated': max(str(x.get('updated') or '') for x in gg)}
+        for x in gg:
+            for f in ('regions', 'rivers', 'warnings', 'prelim_warnings', 'messages'):
+                merged[f] += list(x.get(f) or [])
+        rows.insert(0, _summarize('gyeonggi', '경기도', merged))
+    out = {'generated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'sido': rows}
+    _atomic_write_text(SUMMARY_PATH, 'window.NATION_SUMMARY = ' + json.dumps(out, ensure_ascii=False) + ';\n')
+    return len(rows)
+
+
 def push_only():
     """수집 없이 커밋·푸시·배포만. 지역별 수집을 동시에 돌린 뒤 마지막에 한 번 호출한다.
     (각 수집은 --no-push로 파일만 만들고, 여기서 한꺼번에 올린다 — 푸시 경합 방지)
@@ -3714,6 +3764,10 @@ def push_only():
               f'변경은 다음 배포 때 함께 올림')
         print(f'[{now_str()}] 종료')
         return
+    try:
+        print(f'  · 전국 요약 {build_summary()}개 시도 → data-summary.js')
+    except Exception as e:
+        print(f'  · 전국 요약 실패({type(e).__name__}) — 건너뜀')
     git_push_data()
     run_deploy(reason, sig, mins)
     print(f'[{now_str()}] 푸시 완료')
