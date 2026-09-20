@@ -2451,9 +2451,16 @@ class Component extends DCLogic {
       const dmax=(Math.max.apply(null,allV)||1)*1.04;
       // 칸마다 최소 너비 — 기준이 붙어 있어도(관심 0.7m·주의 1.0m) 이름·수치가 안 겹치게. 구간 너비 = max(실제 비율, 12%)
       // 를 다시 100% 로 맞춘 눈금. 현재 수위 표식은 자기 구간 안에서 비례 위치(2026-09-21 사장님 "칸 간격 조정").
-      const _bnd=[0].concat(thresholds.map(t=>Math.max(0,+t.v||0)).sort((a,b)=>a-b), [dmax]);
-      const _MIN=0.12, _w=[]; let _sum=0;
-      for(let i=0;i<_bnd.length-1;i++){ const w=Math.max((_bnd[i+1]-_bnd[i])/dmax, _MIN); _w.push(w); _sum+=w; }
+      const _ts=thresholds.slice().sort((a,b)=>(+a.v||0)-(+b.v||0));
+      const _bnd=[0].concat(_ts.map(t=>Math.max(0,+t.v||0)), [dmax]);
+      // 칸 최소 너비 = 이웃한 두 이름표가 반씩 들어가고 6px 남는 폭. 고정 12% 는 좁은 화면(게이지 290px)에서
+      // '계획홍수위'(41px)를 못 담아 여전히 겹쳤다. 이름표 폭은 글자 수로, 게이지 폭은 창 너비로 어림한다.
+      const _gw=Math.max(200, Math.min(560, ((typeof window!=='undefined'&&window.innerWidth)||800)-90));
+      const _lw=_ts.map(t=>Math.max(String(t.name||'').length*9.5, (num(t.v,1)+'m').length*5.6)+4);
+      const _w=[]; let _sum=0;
+      for(let i=0;i<_bnd.length-1;i++){
+        const need=((i>0?_lw[i-1]/2:0)+(i<_lw.length?_lw[i]/2:0)+6)/_gw;      // 앞 이름표 반 + 뒤 이름표 반 + 여유
+        const w=Math.max((_bnd[i+1]-_bnd[i])/dmax, 0.08, need); _w.push(w); _sum+=w; }
       const _cum=[0]; _w.forEach((w,i)=>_cum.push(_cum[i]+w/_sum));
       const pct=(v)=>{ v=Math.max(0,Math.min(dmax,+v||0));
         for(let i=0;i<_bnd.length-1;i++){ if(v<=_bnd[i+1]){ const span=_bnd[i+1]-_bnd[i]; const f=span>0?(v-_bnd[i])/span:1; return Math.max(0,Math.min(100,(_cum[i]+f*(_cum[i+1]-_cum[i]))*100)); } }
@@ -2470,10 +2477,11 @@ class Component extends DCLogic {
         R('div',{style:{position:'relative', height:'12px', borderRadius:'6px', background:grad, border:'1px solid var(--border)'}},
           R('div',{style:{position:'absolute', left:cpct+'%', top:'-15px', transform:'translateX(-50%)', fontSize:'11px', fontWeight:900, color:'var(--ink)', lineHeight:1, whiteSpace:'nowrap'}}, '▼'),
           R('div',{style:{position:'absolute', left:cpct+'%', top:'-2px', bottom:'-2px', width:'2px', transform:'translateX(-1px)', background:'var(--ink)'}})),
-        R('div',{style:{position:'relative', height:'24px', marginTop:'3px'}}, thresholds.map((t,i)=>
-          R('div',{key:i, style:{position:'absolute', left:pct(t.v)+'%', transform: pct(t.v)>82?'translateX(-92%)':(pct(t.v)<8?'translateX(0)':'translateX(-50%)'), textAlign:'center', whiteSpace:'nowrap'}},
+        // 이름표는 값이 아니라 칸 경계 순번에 — 값이 같은 기준(댐 위험 52.0m = 계획홍수위 52.0m)도 겹치지 않게
+        R('div',{style:{position:'relative', height:'24px', marginTop:'3px'}}, _ts.map((t,i)=>{ const lp=_cum[i+1]*100; return (
+          R('div',{key:i, style:{position:'absolute', left:lp+'%', transform:'translateX(-50%)', textAlign:'center', whiteSpace:'nowrap'}},
             R('div',{style:{fontSize:'9.5px', fontWeight:800, color:t.col, lineHeight:1.15}}, t.name),
-            R('div',{style:{fontSize:'9px', color:'var(--ink3)', lineHeight:1.15}}, num(t.v,1)+'m'))))
+            R('div',{style:{fontSize:'9px', color:'var(--ink3)', lineHeight:1.15}}, num(t.v,1)+'m'))); }))
       );
     }
 
