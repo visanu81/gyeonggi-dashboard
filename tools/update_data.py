@@ -338,6 +338,14 @@ def shared_get(key, url, params=None, timeout=15, max_age=240, headers=None):
                                                      'b64': _b64.b64encode(r.content).decode('ascii')}))
             except Exception:
                 pass
+            # 시각이 든 키(aws_min_<5분칸>·mid_fcst_<발표시각>)가 하루 300개씩 쌓이지 않게 — 6시간 지난 캐시는 지운다
+            try:
+                _cut = _time.time() - 6 * 3600
+                for _f in SHARED_DIR.glob('*.json'):
+                    if _f.stat().st_mtime < _cut:
+                        _f.unlink()
+            except Exception:
+                pass
         return _CachedResp(r.content, r.status_code)
     finally:
         if got_lock:
@@ -361,7 +369,11 @@ def fetch_aws_rain():
     tm = (datetime.now() - timedelta(minutes=10)).strftime('%Y%m%d%H%M')
     url = ('https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-aws2_min'
            f'?tm2={tm}&stn=0&disp=0&help=0&authKey={KMA_APIHUB_KEY}')
-    r = shared_get('aws_min', url, timeout=15, max_age=240)
+    # 캐시 키에 5분 칸을 넣는다 — 키가 'aws_min' 하나면 다음 회차(5분 뒤)가 앞 회차 묶음이 3~4분 전에 쓴 응답을
+    # 물려받아 자료가 설계(10분)보다 5~8분 더 늦었다(2026-09-20 실측: 12:36 회차가 12:21 자료). 같은 회차의
+    # 북부·남부·시도 15 프로세스는 같은 칸이라 한 번만 받는다.
+    bucket = tm[:-2] + f'{int(tm[-2:]) // 5 * 5:02d}'
+    r = shared_get(f'aws_min_{bucket}', url, timeout=15, max_age=240)
     r.raise_for_status()
     r.encoding = 'euc-kr'
     text = r.text
