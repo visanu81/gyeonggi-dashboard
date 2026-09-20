@@ -1340,9 +1340,13 @@ class Component extends DCLogic {
   _canonRegion(name){
     var n=String(name||'').trim();
     if(!n) return null;
+    var RC=window.REGION_CONF||{}, UNITS=RC.order||[];
     if(n==='경기북부'||n==='경기도'||n==='수도권'||n==='경기') return '경기도';
+    if((RC.wideNames||[]).indexOf(n)>=0) return (RC.warnOrder||[])[0]||n;   // 시도 전역 표기('강원도'·'충청북도') → 표시명
+    if(UNITS.indexOf(n)>=0) return n;   // 관서 이름 그대로면 그대로 — 광역시 '중구'를 '중'으로, 강원 '양구'를 '양'으로 깎지 않게
     n=n.replace(/(동북부|서북부|동남부|서남부|남부|북부|동부|서부|중부|내륙|산지|앞바다|해안)/g,'');
     n=n.replace(/(특별자치시|특별자치도|특별시|광역시|자치시|자치도)/g,'');
+    if(UNITS.indexOf(n)>=0) return n;
     n=n.replace(/(시|군|구|도)$/,'');
     return n.trim()||null;
   }

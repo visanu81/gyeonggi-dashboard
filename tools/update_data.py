@@ -1472,7 +1472,29 @@ WRN_TYPES = ['호우경보', '호우주의보', '강풍경보', '강풍주의보
              '한파경보', '한파주의보', '폭염경보', '폭염주의보', '풍랑경보', '풍랑주의보',
              '건조경보', '건조주의보', '황사경보', '태풍경보', '태풍주의보']
 
-NORTH_GG_KEYWORDS = P['keywords']
+# 광역시 특보 권역 → 구 (예: 서울동북권 → 8개 구). 권역명도 키워드에 넣어 '서울'이 '서울동북권' 안에서
+# 잡히지 않게 한다(_kw_in_text 가 긴 이름을 먼저 지운다) — 2026-09-20 전국 확장 ④.
+WRN_AREAS = P.get('wrn_areas') or {}
+NORTH_GG_KEYWORDS = list(dict.fromkeys(list(P['keywords']) + list(WRN_AREAS)))
+
+
+def _strip_area_wrappers(text):
+    """기상청 특보 본문의 '광역(세부, 세부)' 꼴에서 광역 껍데기를 벗긴다 — 세부구역이 적혀 있으면 광역명은
+    매칭 근거가 아니다. '경기도(파주시, 양주시), 서울(서울동북권)' → '파주시, 양주시, 서울동북권'.
+    (2026-08-17 점검 [높음]: 남부만 발효돼도 '경기도'가 북부에 잡히던 누수.) 괄호가 비었으면 광역명 유지."""
+    import re as _re
+    return _re.sub(r'([^,()\s]+)\s*\(([^()]*)\)', lambda m: m.group(2).strip() or m.group(1), text or '')
+
+
+def _expand_areas(s):
+    """지역 문자열의 권역명(서울동북권)을 그 권역의 구 목록으로 바꾼다 → 화면·상황실·알림이 전부
+    '지역 문자열에 관서 이름이 있나'로 판정하므로 이 한 곳으로 구 단위가 맞아떨어진다.
+    권역명은 남기지 않는다 — '서울'이 들어 있으면 전역 표기로 오인돼 25개 구 전부에 뜬다."""
+    s = str(s or '')
+    for area, units in WRN_AREAS.items():
+        if area in s:
+            s = s.replace(area, ', '.join(units))
+    return s
 
 
 def _kw_in_text(text, kw):
@@ -2002,10 +2024,11 @@ def fetch_warnings():
             wrn_type = next((w for w in WRN_TYPES if w in head), None)
             if not wrn_type:
                 continue
+            body_text = _strip_area_wrappers(body_text)   # '경기도(수원)' 의 '경기도'는 근거가 아니다
             matched = [k for k in NORTH_GG_KEYWORDS if _kw_in_text(body_text, k)]
             if not matched:
                 continue
-            area_text = ', '.join(matched)
+            area_text = _expand_areas(', '.join(matched))
             key = (wrn_type, area_text)
             if key in seen:
                 continue
@@ -3208,7 +3231,7 @@ def merge_apihub_warnings(d):
         #   warnings에 섞여 텔레그램 알림까지 나간다. 정식 특보명만 통과시킨다.
         if typ not in WRN_TYPES:
             continue
-        area = w.get('region_name') or w.get('reg_ko')
+        area = _expand_areas(w.get('region_name') or w.get('reg_ko'))
         key = f"{typ}|{area}"
         if key in existing:
             continue
@@ -3295,8 +3318,12 @@ def _canon_region(name):
     if (n in ('경기북부', '경기남부', '경기도', '수도권', '경기') or n in SIDO_WORDS
             or n in (WIDE_LABEL, P.get('full'))):
         return WIDE_LABEL
+    if n in SIGUN_SET:          # 관서 이름 그대로면 그대로 — 광역시 '중구'를 '중'으로, 강원 '양구'를 '양'으로 깎지 않게
+        return n
     n = _re.sub(r'(동북부|서북부|동남부|서남부|남부|북부|동부|서부|중부|내륙|산지|앞바다|해안)', '', n)
     n = _re.sub(r'(특별자치시|특별자치도|특별시|광역시|자치시|자치도)', '', n)
+    if n in SIGUN_SET:
+        return n
     n = _re.sub(r'(시|군|구|도)$', '', n)
     return n.strip() or None
 

@@ -679,7 +679,13 @@ def _sido(key, label, full, law, kostat, wrn_up, wrn_stn, pm_sido, words, home, 
 #           · 146 전북 · 156 광주(전남) · 143 대구(경북) · 159 부산(경남·울산) · 184 제주
 # sido_words = 주소·발신처·산불 doname 이 이 말로 시작하면 우리 시도 (옛 이름·새 이름 다 적는다)
 SIDO = {
-    'seoul':     _sido('seoul', '서울', '서울특별시', '11', '11', 'L1100000', 109, '서울', ['서울'], '중구'),
+    # wrn_areas = 특보 권역 → 구. 서울 4권역은 기상청 통보문(getPwnStatus 'other' 필드 2026-05-19)에서 확인한 구성.
+    # 부산·울산·인천·광주의 권역은 같은 방법으로 구성표를 확인한 뒤 같은 형식으로 추가한다 — 추측으로 넣지 말 것.
+    'seoul':     _sido('seoul', '서울', '서울특별시', '11', '11', 'L1100000', 109, '서울', ['서울'], '중구',
+                       wrn_areas={'서울동남권': ['강남구', '강동구', '서초구', '송파구'],
+                                  '서울동북권': ['강북구', '광진구', '노원구', '도봉구', '동대문구', '성동구', '성북구', '중랑구'],
+                                  '서울서남권': ['강서구', '관악구', '구로구', '금천구', '동작구', '양천구', '영등포구'],
+                                  '서울서북권': ['마포구', '서대문구', '용산구', '은평구', '종로구', '중구']}),
     'busan':     _sido('busan', '부산', '부산광역시', '26', '21', 'L1150000', 159, '부산', ['부산'], '연제구'),
     'daegu':     _sido('daegu', '대구', '대구광역시', '27', '22', 'L1140000', 143, '대구', ['대구'], '중구',
                        map_any_prefix=['군위군']),          # 2023 경북→대구 편입, 2013 경계자료엔 경북 밑
@@ -1229,6 +1235,7 @@ def build_sido(key, with_cctv=True, refresh=False):
         'kostat': sd['kostat'], 'map_alias': map_alias,
         'alias': alias, 'splits': {p: list(s) for p, s in splits.items()},
         'unit_alias': {**(sd.get('unit_alias') or {}), **main_of},
+        'wrn_areas': sd.get('wrn_areas') or {},          # 광역시 특보 권역 → 구 (수집기가 권역 특보를 구 목록으로 펼친다)
         'map_any_prefix': sd.get('map_any_prefix') or [],
         'map_inset_units': sd.get('map_inset_units') or [],
         'regions': [{k: r[k] for k in ('name', 'nx', 'ny', 'sgg', 'lat', 'lon', 'admin')} for r in regs_main],

@@ -835,10 +835,13 @@ INJECT = r'''
     if(/맑/.test(w)) return night?'moon':'sun';
     return 'cloud'; }
   /* 지도.html _canonRegion 동일 — 특보구역명 → 관서 정규화 */
-  function canon(name){ var n=String(name||'').trim(); if(!n) return null;
-    if(n==='경기북부'||n==='경기남부'||n==='경기도'||n==='수도권'||n==='경기') return '경기도';
+  function canon(name){ var n=String(name||'').trim(); if(!n) return null; var UNITS=RC.order||[];
+    /* 시도 전역 표기(경기도·강원도·서울…)는 '경기도' 표식으로 — 아래 warnsByStation 이 전 관서 발효로 푼다 */
+    if(n==='경기북부'||n==='경기남부'||n==='경기도'||n==='수도권'||n==='경기'||(RC.wideNames||[]).indexOf(n)>=0) return '경기도';
+    if(UNITS.indexOf(n)>=0) return n;   /* 관서 이름 그대로면 그대로 — 광역시 '중구'를 '중'으로 깎지 않게 */
     n=n.replace(/(동북부|서북부|동남부|서남부|남부|북부|동부|서부|중부|내륙|산지|앞바다|해안)/g,'');
     n=n.replace(/(특별자치시|특별자치도|특별시|광역시|자치시|자치도)/g,'');
+    if(UNITS.indexOf(n)>=0) return n;
     n=n.replace(/(시|군|구|도)$/,''); return n.trim()||null; }
   /* 특보 종류 → 색/배경/심각도(sev). 급성경보=3(심각·빨강), 급성주의보=2(경계·주황),
      만성(폭염/한파/건조/황사)=1(주의) — 상황실 24h 빨강맥동 방지. 디자인 팔레트와 동일. */
