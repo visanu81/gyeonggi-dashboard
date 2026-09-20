@@ -1504,11 +1504,14 @@ def _expand_areas(s):
     """지역 문자열의 권역명(서울동북권)을 그 권역의 구 목록으로 바꾼다 → 화면·상황실·알림이 전부
     '지역 문자열에 관서 이름이 있나'로 판정하므로 이 한 곳으로 구 단위가 맞아떨어진다.
     권역명은 남기지 않는다 — '서울'이 들어 있으면 전역 표기로 오인돼 25개 구 전부에 뜬다."""
-    s = str(s or '')
-    for area, units in WRN_AREAS.items():
-        if area in s:
-            s = s.replace(area, ', '.join(units))
-    return s
+    out = []
+    for p in str(s or '').split(','):
+        p = p.strip()
+        if not p:
+            continue
+        base = p[:-4] if p.endswith('(전체)') else p     # '인천(전체)' → '인천'
+        out.extend(WRN_AREAS.get(base) or [p])           # 낱말 단위 — '인천'이 '인천남부' 안에서 바뀌면 안 된다
+    return ', '.join(dict.fromkeys(out))
 
 
 def _kw_in_text(text, kw):

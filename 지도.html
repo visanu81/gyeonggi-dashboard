@@ -1276,7 +1276,7 @@ class Component extends DCLogic {
       return { type:t, count:items.length, color: mx>=4?'var(--severe)':mx>=3?'var(--warn)':mx>=2?'var(--caution)':'var(--safe)', items:items };
     }).sort(function(a,b){ return b.count-a.count; });
     const near=this.riversOf(d.rivers, s.sigun||f, s.name||f).map(r=>{const lv=this.riverLevel(r);return{name:r.name, val:this.fmtNum(r.value,2), color:this.cvar(lv), statusTxt:lv==='danger'?'위험':lv==='warning'?'주의':'안전'};});
-    const fw=(d.warnings||[]).filter(w=>{const a=w.area||'';return a.includes(s.sigun||f)||(((window.REGION_CONF||{}).wideNames)||['경기북부']).some(function(_w){return a.includes(_w);})||a.includes('전역');}).map(w=>this.warnBadge(w));
+    const fw=(d.warnings||[]).filter(w=>this._areaHits(w.area, s.sigun||f)).map(w=>this.warnBadge(w));
     const lv=s.level||'normal';
     const status={label:lv==='danger'?'경보':lv==='warning'?'주의보':'정상', color:this.cvar(lv==='danger'?'danger':lv==='warning'?'warning':'safe')};
     const stats=[{label:'기온', val:this.fmtNum(s.temp,1), unit:'°'},{label:'체감', val:(s.feels!=null?s.feels:'-'), unit:'°'},{label:'강수', val:(s.rain!=null?s.rain:'-'), unit:'mm'},{label:'풍속', val:(s.wind!=null?s.wind:'-'), unit:'m/s'},{label:'습도', val:(s.humid!=null?s.humid:'-'), unit:'%'},{label:'강수확률', val:(s.pop!=null?s.pop:'-'), unit:'%'}];
@@ -1285,7 +1285,7 @@ class Component extends DCLogic {
     const sg=s.sigun||f;
     const nearRB=this.riversOf(d.rivers, sg, (s&&s.name)||sg).map(r=>({name:r.name, value:r.value, danger:r.danger, lv:this.riverLevel(r)}));
     const msgs=(d.messages||[]).filter(m=>m.region===sg || m.region===f || m.region==='경기도');
-    const warnsRB=(d.warnings||[]).filter(w=>{const a=w.area||'';return a.includes(sg)||a.includes('전역')||(((window.REGION_CONF||{}).wideNames)||['경기북부']).some(function(_w){return a.includes(_w);});});
+    const warnsRB=(d.warnings||[]).filter(w=>this._areaHits(w.area, sg));
     const pm=(d.pm||[]).find(p=>p.region===sg);
     const fire=(d.fire||[]).find(z=>(z.region||'').includes(sg));
     let detail=this.regionBody(s, nearRB, msgs, warnsRB, pm, fire);
@@ -1336,6 +1336,18 @@ class Component extends DCLogic {
       bg: sev?'var(--severeSoft)':'var(--warnSoft)',
       border: sev?'var(--severe)':'var(--warn)',
       open:()=>this.setState({modal:{kind:'warn'}}) };
+  }
+  _areaHits(area, name){
+    // 특보 지역 문자열에 이 관서가 들어 있나 — 낱말(쉼표 조각) 단위 + _canonRegion 으로 판정.
+    // 글자 포함(includes)은 '양주'가 '남양주'에, 인천 '동구'가 '남동구'에, 부산 '서구'가 '강서구'에 걸렸다(2026-09-20).
+    var RC=window.REGION_CONF||{}, wide=(RC.warnOrder||[])[0]||'경기도', g=RC.scopes||{}, alias=RC.alias||{};
+    var me=this._canonRegion(name), self=this;
+    return String(area||'').split(/[,·\/()]/).some(function(p){
+      p=p.trim(); if(!p) return false; if(p.indexOf('전역')>=0) return true;
+      // 전체판(권역이 있는 화면)에서 '경기북부' 같은 권역 표기는 그 권역 관서에만 — 남부 카드에 북부 특보가 뜨지 않게
+      if(g[p]) return g[p].some(function(n){ return n===name || (alias[n]||n)===name; });
+      var c=self._canonRegion(p); return c===wide || c===me;
+    });
   }
   _canonRegion(name){
     var n=String(name||'').trim();
@@ -1768,7 +1780,7 @@ class Component extends DCLogic {
     // warnings
     const rawWarns=(d.warnings||[]);
     // 내 관할 특보 — mineItems 와 mineBorder 가 같은 판정을 쓴다
-    const _myWarns = rawWarns.filter(function(w){ const ar=String(w.area||''); return ar.indexOf(mySg)>=0 || ar.indexOf('전역')>=0 || (((window.REGION_CONF||{}).wideNames)||[]).some(function(n){ return ar.indexOf(n)>=0; }); });
+    const _myWarns = rawWarns.filter(w=>this._areaHits(w.area, mySg));
     const groupedWarns = this.groupWarns(rawWarns);   // 같은 특보끼리 지역 묶기
     const warns = groupedWarns.map(x=>this.warnBadge(x));
     const prelim = d.prelim||[];
@@ -2067,7 +2079,7 @@ class Component extends DCLogic {
       const sg=s.sigun||modal.key;
       const near=this.riversOf(d.rivers, sg, (s&&s.name)||sg).map(r=>({name:r.name, value:r.value, danger:r.danger, lv:this.riverLevel(r)}));
       const msgs=(d.messages||[]).filter(m=>m.region===sg || m.region===modal.key || m.region==='경기도');
-      const warns=(d.warnings||[]).filter(w=>{ const a=w.area||''; return a.includes(sg)||a.includes('전역')||(((window.REGION_CONF||{}).wideNames)||['경기북부']).some(function(_w){return a.includes(_w);}); });
+      const warns=(d.warnings||[]).filter(w=>this._areaHits(w.area, sg));
       const pm=(d.pm||[]).find(p=>p.region===sg);
       const fire=(d.fire||[]).find(f=>(f.region||'').includes(sg));
       return {modalTitle:modal.key+' 관서 상세', modalAccent:this.cvar(s.level==='danger'?'danger':s.level==='warning'?'warning':'safe'), modalMax:'620px',
