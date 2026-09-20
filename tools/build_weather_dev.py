@@ -52,6 +52,40 @@ GATE = """<script>
 """
 
 
+# 새 판 알림(tools/version_check.js): 페이지마다 BUILD_ID 를 박고 /version.json 을 같이 올린다 — 열려 있는 화면이
+# 60초마다 확인해 다르면 띠를 띄우고(상황실은 스스로 다시 불러옴). version.json 은 캐시 금지.
+HEADERS = """/version.json
+  Cache-Control: no-store, must-revalidate
+"""
+
+
+def build_id():
+    import datetime
+    try:
+        sha = sh('git', 'rev-parse', '--short', 'HEAD').decode('ascii').strip()
+    except SystemExit:
+        sha = 'nogit'
+    return datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + '-' + sha
+
+
+def inject_version(pub, bid):
+    """모든 HTML(시도 폴더 포함)의 charset 바로 뒤에 BUILD_ID + 감시 스크립트를 넣고 /version.json 을 쓴다."""
+    import json, datetime
+    js = (ROOT / 'tools' / 'version_check.js').read_text(encoding='utf-8')
+    tag = f'<script>window.BUILD_ID={json.dumps(bid)};</script>\n<script>\n{js}</script>\n'
+    n = 0
+    for f in pub.rglob('*.html'):
+        body = f.read_text(encoding='utf-8')
+        if 'window.BUILD_ID=' in body or '<meta charset="utf-8">' not in body:
+            continue
+        f.write_text(body.replace('<meta charset="utf-8">', '<meta charset="utf-8">\n' + tag, 1), encoding='utf-8')
+        n += 1
+    (pub / 'version.json').write_text(json.dumps({'build': bid, 'at': datetime.datetime.now().strftime('%Y-%m-%d %H:%M')},
+                                                 ensure_ascii=False), encoding='utf-8')
+    (pub / '_headers').write_text(HEADERS, encoding='utf-8')
+    return n
+
+
 WRANGLER = """# weather 개조 작업장 배포 설정 — tools/build_weather_dev.py 가 만든다.
 name = "weather"
 compatibility_date = "2024-10-21"
@@ -318,6 +352,9 @@ def main():
     for _, _, folder, _ in sidos:
         shutil.copy(PUB / DEV_DIR / folder / '지도.html', PUB / DEV_DIR / folder / 'index.html')
     (DEPLOY / 'wrangler.toml').write_text(WRANGLER, encoding='utf-8')
+    bid = build_id()
+    n_ver = inject_version(PUB, bid)
+    print(f'  새 판 알림: BUILD_ID {bid} · HTML {n_ver}개에 주입 · /version.json')
 
     left = []
     for f in (PUB / DEV_DIR).glob('*.html'):

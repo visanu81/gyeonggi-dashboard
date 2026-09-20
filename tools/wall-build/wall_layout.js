@@ -171,6 +171,7 @@
   }
   function setEdit(on) {
     ensureOverlay(); EDIT = on; sel = null;
+    window.WALL_EDITING = !!on;   /* 새 판 알림(version_check.js)이 편집 중엔 자동 재로드를 미룬다 */
     ov.style.display = on ? 'block' : 'none'; hud.style.display = on ? 'block' : 'none';
     ctl(on); touch(); if (on) { toast('편집 모드 · 관서 순환 멈춤 · 3분 무조작 시 자동 종료'); loop(); } else { cancelAnimationFrame(raf); }
     refresh();
