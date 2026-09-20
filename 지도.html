@@ -2449,7 +2449,15 @@ class Component extends DCLogic {
     if(thresholds.length){
       const allV=thresholds.map(t=>t.v).concat([r.value]);
       const dmax=(Math.max.apply(null,allV)||1)*1.04;
-      const pct=(v)=>Math.max(0,Math.min(100, v/dmax*100));
+      // 칸마다 최소 너비 — 기준이 붙어 있어도(관심 0.7m·주의 1.0m) 이름·수치가 안 겹치게. 구간 너비 = max(실제 비율, 12%)
+      // 를 다시 100% 로 맞춘 눈금. 현재 수위 표식은 자기 구간 안에서 비례 위치(2026-09-21 사장님 "칸 간격 조정").
+      const _bnd=[0].concat(thresholds.map(t=>Math.max(0,+t.v||0)).sort((a,b)=>a-b), [dmax]);
+      const _MIN=0.12, _w=[]; let _sum=0;
+      for(let i=0;i<_bnd.length-1;i++){ const w=Math.max((_bnd[i+1]-_bnd[i])/dmax, _MIN); _w.push(w); _sum+=w; }
+      const _cum=[0]; _w.forEach((w,i)=>_cum.push(_cum[i]+w/_sum));
+      const pct=(v)=>{ v=Math.max(0,Math.min(dmax,+v||0));
+        for(let i=0;i<_bnd.length-1;i++){ if(v<=_bnd[i+1]){ const span=_bnd[i+1]-_bnd[i]; const f=span>0?(v-_bnd[i])/span:1; return Math.max(0,Math.min(100,(_cum[i]+f*(_cum[i+1]-_cum[i]))*100)); } }
+        return 100; };
       let grad;
       if(!isDam && meta){
         grad='linear-gradient(90deg, var(--safe) 0 '+pct(+meta.att)+'%, var(--brand) '+pct(+meta.att)+'% '+pct(+meta.wrn)+'%, var(--caution) '+pct(+meta.wrn)+'% '+pct(+meta.alm)+'%, var(--warn) '+pct(+meta.alm)+'% '+pct(+meta.srs)+'%, var(--severe) '+pct(+meta.srs)+'% 100%)';
