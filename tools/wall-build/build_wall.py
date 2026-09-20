@@ -54,8 +54,9 @@ h = h.replace("'김포'", "'연천'")
 #     (주입한 변환기만 바꿔선 소용없다 — 순환 표시·'n / 전체' 개수는 이 NAMES가 정한다)
 _names_old = ("const NAMES = ['고양','일산','파주','연천','의정부','양주','동두천',"
               "'포천','가평','남양주','구리'];")
-_names_new = ("const NAMES = ((typeof window!=='undefined'&&window.REGION_CONF&&window.REGION_CONF.order)"
-              " || ['고양','일산','파주','연천','의정부','양주','동두천','포천','가평','남양주','구리']);")
+# 관서 목록 = 권역 필터 적용. ?scope=경기북부(또는 북부) > 접속 주소의 hostScope > 전체.
+# 세 주소가 같은 전체판을 받아도 북부 주소의 벽면은 북부 11개만 순환한다(2026-08-28).
+_names_new = "const NAMES = (function(){ var RC=(typeof window!=='undefined'&&window.REGION_CONF)||{}; var base=RC.order||['고양','일산','파주','연천','의정부','양주','동두천','포천','가평','남양주','구리']; var sc=null; try{ sc=new URLSearchParams(location.search).get('scope'); }catch(e){} var g=RC.scopes||{}; try{ if(sc && !g[sc] && g['경기'+sc]) sc='경기'+sc; }catch(e){} try{ if(!sc && typeof localStorage!=='undefined'){ var v=localStorage.getItem('ggScope'); if(v==='전체') return base; if(v && g[v]) sc=v; } }catch(e){} try{ if(!sc) sc=(RC.hostScope||{})[location.hostname.split('.')[0]]||null; }catch(e){} if(sc && g[sc]) base=base.filter(function(n){ return g[sc].indexOf(n)>=0; }); return base; })();"
 assert _names_old in h, '화면 컴포넌트의 NAMES를 못 찾음 — 디자인 원본이 바뀌었는지 확인'
 h = h.replace(_names_old, _names_new, 1)
 print('패치: 화면 컴포넌트 NAMES → region.js 연동')
@@ -319,7 +320,7 @@ ULTRA = r"""ultraEl(rows){
     const cell=(o,i)=>{
       const wet=(o.rain||0)>0, hi=(o.pop||0)>=60;
       return R('div',{key:i,style:{flex:'1 1 0',minWidth:0,display:'flex',flexDirection:'column',
-        alignItems:'center',justifyContent:'center',gap:'6px',padding:'10px 4px',borderRadius:'14px',
+        alignItems:'center',justifyContent:'space-evenly',gap:'6px',padding:'10px 4px',borderRadius:'14px',
         background:(wet?'rgba(84,170,255,.10)':'transparent')}},
         R('div',{style:{fontSize:'27px',fontWeight:700,color:DIM,whiteSpace:'nowrap'}}, o.time||'-'),
         R('div',{style:{fontSize:'46px',fontWeight:800,lineHeight:1.2,whiteSpace:'nowrap',
@@ -454,14 +455,18 @@ patch('<div ref="{{ stageRef }}"',
       'style="position:absolute;left:10px;top:8px;z-index:20;opacity:.22;'
       'padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);'
       'color:var(--fg,#f2f5fa);font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;" '
-      'style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">← 상황판</a>\n'
+      'class="wall-ov" style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">← 상황판</a>\n'
       '  <a href="도움말.html" title="사용설명서 — 화면 보는 법과 색·기호, 자동 판단 기준" '
       'style="position:absolute;left:98px;top:8px;z-index:20;opacity:.22;'
       'padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);'
       'color:var(--fg,#f2f5fa);font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;" '
-      'style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">❓ 설명서</a>\n'
+      'class="wall-ov" style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">❓ 설명서</a>\n'
       '  <div ref="{{ stageRef }}"',
       '복귀·설명서 링크(좌상단 오버레이)')
+# 마우스를 올리면 선명해지기 — style-hover 는 이 두 링크에서 opacity 를 못 바꾼다(2026-09-19 사장님 지적:
+# 배치 편집·시도 배지는 진해지는데 상황판·설명서는 안 됨). 배지는 JS 로 직접 하므로 CSS :hover 로 맞춘다.
+patch('</head>', '<style>.wall-ov:hover{opacity:1 !important;border-color:var(--acc,#ff7a2f) !important}</style>\n</head>',
+      '오버레이 링크 hover CSS')
 
 # (j5) 출동 영향 판단 — 전역보다 한 단계 더 얇게(사장님 지적: 이 블록이 특히 두껍다).
 #      전역 리맵(800→660/700→570/500유지)에 다시 안 걸리도록 그 목록에 없는 값을 쓴다.
@@ -479,6 +484,18 @@ patch('<div style="margin-left:auto;flex:none;font-size:44px;font-weight:800;col
 patch('한강홍수통제소 · 위험수위 대비',
       '한강홍수통제소 · 하천 위험수위 / 댐 저수율',
       '하천카드 부제')
+
+# (j9) 본문 3열이 내용에 밀려 틀어지던 것 차단 ★
+# 1fr(=minmax(auto,1fr))은 열의 최소폭이 '내용의 최소폭'이라, 특보 지역 나열이 긴 날
+# (예: 2026-08-25 폭염주의보에 21개 시군 한 줄) 가운데 열이 2200px까지 부풀어
+# 좌우 열이 짜부라졌다 — 6시간 강수예측 제목이 꺾이고 미세먼지 '좋음'이 세로로 섰다.
+# minmax(0,1fr)이면 어떤 내용도 열을 못 밀고, 지역 나열은 원래 달려 있던 말줄임(…)이 받는다.
+patch('style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:28px;">',
+      'style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:28px;">',
+      '본문 3열 밀림 차단')
+patch('style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">',
+      'style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:20px;">',
+      '칩 3열 밀림 차단')
 
 # (j6) 사다리차 판정 → 순간풍속 기준 (지도.html과 통일)
 # 원본은 '평균풍속 12/8m/s'로 단계를 정하면서 설명줄엔 순간풍속을 찍었다. 그래서
@@ -777,7 +794,8 @@ INJECT = r'''
   /* 관서 목록·행정명은 region.js(window.REGION_CONF)에서. 지역이 바뀌면 그 파일만 갈아끼운다.
      region.js가 없으면 지금까지 쓰던 경기북부 값으로 동작한다(하위호환). */
   var RC=(typeof window!=='undefined'&&window.REGION_CONF)||{};
-  var NAMES=RC.order||['고양','일산','파주','연천','의정부','양주','동두천','포천','가평','남양주','구리'];
+  /* 권역 필터 — 화면 컴포넌트의 NAMES와 반드시 같은 규칙일 것(둘이 다르면 데이터-화면이 어긋난다) */
+  var NAMES=(function(){ var RC=(typeof window!=='undefined'&&window.REGION_CONF)||{}; var base=RC.order||['고양','일산','파주','연천','의정부','양주','동두천','포천','가평','남양주','구리']; var sc=null; try{ sc=new URLSearchParams(location.search).get('scope'); }catch(e){} var g=RC.scopes||{}; try{ if(sc && !g[sc] && g['경기'+sc]) sc='경기'+sc; }catch(e){} try{ if(!sc && typeof localStorage!=='undefined'){ var v=localStorage.getItem('ggScope'); if(v==='전체') return base; if(v && g[v]) sc=v; } }catch(e){} try{ if(!sc) sc=(RC.hostScope||{})[location.hostname.split('.')[0]]||null; }catch(e){} if(sc && g[sc]) base=base.filter(function(n){ return g[sc].indexOf(n)>=0; }); return base; })();
   var ADMIN=RC.admin||{고양:'고양시',파주:'파주시',연천:'연천군',의정부:'의정부시',양주:'양주시',동두천:'동두천시',포천:'포천시',가평:'가평군',남양주:'남양주시',구리:'구리시'};
   /* SIG = 실제 시군(일산은 고양의 일부라 제외). 하천 표시명에서 '괄호 안이 시군인지' 판정용. */
   /* 관서명 → 데이터상의 시군명. 소방서가 시(市)를 나눠 맡는 곳(분당·송탄·일산)은
@@ -787,6 +805,10 @@ INJECT = r'''
        읽도록 바꿔, 관서가 늘어도 코드를 안 고치게 했다. */
   var ALIAS=((typeof window!=='undefined'&&window.REGION_CONF)||{}).alias||{'일산':'고양'};
   var SIG=NAMES.filter(function(n){ return !ALIAS[n]; });
+  /* 이름에서 시군명을 떼어낼 땐 '권역으로 거른 목록'이 아니라 전체 시군을 기준으로 한다.
+     NAMES가 선택 권역만 담게 된 뒤(2026-09-17), 남부를 고르면 임진강 지점의 '연천'이
+     안 떼어져 '연천 필승교'가 상단 카드 칸을 넘쳤다. */
+  var SIG_ALL=(RC.order||NAMES).filter(function(n){ return !ALIAS[n]; });
   function nv(x){ return (x==null||x===''||isNaN(x))?null:+x; }
   function sig(nm){ return ALIAS[nm]||nm; }
   /* 표시명: 괄호 안(예 '임진강 (연천 임진교)'→'연천 임진교'). 단 괄호가 시군뿐이면
@@ -799,7 +821,7 @@ INJECT = r'''
   /* 상단바 감시카드용 짧은 이름 — '임진강 (연천 필승교)' → '필승교'.
      칸이 좁아 시군명까지 넣으면 넘친다. 어차피 고정 지점이라 어디인지 다 안다. */
   function keyName(nm){ var s=shortRiver(nm).split(' ');
-    if(s.length>1 && SIG.indexOf(s[0])>=0) s.shift();
+    if(s.length>1 && SIG_ALL.indexOf(s[0])>=0) s.shift();
     return s.join(' '); }
   var ICON={'맑음':'☀️','구름많음':'⛅','구름조금':'🌤️','흐림':'☁️','비':'🌧️','소나기':'🌦️','빗방울':'🌧️','비/눈':'🌨️','눈':'❄️','눈날림':'🌨️','진눈깨비':'🌨️','뇌우':'⛈️'};
   function wicon(w){ return ICON[w]||'☁️'; }
@@ -813,10 +835,13 @@ INJECT = r'''
     if(/맑/.test(w)) return night?'moon':'sun';
     return 'cloud'; }
   /* 지도.html _canonRegion 동일 — 특보구역명 → 관서 정규화 */
-  function canon(name){ var n=String(name||'').trim(); if(!n) return null;
-    if(n==='경기북부'||n==='경기남부'||n==='경기도'||n==='수도권'||n==='경기') return '경기도';
+  function canon(name){ var n=String(name||'').trim(); if(!n) return null; var UNITS=RC.order||[];
+    /* 시도 전역 표기(경기도·강원도·서울…)는 '경기도' 표식으로 — 아래 warnsByStation 이 전 관서 발효로 푼다 */
+    if(n==='경기북부'||n==='경기남부'||n==='경기도'||n==='수도권'||n==='경기'||(RC.wideNames||[]).indexOf(n)>=0) return '경기도';
+    if(UNITS.indexOf(n)>=0) return n;   /* 관서 이름 그대로면 그대로 — 광역시 '중구'를 '중'으로 깎지 않게 */
     n=n.replace(/(동북부|서북부|동남부|서남부|남부|북부|동부|서부|중부|내륙|산지|앞바다|해안)/g,'');
     n=n.replace(/(특별자치시|특별자치도|특별시|광역시|자치시|자치도)/g,'');
+    if(UNITS.indexOf(n)>=0) return n;
     n=n.replace(/(시|군|구|도)$/,''); return n.trim()||null; }
   /* 특보 종류 → 색/배경/심각도(sev). 급성경보=3(심각·빨강), 급성주의보=2(경계·주황),
      만성(폭염/한파/건조/황사)=1(주의) — 상황실 24h 빨강맥동 방지. 디자인 팔레트와 동일. */
@@ -877,20 +902,22 @@ INJECT = r'''
     var RCODE=((typeof window!=='undefined'&&window.REGION_CONF)||{}).riverCodes||{};
     (D.rivers||[]).forEach(function(rv){
       var sg=rv.sigun;
+      /* 댐 = api:'dam'(원천 플래그). 댐은 '위험수위 대비 %'가 무의미(상시만수위 유지가 정상)라
+         화면에서 저수율·유입·방류로 따로 표기하고, 침수판단(worst)에서는 제외한다. */
+      var isDam=(rv.api==='dam')||!!rv.dam_info, di=rv.dam_info||{};
+      /* ⚠ 반드시 이 entry(화면용 배열)를 넣을 것 — 원시 rv를 넣으면 이름 없는 '0.00m' 행이 된다.
+         2026-08-25 평택·송탄에서 실제 발생(코드 지정 관서만 원시 rv가 들어가고 있었다). */
+      var entry=[shortRiver(rv.name), nv(rv.value), nv(rv.danger), (isDam?'dam':''), (rv.level||'safe'),
+        nv(rv.delta_1h), nv(rv.warning), nv(di.storage_rate), nv(di.inflow),
+        nv(di.total_outflow!=null?di.total_outflow:di.outflow)];
       /* 코드로 지정된 관서에 먼저 넣는다. 지정 관서가 하나라도 있으면 시군 배분은 건너뛴다. */
       var _placed=false;
       NAMES.forEach(function(nm){ var cs=RCODE[nm];
-        if(cs && cs.indexOf(String(rv.code))>=0){ rivers[nm].push(rv); _placed=true; } });
+        if(cs && cs.indexOf(String(rv.code))>=0){ rivers[nm].push(entry); _placed=true; } });
       if(_placed) return;
       if(RCODE[sg]) return;   /* 그 시군은 코드로만 받는다 — 남의 하천이 섞이지 않게 */
       if(!sg){ var best=''; SIG.forEach(function(x){ if(String(rv.name||'').indexOf(x)>=0 && x.length>best.length) best=x; }); sg=best; }
       if(!sg) return;
-      /* 댐 = api:'dam'(원천 플래그). 댐은 '위험수위 대비 %'가 무의미(상시만수위 유지가 정상)라
-         화면에서 저수율·유입·방류로 따로 표기하고, 침수판단(worst)에서는 제외한다. */
-      var isDam=(rv.api==='dam')||!!rv.dam_info, di=rv.dam_info||{};
-      var entry=[shortRiver(rv.name), nv(rv.value), nv(rv.danger), (isDam?'dam':''), (rv.level||'safe'),
-        nv(rv.delta_1h), nv(rv.warning), nv(di.storage_rate), nv(di.inflow),
-        nv(di.total_outflow!=null?di.total_outflow:di.outflow)];
       NAMES.forEach(function(nm){ if(sig(nm)===sg && nm!=='일산') rivers[nm].push(entry); });  /* 시군 관서에만(일산 중복 방지) */
     });
     /* 정렬: 공식 경보 → 주의보 → 하천(위험수위 대비 높은 순) → 댐. 벽면 가독성 위해 최대 5행. */
@@ -935,7 +962,9 @@ INJECT = r'''
       });
     });
     return { stations:stations, rivers:rivers, msgs:msgs, warns:warnsByStation(D.warnings),
-             keyRivers:keyRivers, ultra:ultra, updated:D.updated };
+             keyRivers:keyRivers, ultra:ultra, updated:D.updated,
+             /* 새 카드 3장(레이더·태풍·물때, 2026-09-18) 원시 데이터 통과 */
+             kmaImages:(D.kma_images||{}), typhoon:(D.typhoon||[]), tide:(D.tide||null) };
   }
   /* ── 위험구역: 구글시트 관서별 탭 (지도.html loadRiskSheet 포팅, name/type/note만) ── */
   function parseCSV(txt){ var lines=txt.replace(/\r/g,'').split('\n').filter(function(l){return l.length;});
@@ -994,6 +1023,177 @@ INJECT = r'''
 })();
 </script>
 '''
+
+# ══════════════════════════════════════════════════════════════════════════
+# (N) 새 카드 3장 — 레이더 · 태풍 · 물때(파주)  (2026-09-18 사장님 지시 "새 카드 추가")
+#     수집은 이미 되는데 벽면에 없던 데이터. 편집기 기본은 '숨김' → 원하는 상황실만 켠다.
+#     자료 없으면 '자료 없음' (지어내지 않는다).
+# ══════════════════════════════════════════════════════════════════════════
+NEWCARD_EL = r"""radarEl(){
+    const R = window.React.createElement, DIM='var(--dim,#8e9bb0)';
+    const ki=(EXT().kmaImages)||{}, ok=ki.radar && ki.radar.ok;
+    if(!ok) return R('div',{style:{flex:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'38px',fontWeight:700,color:DIM}},'레이더 영상 없음');
+    /* 이미지 주소는 data.js 를 받는 곳과 같은 폴더 — 5분마다 ts 가 바뀌어 캐시가 갈린다 */
+    return R('div',{style:{flex:1,minHeight:0,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',borderRadius:'16px',background:'var(--panel2,#1b2230)'}},
+      R('img',{src:'images/kma_radar.png?t='+encodeURIComponent(ki.radar.ts||''),alt:'레이더 합성',
+        style:{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',display:'block'}}));
+  }
+  typhoonEl(){
+    const R = window.React.createElement, DIM='var(--dim,#8e9bb0)', GREEN='var(--cGreen,#2ad19a)', RED='var(--cRed,#ff5a5a)', AMBER='var(--cAmber,#ffb020)';
+    const list=(EXT().typhoon)||[];
+    if(!list.length) return R('div',{style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'12px'}},
+      R('div',{style:{fontSize:'64px',fontWeight:800,color:GREEN}},'활동 태풍 없음'),
+      R('div',{style:{fontSize:'28px',fontWeight:600,color:DIM}},'기상청 태풍정보'));
+    const rows=list.slice(0,2).map((t,i)=>{
+      const near=!!t.near_kr, col=near?RED:(String(t.eff)==='4'?DIM:AMBER), n=t.now||{};
+      return R('div',{key:i,style:{display:'flex',flexDirection:'column',gap:'8px',padding:'14px 20px',borderRadius:'16px',background:'var(--panel2,#1b2230)',borderLeft:'12px solid '+col}},
+        R('div',{style:{display:'flex',alignItems:'baseline',gap:'16px'}},
+          R('div',{style:{fontSize:'44px',fontWeight:800,whiteSpace:'nowrap'}},'제'+(t.seq||'?')+'호 '+(t.name||'')),
+          R('div',{style:{fontSize:'32px',fontWeight:700,color:col,whiteSpace:'nowrap'}}, t.eff_txt||'')),
+        R('div',{style:{display:'flex',gap:'26px',fontSize:'30px',fontWeight:600,color:DIM,flexWrap:'wrap'}},
+          R('span',null,'중심기압 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.ps!=null?n.ps+'hPa':'-'))),
+          R('span',null,'최대풍속 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.ws!=null?n.ws+'m/s':'-'))),
+          R('span',null,'이동 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.dir||'-')+' '+(n.sp!=null?n.sp+'km/h':''))),
+          R('span',null,'위치 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.lat!=null?(n.lat+'N '+n.lon+'E'):'-')))));
+    });
+    return R('div',{style:{flex:1,minHeight:0,display:'flex',flexDirection:'column',gap:'14px',justifyContent:'center'}},rows);
+  }
+  tideEl(){
+    const R = window.React.createElement, DIM='var(--dim,#8e9bb0)', BLUE='#54aaff';
+    const td=(EXT().tide)||null;
+    if(!td || !td.events || !td.events.length) return R('div',{style:{flex:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'38px',fontWeight:700,color:DIM}},'물때 자료 없음');
+    const now=new Date(), hm=now.getHours()*60+now.getMinutes();
+    const toMin=s=>{ const m=String(s||'').match(/^(\d+):(\d+)$/); return m?(+m[1]*60+ +m[2]):null; };
+    /* 다음 고조/저조 하나를 강조 — 파주 두포리 시각(dupo) 기준 */
+    let nextIdx=-1; td.events.forEach((e,i)=>{ const mm=toMin(e.dupo); if(nextIdx<0 && mm!=null && mm>=hm) nextIdx=i; });
+    const cells=td.events.map((e,i)=>{
+      const hi=e.kind==='high', isNext=i===nextIdx;
+      return R('div',{key:i,style:{flex:'1 1 0',minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'6px',padding:'12px 6px',borderRadius:'14px',
+        background:isNext?'rgba(84,170,255,.14)':'transparent',border:isNext?'3px solid '+BLUE:'3px solid transparent'}},
+        R('div',{style:{fontSize:'28px',fontWeight:700,color:hi?BLUE:DIM,whiteSpace:'nowrap'}}, hi?'만조':'간조'),
+        R('div',{style:{fontSize:'50px',fontWeight:800,lineHeight:1.1,whiteSpace:'nowrap'}}, e.dupo||'-'),
+        R('div',{style:{fontSize:'26px',fontWeight:600,color:DIM,whiteSpace:'nowrap'}}, (e.cm!=null?Math.round(e.cm)+'cm':'-')));
+    });
+    return R('div',{style:{flex:1,minHeight:0,display:'flex',flexDirection:'column',gap:'10px'}},
+      R('div',{style:{display:'flex',alignItems:'stretch',gap:'6px',flex:1}},cells),
+      R('div',{style:{fontSize:'24px',fontWeight:600,color:DIM,textAlign:'right'}},
+        (td.target||'')+' · '+(td.station||'')+' +'+(td.shift_min!=null?Math.round(td.shift_min/60):2)+'h · 물때 '+(td.spring||'-')));
+  }"""
+patch('  // 특보는 실황값에서 파생',
+      '  ' + NEWCARD_EL + '\n\n  // 특보는 실황값에서 파생',
+      '새 카드 3장 렌더러 주입')
+patch("      ultraEl: this.ultraEl((EXT().ultra||{})[s.name]),",
+      "      ultraEl: this.ultraEl((EXT().ultra||{})[s.name]),\n"
+      "      radarEl: this.radarEl(), typhoonEl: this.typhoonEl(), tideEl: this.tideEl(),\n"
+      "      radarTs: (((EXT().kmaImages||{}).radar||{}).ts||'').slice(11,16),",
+      '새 카드 값 바인딩')
+# INJECT 원시 데이터 통과는 INJECT 문자열 원문에 직접 넣었다 — INJECT 는 이 시점엔 아직 h 에 없다.
+# 마크업: 6시간 카드 뒤에 3장 추가 (같은 카드 껍데기)
+def _card_html(title, sub, body):
+    return ('          <div style="background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;">\n'
+            '            <div style="display:flex;align-items:baseline;justify-content:space-between;">\n'
+            '              <div style="font-size:40px;font-weight:800;">' + title + '</div>\n'
+            '              <div style="font-size:28px;font-weight:700;color:var(--dim,#8e9bb0);">' + sub + '</div>\n'
+            '            </div>\n'
+            '            <div style="flex:1;min-height:0;display:flex;">' + body + '</div>\n'
+            '          </div>\n')
+_ULTRA_CLOSE = '            <div style="flex:1;min-height:0;display:flex;">{{ ultraEl }}</div>\n          </div>\n'
+patch(_ULTRA_CLOSE,
+      _ULTRA_CLOSE
+      + _card_html('레이더 영상', '기상청 합성 · {{ radarTs }}', '{{ radarEl }}')
+      + _card_html('태풍 현황', '기상청 태풍정보', '{{ typhoonEl }}')
+      + _card_html('물때 · 파주 두포리', '국립해양조사원 · 강화대교 +2h', '{{ tideEl }}'),
+      '새 카드 3장 마크업')
+
+# ══════════════════════════════════════════════════════════════════════════
+# (L) 카드 배치 편집기 — 2026-09-17 사장님 지시("내 입맛대로 넣고 빼고 배치")
+#     고정 3열 격자 → 12열×24행 자유 격자. 카드 8개가 각각 CSS 변수(--wl-<id>-*)로
+#     자리·크기·표시·글자배율을 받는다. 변수는 tools/wall-build/wall_layout.js 가
+#     :root 에 쓴다(React 마운트 전). 화면 코드는 변수만 읽으므로 리렌더와 무관.
+#     ⚠ 이 블록은 카드 내용을 건드리는 모든 패치 '뒤'에 있어야 한다(앵커가 최종 형태).
+# ══════════════════════════════════════════════════════════════════════════
+def _card_style(cid, extra=''):
+    # var() 폴백값 = wall_layout.js 의 DEFAULT 와 같은 값(스크립트가 안 떠도 기본 모양)
+    d = {'obs':(1,1,4,8),'hourly':(1,9,4,16),'warn':(5,1,4,6),'river':(5,7,4,6),'impact':(5,13,4,12),'msg':(9,1,4,10),'idx':(9,11,4,6),'ultra':(9,17,4,8),'radar':(9,17,4,8),'typhoon':(9,17,4,8),'tide':(9,17,4,8)}[cid]
+    # 새 카드 3장은 기본 숨김 — 편집기에서 켠다(폴백 display:none)
+    disp = 'none' if cid in ('radar','typhoon','tide') else ('grid' if cid == 'idx' else 'flex')
+    return (f'grid-column:var(--wl-{cid}-c,{d[0]})/span var(--wl-{cid}-cs,{d[2]});'
+            f'grid-row:var(--wl-{cid}-r,{d[1]})/span var(--wl-{cid}-rs,{d[3]});'
+            f'display:var(--wl-{cid}-d,{disp});--fz:var(--wl-{cid}-fz,1);'
+            f'min-height:0;min-width:0;overflow:hidden;{extra}')
+
+# (L1) 메인 격자: 3열 → 12×24 (행 고정·minmax(0,…) 필수 — auto-rows 는 스냅 기준이 흔들린다)
+patch('<div style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:28px;">',
+      '<div data-wall-grid style="flex:1;min-height:0;display:grid;'
+      'grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(24,minmax(0,1fr));'
+      'gap:0;margin:-14px;">',
+      '메인 격자 12×24')
+# (L2) 열 래퍼 4개를 녹인다(display:contents) — 카드가 격자 직속 자식이 된다.
+#      같은 문자열이 두 곳(열A·열C 안쪽)이라 patch 를 두 번 부른다(각각 첫 남은 것을 잡음).
+patch('<div style="display:grid;grid-template-rows:auto 1fr;gap:28px;min-height:0;">', '<div style="display:contents;">', '열A 래퍼 녹임')
+patch('<div style="display:grid;grid-template-rows:1fr 1fr 1.15fr;gap:28px;min-height:0;">', '<div style="display:contents;">', '열B 래퍼 녹임')
+patch('<div style="display:grid;grid-template-rows:minmax(0,1.55fr) minmax(600px,1fr);gap:28px;min-height:0;">', '<div style="display:contents;">', '열C 래퍼 녹임')
+patch('<div style="display:grid;grid-template-rows:auto 1fr;gap:28px;min-height:0;">', '<div style="display:contents;">', '열C 안쪽 래퍼 녹임')
+
+# (L3) 카드 8개 — 제목으로 특정해 여는 태그에 data-card 와 격자 변수를 박는다.
+#      카드 여는 태그는 서로 비슷해 '여는 태그 + 헤더 + 제목' 세 줄을 한 덩어리로 잡는다.
+import re as _re
+def _tag_card(cid, title_html, open_tag_re):
+    global h
+    pat = _re.compile(r'(' + open_tag_re + r')(\s*<div style="display:flex;align-items:baseline;justify-content:space-between;">\s*<div style="font-size:40px;font-weight:\d+;[^"]*">' + _re.escape(title_html) + r'</div>)')
+    m = pat.search(h); assert m, '카드 앵커 없음: ' + cid
+    tag = m.group(1)
+    # 여는 태그의 style="…" 앞에 격자 스타일을 주입. 원래 display:flex 는 변수로 대체됨(뒤에 오는 값이 이김 → 앞에 넣는다)
+    new_tag = tag.replace('style="', 'data-card="%s" style="' % cid, 1)
+    new_tag = new_tag[:-2] + _card_style(cid) + '">'          # style 끝에 붙여 원본 display 를 덮는다
+    h = h[:m.start(1)] + new_tag + h[m.end(1):]
+_PANEL = r'<div style="background:var\(--panel,#151b26\);border:2px solid var\(--line,#28313f\);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:\d+px;(?:min-height:0;)?">'
+_tag_card('obs',    '현재 실황',            _PANEL)
+_tag_card('hourly', '시간대별 예보 · 12시간', _PANEL)
+_tag_card('warn',   '기상특보',             r'<div style="background:var\(--panel,#151b26\);border:3px solid \{\{ warnBorder \}\};border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;">')
+_tag_card('river',  '하천 수위 · 관할',      _PANEL)
+_tag_card('impact', '출동 영향 판단',        _PANEL)
+_tag_card('msg',    '재난문자 · 관할 시군',   _PANEL)
+_tag_card('ultra',  '6시간 강수예측',        _PANEL)
+_tag_card('radar',  '레이더 영상',           _PANEL)
+_tag_card('typhoon','태풍 현황',             _PANEL)
+_tag_card('tide',   '물때 · 파주 두포리',     _PANEL)
+# 지표 칩 3개(산불·미세먼지·일출)는 제목이 없는 서브그리드 — 그 그리드 자체를 카드로 삼는다
+patch('<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:20px;">',
+      '<div data-card="idx" style="' + _card_style('idx', 'display:var(--wl-idx-d,grid);grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;') + '">',
+      '지표 칩 묶음 → idx 카드')
+assert h.count('data-card="') == 11, 'data-card 가 11개가 아님: %d' % h.count('data-card="')
+# 카드 사이 간격: 격자 gap 대신 카드 margin (N칸 = 정확히 N/24 이 되도록)
+h = _re.sub(r'(data-card="[a-z]+" style=")', r'\1margin:14px;', h)
+
+# (L4) 글자 배율 — 카드 안의 font-size:Npx → calc(Npx*var(--fz,1)). 카드 밖(상단바·레일)은 제외.
+# 전역 치환이지만 상단바·레일은 --fz 를 안 받으므로(폴백 1) 값이 안 변한다.
+_n_fz = len(_re.findall(r'font-size:(\d+)px', h))
+h = _re.sub(r'font-size:(\d+)px', r'font-size:calc(\1px*var(--fz,1))', h)
+print('패치: 글자 배율 변수화 %d곳' % _n_fz)
+
+# (L5) 편집 중 순환 정지 훅 — 컴포넌트 밖 스크립트가 setState 를 못 부르므로 이벤트로 받는다.
+patch("    this.fit(); window.addEventListener('resize', this._fit = ()=>this.fit());",
+      "    this.fit(); window.addEventListener('resize', this._fit = ()=>this.fit());\n"
+      "    /* 배치 편집기(wall_layout.js)가 켜지면 순환을 멈추고, 끄면 편집 전 상태로 복원 */\n"
+      "    window.addEventListener('wall:edit', this._edit = (e)=>{ if(e.detail.on){ this._wasPlaying=this.state.playing; this.setState({playing:false}); } else { this.setState({playing:this._wasPlaying!==false}); } });",
+      '편집 순환정지 훅')
+
+# (L6) 편집기 스크립트 삽입 — region.js 다음(REGION_CONF 필요), 화면 마운트 전.
+import pathlib as _pl
+_wl = (_pl.Path(__file__).parent / 'wall_layout.js').read_text(encoding='utf-8')
+_ws = (_pl.Path(__file__).parent / 'wall_sido.js').read_text(encoding='utf-8')
+patch('<script src="./region.js"></script>',
+      '<script src="./region.js"></script>\n<script>\n' + _wl + '\n</script>\n'
+      '<script>\n' + _ws + '\n</script>',
+      '배치 편집기·시도 선택 삽입')
+
+# (M) 첫 관서 — 디자인 원본은 idx:5(경기북부 동두천 자리)로 고정돼 있어 관서가 5개 이하인 시도(세종 1·제주 2·
+#     대전 5·울산 5)에서 빈 화면이 났다(2026-09-19 전국 점검). 기본 관서(REGION_CONF.home)의 자리로, 없으면 0.
+patch("state = { idx:5, now:new Date(), started:Date.now(), playing:true, theme:'dark' };",
+      "state = { idx:(function(){ var RC=window.REGION_CONF||{}; var i=NAMES.indexOf(RC.home); return i>=0 ? i : 0; })(), now:new Date(), started:Date.now(), playing:true, theme:'dark' };",
+      '첫 관서 = 기본 관서')
+
 h = h.replace('</body>', INJECT + '\n</body>', 1)
 
 # ── 전역 후처리 ────────────────────────────────────────────

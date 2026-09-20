@@ -3,9 +3,363 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./support.js"></script>
+<style>.wall-ov:hover{opacity:1 !important;border-color:var(--acc,#ff7a2f) !important}</style>
 </head>
 <body>
 <script src="./region.js"></script>
+<script>
+/* ============================================================================
+   상황실 카드 배치 편집기 — 2026-09-17 사장님 지시("내 입맛대로 카드를 넣고 빼고 배치")
+   ----------------------------------------------------------------------------
+   화면(React/dc-runtime)은 건드리지 않는다. 카드 위치는 CSS 변수(--wl-<id>-*)로만
+   전달하고, 이 파일은 그 변수를 :root 에 쓴다. React 가 0.5초마다 다시 그려도
+   :root 변수는 살아남는다(2026-09-17 실측: 리렌더·관서순환·배너 토글 모두 보존).
+
+   격자: 12열 × 24행, 각 카드 = (c, r, cs, rs) + hide + fz(글자 배율)
+   저장: localStorage ggWallLayout:<권역>  (권역별 배치. 없으면 기본)
+   심기: ?layout=<코드>  → 저장하고 주소에서 지운다.  ?layout=reset → 저장본 삭제
+   안전: 경보 카드(특보·하천·재난문자)는 숨길 수 없다. 편집 모드는 3분 무조작이면 자동
+         종료되고 순환이 복원된다. 편집 모드 자체는 어디에도 저장하지 않는다.
+   ============================================================================ */
+(function () {
+  'use strict';
+  var COLS = 12, ROWS = 24, VER = 1;
+
+  /* 카드 id = '자리'의 이름. 데이터 종류가 바뀌어도 id 는 영구 고정(저장된 배치 보호). */
+  var CARDS = [
+    { id: 'obs',    name: '현재 실황',       min: [4, 4] },
+    { id: 'hourly', name: '시간대별 예보',   min: [4, 5] },
+    { id: 'warn',   name: '기상특보',        min: [3, 4], noHide: true },
+    { id: 'river',  name: '하천 수위',       min: [3, 4], noHide: true },
+    { id: 'impact', name: '출동 영향 판단',  min: [3, 5] },
+    { id: 'msg',    name: '재난문자',        min: [3, 5], noHide: true },
+    { id: 'idx',    name: '산불·미세먼지·일출', min: [3, 3], disp: 'grid' },   /* 칩 3개 가로 3등분 — flex 로 두면 폭이 내용만큼만 */
+    { id: 'ultra',  name: '6시간 강수예측',  min: [3, 4] },
+    /* 2026-09-18 추가 — 기본 숨김. 자리가 겹치므로 켜기 전에 다른 카드를 줄여 자리를 내야 한다 */
+    { id: 'radar',  name: '레이더 영상',     min: [3, 5] },
+    { id: 'typhoon',name: '태풍 현황',       min: [4, 4] },
+    { id: 'tide',   name: '물때 (파주)',      min: [3, 4] }
+  ];
+  /* 기본 배치 = 지금 화면과 같은 모양을 12×24 로 옮긴 것(실측 튜닝). */
+  var DEFAULT = {
+    obs:    { c: 1, r: 1,  cs: 4, rs: 8 },
+    hourly: { c: 1, r: 9, cs: 4, rs: 16 },
+    warn:   { c: 5, r: 1,  cs: 4, rs: 6 },
+    river:  { c: 5, r: 7,  cs: 4, rs: 6 },
+    impact: { c: 5, r: 13, cs: 4, rs: 12 },
+    msg:    { c: 9, r: 1,  cs: 4, rs: 10 },
+    idx:    { c: 9, r: 11, cs: 4, rs: 6 },
+    ultra:  { c: 9, r: 17, cs: 4, rs: 8 },
+    radar:  { c: 9, r: 17, cs: 4, rs: 8, hide: true },
+    typhoon:{ c: 9, r: 17, cs: 4, rs: 8, hide: true },
+    tide:   { c: 9, r: 17, cs: 4, rs: 8, hide: true }
+  };
+  var BY_ID = {}; CARDS.forEach(function (k) { BY_ID[k.id] = k; });
+
+  /* ── 권역 (상황실 NAMES 와 같은 규칙) ── */
+  function scopeKey() {
+    var RC = window.REGION_CONF || {}, g = RC.scopes || {}, sc = null;
+    try { sc = new URLSearchParams(location.search).get('scope'); } catch (e) {}
+    if (sc && !g[sc] && g['경기' + sc]) sc = '경기' + sc;
+    if (!sc) { try { var v = localStorage.getItem('ggScope'); if (v === '전체') return '전체'; if (v && g[v]) sc = v; } catch (e) {} }
+    if (!sc) { try { sc = (RC.hostScope || {})[location.hostname.split('.')[0]] || null; } catch (e) {} }
+    return (sc && g[sc]) ? sc : '전체';
+  }
+  var SCOPE = scopeKey();
+  var KEY = 'ggWallLayout:' + SCOPE, KEY_PREV = KEY + ':prev';
+
+  /* ── 검증: 범위·최소·겹침·전부숨김. 통과 못 하면 null ── */
+  function clone(L) { return JSON.parse(JSON.stringify(L)); }
+  function overlap(a, b) { return a.c < b.c + b.cs && b.c < a.c + a.cs && a.r < b.r + b.rs && b.r < a.r + a.rs; }
+  function validate(L) {
+    if (!L || typeof L !== 'object') return null;
+    var out = {}, vis = [];
+    for (var i = 0; i < CARDS.length; i++) {
+      var k = CARDS[i], p = L[k.id];
+      if (!p) p = DEFAULT[k.id];
+      var c = +p.c | 0, r = +p.r | 0, cs = +p.cs | 0, rs = +p.rs | 0;
+      if (c < 1 || r < 1 || cs < k.min[0] || rs < k.min[1] || c + cs - 1 > COLS || r + rs - 1 > ROWS) return null;
+      var hide = !!p.hide && !k.noHide;
+      var fz = [0.8, 1, 1.2, 1.4].indexOf(+p.fz) >= 0 ? +p.fz : 1;
+      out[k.id] = { c: c, r: r, cs: cs, rs: rs, hide: hide, fz: fz };
+      if (!hide) vis.push(out[k.id]);
+    }
+    if (!vis.length) return null;
+    for (var a = 0; a < vis.length; a++) for (var b = a + 1; b < vis.length; b++) if (overlap(vis[a], vis[b])) return null;
+    return out;
+  }
+
+  /* ── 짧은 코드: 카드 순서대로 c r cs rs 를 한 자리(36진)씩 + 숨김/배율 플래그 ──
+     예) obs=1,1,4,9 → "1149"  → 8장이면 32자 + 헤더. 사람이 전화로 불러줄 수 있는 길이. */
+  function encode(L) {
+    var s = 'W' + VER + SCOPE.replace('경기', '').charAt(0) + '.';
+    CARDS.forEach(function (k) { var p = L[k.id];
+      s += p.c.toString(36) + p.r.toString(36) + p.cs.toString(36) + p.rs.toString(36)
+         + (p.hide ? 'x' : '') + (p.fz !== 1 ? ({0.8: 's', 1.2: 'l', 1.4: 'h'})[p.fz] : ''); s += '.'; });
+    return s.replace(/\.$/, '');
+  }
+  function decode(code) {
+    try {
+      var m = String(code || '').trim().match(/^W(\d)[전북남]?\.(.+)$/); if (!m || +m[1] !== VER) return null;
+      var parts = m[2].split('.'); if (parts.length !== CARDS.length) return null;
+      var L = {};
+      for (var i = 0; i < CARDS.length; i++) {
+        var q = parts[i].match(/^([0-9a-z])([0-9a-z])([0-9a-z])([0-9a-z])(x?)([slh]?)$/); if (!q) return null;
+        L[CARDS[i].id] = { c: parseInt(q[1], 36), r: parseInt(q[2], 36), cs: parseInt(q[3], 36), rs: parseInt(q[4], 36),
+          hide: q[5] === 'x', fz: ({s: 0.8, l: 1.2, h: 1.4})[q[6]] || 1 };
+      }
+      return validate(L);
+    } catch (e) { return null; }
+  }
+
+  /* ── 저장·로드 ── */
+  function load() {
+    try { var u = new URLSearchParams(location.search).get('layout');
+      if (u === 'reset') { localStorage.removeItem(KEY); localStorage.removeItem(KEY_PREV); stripParam(); }
+      else if (u) { var d = decode(u); if (d) { save(d); stripParam(); return d; } console.warn('[wall] layout 코드가 잘못됨 — 무시'); }
+    } catch (e) {}
+    try { var v = validate(JSON.parse(localStorage.getItem(KEY) || 'null')); if (v) return v; } catch (e) {}
+    return validate(clone(DEFAULT));
+  }
+  function stripParam() { try { var url = new URL(location.href); url.searchParams.delete('layout'); history.replaceState(null, '', url); } catch (e) {} }
+  function save(L) {
+    try { var cur = localStorage.getItem(KEY); if (cur) localStorage.setItem(KEY_PREV, cur);
+      localStorage.setItem(KEY, JSON.stringify(L)); return true; }
+    catch (e) { console.warn('[wall] 저장 실패 — 이 PC는 배치를 기억하지 못합니다. 바로가기 주소에 ?layout= 코드를 넣으세요.'); return false; }
+  }
+  function isDefault(L) { return CARDS.every(function (k) { var a = L[k.id], b = DEFAULT[k.id];
+    return a.c === b.c && a.r === b.r && a.cs === b.cs && a.rs === b.rs && !!a.hide === !!b.hide && a.fz === 1; }); }
+
+  /* ── 적용: :root 변수 (React 마운트 전에 한 번, 편집 중엔 매 변경마다) ── */
+  var LAYOUT = load();
+  function apply(L) {
+    var st = document.documentElement.style;
+    CARDS.forEach(function (k) { var p = L[k.id], pre = '--wl-' + k.id + '-';
+      st.setProperty(pre + 'c', p.c); st.setProperty(pre + 'r', p.r);
+      st.setProperty(pre + 'cs', p.cs); st.setProperty(pre + 'rs', p.rs);
+      st.setProperty(pre + 'd', p.hide ? 'none' : (k.disp || 'flex')); st.setProperty(pre + 'fz', p.fz); });
+    window.WALL_LAYOUT = L;
+  }
+  apply(LAYOUT);
+
+  /* ════════════════════════ 편집 모드 (DOM 준비 후) ════════════════════════ */
+  var EDIT = false, sel = null, idleT = null, IDLE_MS = 180000, ov = null, hud = null, badge = null, raf = 0;
+
+  function $(tag, css, html) { var e = document.createElement(tag); if (css) e.style.cssText = css; if (html != null) e.innerHTML = html; return e; }
+  function cardEl(id) { return document.querySelector('[data-card="' + id + '"]'); }
+  function gridEl() { return document.querySelector('[data-wall-grid]'); }
+  function stageScale() { var s = document.querySelector('[data-wall-grid]'); if (!s) return 1;
+    var st = s.closest('div[style*="3840px"]') || s.parentElement; return st.getBoundingClientRect().width / 3840; }
+
+  function toast(msg, ms) { var t = $('div', 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:60;background:var(--panel,#141e33);color:var(--fg,#f3f6fc);border:1px solid var(--cAmber,#ffb020);border-radius:12px;padding:12px 20px;font:600 15px/1.4 system-ui,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.5);', msg);
+    document.body.appendChild(t); setTimeout(function () { t.remove(); }, ms || 2200); }
+
+  function ctl(on) { try { window.dispatchEvent(new CustomEvent('wall:edit', { detail: { on: on } })); } catch (e) {} }
+  function touch() { clearTimeout(idleT); if (EDIT) idleT = setTimeout(function () { setEdit(false); toast('3분 동안 조작이 없어 편집을 끝냈습니다 · 순환 재개'); }, IDLE_MS); }
+
+  /* 배지: 사용자 배치일 때 좌상단에 상시 (← 상황판 링크 옆 관례) */
+  function renderBadge() {
+    if (!badge) { badge = $('div', 'position:absolute;left:190px;top:8px;z-index:20;display:flex;gap:6px;'); document.body.appendChild(badge); }
+    var custom = !isDefault(LAYOUT);
+    badge.innerHTML = '';
+    var b1 = $('a', 'cursor:pointer;opacity:.28;padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);color:var(--fg,#f2f5fa);font:600 12px system-ui,sans-serif;white-space:nowrap;', '✎ 배치 편집');
+    b1.onmouseenter = function () { b1.style.opacity = 1; }; b1.onmouseleave = function () { b1.style.opacity = .28; };
+    b1.onclick = function () { setEdit(!EDIT); };
+    badge.appendChild(b1);
+    if (custom) { var b2 = $('a', 'cursor:pointer;opacity:.5;padding:6px 11px;border-radius:9px;border:1px solid var(--cAmber,#ffb020);background:var(--panel,#151b26);color:var(--cAmber,#ffb020);font:600 12px system-ui,sans-serif;white-space:nowrap;', '사용자 배치 · 되돌리기');
+      b2.onclick = function () { if (confirm('기본 배치로 되돌릴까요? (직전 배치는 1단계 보관됩니다)')) { LAYOUT = validate(clone(DEFAULT)); save(LAYOUT); apply(LAYOUT); refresh(); toast('기본 배치로 되돌렸습니다'); } };
+      badge.appendChild(b2); }
+  }
+
+  /* 오버레이: React 밖 고정 레이어. 카드 위치는 매 프레임 실측해 따라간다. */
+  function ensureOverlay() {
+    if (ov) return;
+    ov = $('div', 'position:fixed;inset:0;z-index:30;pointer-events:none;display:none;');
+    document.body.appendChild(ov);
+    hud = $('div', 'position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:40;display:none;background:#141e33;border:2px solid var(--cAmber,#ffb020);border-radius:14px;padding:10px 14px;color:#f3f6fc;font:600 14px/1.3 system-ui,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.55);pointer-events:auto;user-select:none;');
+    document.body.appendChild(hud);
+  }
+  function setEdit(on) {
+    ensureOverlay(); EDIT = on; sel = null;
+    ov.style.display = on ? 'block' : 'none'; hud.style.display = on ? 'block' : 'none';
+    ctl(on); touch(); if (on) { toast('편집 모드 · 관서 순환 멈춤 · 3분 무조작 시 자동 종료'); loop(); } else { cancelAnimationFrame(raf); }
+    refresh();
+  }
+  function refresh() { renderBadge(); if (EDIT) { renderHud(); drawBoxes(); } }
+
+  /* 카드 상자·손잡이 */
+  var boxes = {};
+  function drawBoxes() {
+    ov.innerHTML = ''; boxes = {};
+    CARDS.forEach(function (k) {
+      var p = LAYOUT[k.id], el = cardEl(k.id); if (!el) return;
+      var b = $('div', 'position:absolute;border:3px dashed rgba(255,176,32,.7);border-radius:12px;box-sizing:border-box;pointer-events:auto;cursor:move;');
+      if (p.hide) b.style.cssText += 'border-style:dotted;border-color:rgba(142,155,176,.6);background:rgba(20,30,51,.55);';
+      if (sel === k.id) b.style.cssText += 'border-color:var(--cAmber,#ffb020);border-style:solid;box-shadow:0 0 0 4px rgba(255,176,32,.25);';
+      var lab = $('div', 'position:absolute;left:6px;top:6px;background:#141e33;color:var(--cAmber,#ffb020);border:1px solid var(--cAmber,#ffb020);border-radius:8px;padding:3px 9px;font:700 13px system-ui,sans-serif;white-space:nowrap;', k.name + (p.hide ? ' (숨김)' : ''));
+      b.appendChild(lab);
+      if (!p.hide) { var rz = $('div', 'position:absolute;right:-2px;bottom:-2px;width:26px;height:26px;background:var(--cAmber,#ffb020);border-radius:8px 0 10px 0;cursor:nwse-resize;', ''); rz.dataset.rz = '1'; b.appendChild(rz); }
+      b.onpointerdown = function (ev) { if (ev.target.dataset.rz) startResize(ev, k.id); else startDrag(ev, k.id); };
+      ov.appendChild(b); boxes[k.id] = b;
+    });
+    positionBoxes();
+  }
+  function positionBoxes() {
+    CARDS.forEach(function (k) { var b = boxes[k.id], el = cardEl(k.id); if (!b || !el) return;
+      var p = LAYOUT[k.id];
+      if (p.hide) { var g = cellRect(p); Object.assign(b.style, { left: g.x + 'px', top: g.y + 'px', width: g.w + 'px', height: g.h + 'px' }); return; }
+      var r = el.getBoundingClientRect(); Object.assign(b.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' }); });
+  }
+  function loop() { if (!EDIT) return; positionBoxes(); raf = requestAnimationFrame(loop); }
+  /* 격자 셀 → 화면 좌표 (숨긴 카드 상자용) */
+  function cellRect(p) { var g = gridEl().getBoundingClientRect(), cw = g.width / COLS, rh = g.height / ROWS;
+    return { x: g.left + (p.c - 1) * cw, y: g.top + (p.r - 1) * rh, w: p.cs * cw, h: p.rs * rh }; }
+  function toCell(x, y) { var g = gridEl().getBoundingClientRect();
+    return { c: Math.max(1, Math.min(COLS, Math.floor((x - g.left) / (g.width / COLS)) + 1)),
+             r: Math.max(1, Math.min(ROWS, Math.floor((y - g.top) / (g.height / ROWS)) + 1)) }; }
+
+  function tryApply(id, np) {
+    var L = clone(LAYOUT); L[id] = Object.assign({}, L[id], np);
+    var v = validate(L); if (!v) return false;
+    LAYOUT = v; apply(LAYOUT); save(LAYOUT); return true;
+  }
+  function flash(id) { var b = boxes[id]; if (!b) return; b.style.borderColor = 'var(--cRed,#ff5a5a)'; setTimeout(function () { drawBoxes(); }, 350); }
+
+  /* 드래그 이동 (책상 PC용 보조) — 스테이지 배율은 매 이동마다 다시 잰다 */
+  function startDrag(ev, id) {
+    ev.preventDefault(); sel = id; touch(); drawBoxes();
+    var p0 = LAYOUT[id], start = toCell(ev.clientX, ev.clientY), last = null;
+    var b = boxes[id]; b.setPointerCapture(ev.pointerId); document.body.style.userSelect = 'none';
+    b.onpointermove = function (e) { touch(); var cur = toCell(e.clientX, e.clientY);
+      var nc = p0.c + (cur.c - start.c), nr = p0.r + (cur.r - start.r);
+      nc = Math.max(1, Math.min(COLS - p0.cs + 1, nc)); nr = Math.max(1, Math.min(ROWS - p0.rs + 1, nr));
+      if (last && last.c === nc && last.r === nr) return; last = { c: nc, r: nr };
+      var L = clone(LAYOUT); L[id].c = nc; L[id].r = nr; var ok = !!validate(L);
+      b.style.borderColor = ok ? 'var(--cAmber,#ffb020)' : 'var(--cRed,#ff5a5a)';
+      if (ok) { LAYOUT = validate(L); apply(LAYOUT); } };
+    b.onpointerup = function () { b.onpointermove = null; b.onpointerup = null; document.body.style.userSelect = '';
+      save(LAYOUT); drawBoxes(); renderHud(); };
+  }
+  function startResize(ev, id) {
+    ev.preventDefault(); ev.stopPropagation(); sel = id; touch(); drawBoxes();
+    var p0 = LAYOUT[id], start = toCell(ev.clientX, ev.clientY), b = boxes[id];
+    b.setPointerCapture(ev.pointerId); document.body.style.userSelect = 'none';
+    b.onpointermove = function (e) { touch(); var cur = toCell(e.clientX, e.clientY);
+      var ncs = Math.max(BY_ID[id].min[0], p0.cs + (cur.c - start.c)), nrs = Math.max(BY_ID[id].min[1], p0.rs + (cur.r - start.r));
+      ncs = Math.min(ncs, COLS - p0.c + 1); nrs = Math.min(nrs, ROWS - p0.r + 1);
+      var L = clone(LAYOUT); L[id].cs = ncs; L[id].rs = nrs; var ok = !!validate(L);
+      b.style.borderColor = ok ? 'var(--cAmber,#ffb020)' : 'var(--cRed,#ff5a5a)'; if (ok) { LAYOUT = validate(L); apply(LAYOUT); } };
+    b.onpointerup = function () { b.onpointermove = null; b.onpointerup = null; document.body.style.userSelect = '';
+      save(LAYOUT); drawBoxes(); renderHud(); };
+  }
+
+  /* 편집 패널 — 버튼만으로 완결 (벽면 PC 주 수단) */
+  function renderHud() {
+    var k = sel ? BY_ID[sel] : null, p = sel ? LAYOUT[sel] : null;
+    var h = '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">';
+    h += '<span style="color:var(--cAmber,#ffb020);">✎ 편집 중</span><span style="color:#8e9bb0;">· 순환 멈춤 · 3분 무조작 시 자동 종료</span>';
+    h += '<select data-a="sel" style="background:#0b1220;color:#f3f6fc;border:1px solid #28313f;border-radius:8px;padding:5px 8px;font:600 13px system-ui;"><option value="">카드 선택…</option>';
+    CARDS.forEach(function (c) { h += '<option value="' + c.id + '"' + (sel === c.id ? ' selected' : '') + '>' + c.name + (LAYOUT[c.id].hide ? ' (숨김)' : '') + '</option>'; });
+    h += '</select>';
+    if (k) {
+      var B = function (a, t, dis) { return '<button data-a="' + a + '"' + (dis ? ' disabled' : '') + ' style="background:#1b2230;color:#f3f6fc;border:1px solid #28313f;border-radius:8px;padding:5px 10px;font:700 13px system-ui;cursor:pointer;' + (dis ? 'opacity:.35;cursor:default;' : '') + '">' + t + '</button>'; };
+      h += '<span style="border-left:1px solid #28313f;height:22px;"></span>';
+      h += B('l', '◀') + B('r', '▶') + B('u', '▲') + B('d', '▼');
+      h += '<span style="color:#8e9bb0;font-size:12px;">폭</span>' + B('w-', '−') + B('w+', '+');
+      h += '<span style="color:#8e9bb0;font-size:12px;">높이</span>' + B('h-', '−') + B('h+', '+');
+      h += '<span style="color:#8e9bb0;font-size:12px;">글자</span>';
+      [[0.8, '작게'], [1, '보통'], [1.2, '크게'], [1.4, '아주크게']].forEach(function (f) { h += '<button data-a="fz" data-v="' + f[0] + '" style="background:' + (p.fz === f[0] ? 'var(--cAmber,#ffb020)' : '#1b2230') + ';color:' + (p.fz === f[0] ? '#101725' : '#f3f6fc') + ';border:1px solid #28313f;border-radius:8px;padding:5px 9px;font:700 12px system-ui;cursor:pointer;">' + f[1] + '</button>'; });
+      h += k.noHide ? '<span style="color:#8e9bb0;font-size:12px;">경보 카드 · 숨길 수 없음</span>' : B('hide', p.hide ? '👁 다시 보이기' : '👁 숨기기');
+    }
+    h += '<span style="border-left:1px solid #28313f;height:22px;"></span>';
+    h += '<button data-a="copy" style="background:#1b2230;color:#f3f6fc;border:1px solid #28313f;border-radius:8px;padding:5px 10px;font:700 13px system-ui;cursor:pointer;">배치 코드 복사</button>';
+    h += '<button data-a="paste" style="background:#1b2230;color:#f3f6fc;border:1px solid #28313f;border-radius:8px;padding:5px 10px;font:700 13px system-ui;cursor:pointer;">코드 붙여넣기</button>';
+    h += '<button data-a="undo" style="background:#1b2230;color:#f3f6fc;border:1px solid #28313f;border-radius:8px;padding:5px 10px;font:700 13px system-ui;cursor:pointer;">직전으로</button>';
+    h += '<button data-a="reset" style="background:#1b2230;color:var(--cOrange,#ff9a3c);border:1px solid #28313f;border-radius:8px;padding:5px 10px;font:700 13px system-ui;cursor:pointer;">기본 배치</button>';
+    h += '<button data-a="done" style="background:var(--cAmber,#ffb020);color:#101725;border:0;border-radius:8px;padding:6px 14px;font:800 13px system-ui;cursor:pointer;">완료</button>';
+    h += '</div>';
+    hud.innerHTML = h;
+    hud.querySelector('[data-a=sel]').onchange = function () { sel = this.value || null; touch(); drawBoxes(); renderHud(); };
+    hud.querySelectorAll('button[data-a]').forEach(function (btn) { btn.onclick = function () { act(btn.dataset.a, btn.dataset.v); }; });
+  }
+  function act(a, v) {
+    touch(); var p = sel ? LAYOUT[sel] : null, ok = true;
+    switch (a) {
+      case 'l': ok = tryApply(sel, { c: p.c - 1 }); break;   case 'r': ok = tryApply(sel, { c: p.c + 1 }); break;
+      case 'u': ok = tryApply(sel, { r: p.r - 1 }); break;   case 'd': ok = tryApply(sel, { r: p.r + 1 }); break;
+      case 'w-': ok = tryApply(sel, { cs: p.cs - 1 }); break; case 'w+': ok = tryApply(sel, { cs: p.cs + 1 }); break;
+      case 'h-': ok = tryApply(sel, { rs: p.rs - 1 }); break; case 'h+': ok = tryApply(sel, { rs: p.rs + 1 }); break;
+      case 'fz': ok = tryApply(sel, { fz: +v }); break;
+      case 'hide': ok = tryApply(sel, { hide: !p.hide }); if (ok) toast(p.hide ? '다시 보입니다' : '숨겼습니다 — 편집 패널의 카드 목록에서 되살릴 수 있습니다'); break;
+      case 'copy': var code = encode(LAYOUT);
+        (navigator.clipboard ? navigator.clipboard.writeText(code) : Promise.reject()).then(function () { toast('복사됨: ' + code, 4000); }, function () { prompt('배치 코드 (복사하세요)', code); }); break;
+      case 'paste': var s = prompt('배치 코드를 붙여넣으세요'); if (s == null) break;
+        var d = decode(s); if (d) { LAYOUT = d; apply(LAYOUT); save(LAYOUT); toast('적용했습니다'); } else { toast('코드가 올바르지 않습니다', 3000); } break;
+      case 'undo': try { var pv = validate(JSON.parse(localStorage.getItem(KEY_PREV) || 'null')); if (pv) { LAYOUT = pv; apply(LAYOUT); save(LAYOUT); toast('직전 배치로'); } else toast('직전 배치가 없습니다'); } catch (e) {} break;
+      case 'reset': if (confirm('기본 배치로 되돌릴까요?')) { LAYOUT = validate(clone(DEFAULT)); apply(LAYOUT); save(LAYOUT); toast('기본 배치'); } break;
+      case 'done': setEdit(false); toast('편집 끝 · 순환 재개'); return;
+    }
+    if (!ok) { if (sel) flash(sel); toast('그 자리엔 못 놓습니다 (겹침·범위·최소 크기)', 2500); }
+    drawBoxes(); renderHud(); renderBadge();
+  }
+
+  /* 부팅: DOM 준비 후 배지. 편집 손잡이는 켜야 생긴다. */
+  function boot() { if (!gridEl()) { setTimeout(boot, 300); return; } renderBadge(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  window.WALL_EDITOR = { open: function () { setEdit(true); }, code: function () { return encode(LAYOUT); }, layout: function () { return clone(LAYOUT); } };
+})();
+
+</script>
+<script>
+/* 상황실 벽면 — 시도 바꾸기 (전국판, 2026-09-19 사장님 지시 "상황실도 시도 바꾸게")
+   · region.js 에 sidoList 가 주입된 화면(작업장/전국판)에서만 나타난다. 경기 전용 사이트엔 없다.
+   · 좌상단 오버레이 둘째 줄에 '🗺 시도 · 강원도' 배지. 누르면 시도 칩 16개가 뜨고, 고르면 그 시도
+     폴더의 상황실로 이동한다(시도마다 데이터·지도·설정 파일이 달라 한 화면 안에서는 못 바꾼다).
+   · React 밖 고정 레이어 — 순환·배치 편집기와 무관. */
+(function () {
+  var RC = window.REGION_CONF || {};
+  var LIST = RC.sidoList || [];
+  if (!LIST.length) return;
+  var CUR = RC.sidoCurrent || '';
+
+  function $(tag, style, text) { var e = document.createElement(tag); if (style) e.style.cssText = style; if (text != null) e.textContent = text; return e; }
+  function go(sd) {
+    try { localStorage.setItem('ggSido', sd.base); } catch (e) {}
+    var page = location.pathname.split('/').pop() || '상황실.html';
+    location.href = sd.base + page;
+  }
+
+  var panel = null;
+  function togglePanel() {
+    if (panel) { panel.remove(); panel = null; return; }
+    panel = $('div', 'position:fixed;left:10px;top:70px;z-index:45;background:var(--panel,#141e33);border:2px solid var(--cAmber,#ffb020);border-radius:14px;padding:12px 14px;color:var(--fg,#f3f6fc);font:600 14px/1.3 system-ui,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.45);max-width:520px;');
+    panel.appendChild($('div', 'font-size:12px;color:var(--dim,#93a5c4);margin-bottom:8px;', '시도를 고르면 그 시도 상황실로 이동합니다'));
+    var wrap = $('div', 'display:flex;flex-wrap:wrap;gap:6px;');
+    LIST.forEach(function (sd) {
+      var on = (sd.label === CUR);
+      var c = $('a', 'cursor:pointer;padding:7px 11px;border-radius:9px;border:1px solid ' + (on ? 'var(--cAmber,#ffb020)' : 'var(--line,#28313f)') + ';background:' + (on ? 'var(--cAmber,#ffb020)' : 'var(--panel2,#151b26)') + ';color:' + (on ? '#101725' : 'var(--fg,#f2f5fa)') + ';font:700 13px system-ui,sans-serif;white-space:nowrap;', sd.label);
+      if (!on) c.onclick = function () { go(sd); };
+      wrap.appendChild(c);
+    });
+    panel.appendChild(wrap);
+    var close = $('a', 'display:inline-block;margin-top:10px;cursor:pointer;color:var(--dim,#93a5c4);font-size:12px;', '닫기');
+    close.onclick = togglePanel;
+    panel.appendChild(close);
+    document.body.appendChild(panel);
+  }
+
+  function mount() {
+    if (!document.body) return setTimeout(mount, 50);
+    var b = $('a', 'position:absolute;left:10px;top:40px;z-index:20;cursor:pointer;opacity:.28;padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);color:var(--fg,#f2f5fa);font:600 12px system-ui,sans-serif;white-space:nowrap;', '🗺 시도 · ' + CUR);
+    b.title = '다른 시도 상황실로 바꾸기';
+    b.onmouseenter = function () { b.style.opacity = 1; }; b.onmouseleave = function () { b.style.opacity = .28; };
+    b.onclick = togglePanel;
+    document.body.appendChild(b);
+  }
+  mount();
+})();
+
+</script>
 <x-dc>
 <helmet>
 <style>/*
@@ -948,8 +1302,8 @@ http://scripts.sil.org/OFL
 
 </helmet>
 <div style="position:fixed;inset:0;background:var(--bg,#0d1118);display:flex;align-items:center;justify-content:center;font-family:'Pretendard Variable',Pretendard,system-ui,sans-serif;">
-  <a href="지도.html" title="일반 상황판(대시보드)으로 돌아가기" style="position:absolute;left:10px;top:8px;z-index:20;opacity:.22;padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);color:var(--fg,#f2f5fa);font-size:12px;font-weight:520;text-decoration:none;white-space:nowrap;" style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">← 상황판</a>
-  <a href="도움말.html" title="사용설명서 — 화면 보는 법과 색·기호, 자동 판단 기준" style="position:absolute;left:98px;top:8px;z-index:20;opacity:.22;padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);color:var(--fg,#f2f5fa);font-size:12px;font-weight:520;text-decoration:none;white-space:nowrap;" style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">❓ 설명서</a>
+  <a href="지도.html" title="일반 상황판(대시보드)으로 돌아가기" style="position:absolute;left:10px;top:8px;z-index:20;opacity:.22;padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);color:var(--fg,#f2f5fa);font-size:calc(12px*var(--fz,1));font-weight:520;text-decoration:none;white-space:nowrap;" class="wall-ov" style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">← 상황판</a>
+  <a href="도움말.html" title="사용설명서 — 화면 보는 법과 색·기호, 자동 판단 기준" style="position:absolute;left:98px;top:8px;z-index:20;opacity:.22;padding:6px 11px;border-radius:9px;border:1px solid var(--line,#28313f);background:var(--panel,#151b26);color:var(--fg,#f2f5fa);font-size:calc(12px*var(--fz,1));font-weight:520;text-decoration:none;white-space:nowrap;" class="wall-ov" style-hover="opacity:1;border-color:var(--acc,#ff7a2f)">❓ 설명서</a>
   <div ref="{{ stageRef }}" style="width:3840px;height:2160px;flex:none;transform-origin:center center;padding:56px;display:flex;flex-direction:column;gap:28px;color:var(--fg,#f2f5fa);background:var(--bg,#0d1118);position:relative;">
 
     <div style="position:absolute;inset:0;pointer-events:none;border-radius:0;animation:alertGlow 2.4s ease-in-out infinite;opacity:var(--alertOn,0);"></div>
@@ -961,32 +1315,32 @@ http://scripts.sil.org/OFL
         <div style="width:14px;align-self:stretch;margin:34px 0;border-radius:8px;background:var(--acc,#ff7a2f);flex:none;"></div>
         <div style="display:flex;flex-direction:column;gap:10px;min-width:0;">
           <div style="display:flex;align-items:baseline;gap:20px;">
-            <div style="font-size:118px;font-weight:660;line-height:.95;letter-spacing:-.03em;white-space:nowrap;">{{ stationName }}</div>
-            <div style="font-size:38px;font-weight:520;color:var(--dim,#8e9bb0);white-space:nowrap;">소방관서</div>
+            <div style="font-size:calc(118px*var(--fz,1));font-weight:660;line-height:.95;letter-spacing:-.03em;white-space:nowrap;">{{ stationName }}</div>
+            <div style="font-size:calc(38px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);white-space:nowrap;">소방관서</div>
           </div>
           <div style="display:flex;align-items:center;gap:18px;">
-            <div style="font-size:38px;font-weight:570;color:var(--acc,#ff7a2f);font-variant-numeric:tabular-nums;white-space:nowrap;">{{ rotLabel }}</div>
+            <div style="font-size:calc(38px*var(--fz,1));font-weight:570;color:var(--acc,#ff7a2f);font-variant-numeric:tabular-nums;white-space:nowrap;">{{ rotLabel }}</div>
             <div style="width:2px;height:34px;background:var(--line,#28313f);"></div>
-            <div style="font-size:36px;font-weight:500;color:var(--dim,#8e9bb0);white-space:nowrap;">다음 · {{ nextName }}</div>
+            <div style="font-size:calc(36px*var(--fz,1));font-weight:500;color:var(--dim,#8e9bb0);white-space:nowrap;">다음 · {{ nextName }}</div>
           </div>
         </div>
       </div>
 
       <div style="display:flex;align-items:center;gap:36px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:24px;padding:0 36px;min-width:0;">
-        <div style="font-size:92px;line-height:1;flex:none;">{{ icon }}</div>
+        <div style="font-size:calc(92px*var(--fz,1));line-height:1;flex:none;">{{ icon }}</div>
         <div style="display:flex;flex-direction:column;gap:6px;min-width:0;">
           <div style="display:flex;align-items:baseline;gap:8px;">
-            <div style="font-size:140px;font-weight:660;line-height:.9;letter-spacing:-.04em;font-variant-numeric:tabular-nums;">{{ temp }}</div>
-            <div style="font-size:66px;font-weight:520;color:var(--dim,#8e9bb0);line-height:1;">°C</div>
+            <div style="font-size:calc(140px*var(--fz,1));font-weight:660;line-height:.9;letter-spacing:-.04em;font-variant-numeric:tabular-nums;">{{ temp }}</div>
+            <div style="font-size:calc(66px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);line-height:1;">°C</div>
           </div>
-          <div style="font-size:44px;font-weight:520;color:var(--dim,#8e9bb0);white-space:nowrap;">{{ skyText }} · 체감 {{ feels }}°</div>
+          <div style="font-size:calc(44px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);white-space:nowrap;">{{ skyText }} · 체감 {{ feels }}°</div>
         </div>
         <div style="margin-left:auto;display:flex;flex-direction:column;gap:12px;align-items:flex-end;flex:none;">
           <div style="display:flex;align-items:center;gap:14px;">
             <div style="width:20px;height:20px;border-radius:50%;background:#ff3b3b;animation:livePulse 1.6s ease-in-out infinite;"></div>
-            <div style="font-size:34px;font-weight:660;letter-spacing:.16em;">LIVE</div>
+            <div style="font-size:calc(34px*var(--fz,1));font-weight:660;letter-spacing:.16em;">LIVE</div>
           </div>
-          <div style="font-size:30px;color:var(--dim,#8e9bb0);font-weight:500;white-space:nowrap;">{{ updatedLabel }}</div>
+          <div style="font-size:calc(30px*var(--fz,1));color:var(--dim,#8e9bb0);font-weight:500;white-space:nowrap;">{{ updatedLabel }}</div>
         </div>
       </div>
 
@@ -995,21 +1349,21 @@ http://scripts.sil.org/OFL
       <div style="display:flex;align-items:center;gap:26px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:24px;padding:0 30px;min-width:0;">
         <div style="width:14px;align-self:stretch;margin:34px 0;border-radius:8px;background:{{ keyAccent }};flex:none;"></div>
         <div style="display:flex;flex-direction:column;gap:12px;min-width:0;flex:1;">
-          <div style="font-size:32px;font-weight:570;letter-spacing:.06em;color:var(--dim,#8e9bb0);white-space:nowrap;">{{ keyTitle }}</div>
+          <div style="font-size:calc(32px*var(--fz,1));font-weight:570;letter-spacing:.06em;color:var(--dim,#8e9bb0);white-space:nowrap;">{{ keyTitle }}</div>
           <sc-for list="{{ keyRivers }}" as="k" hint-placeholder-count="2">
             <div style="display:flex;align-items:flex-end;gap:18px;">
-              <div style="width:132px;flex:none;font-size:42px;font-weight:660;line-height:1.1;color:{{ k.color }};white-space:nowrap;">{{ k.name }}</div>
+              <div style="width:132px;flex:none;font-size:calc(42px*var(--fz,1));font-weight:660;line-height:1.1;color:{{ k.color }};white-space:nowrap;">{{ k.name }}</div>
               <div style="flex:1;min-width:0;">
-                <div style="font-size:26px;font-weight:520;color:var(--dim,#8e9bb0);white-space:nowrap;">{{ k.l1 }}</div>
-                <div style="font-size:46px;font-weight:660;line-height:1.05;color:{{ k.color }};font-variant-numeric:tabular-nums;white-space:nowrap;">{{ k.v1 }}</div>
+                <div style="font-size:calc(26px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);white-space:nowrap;">{{ k.l1 }}</div>
+                <div style="font-size:calc(46px*var(--fz,1));font-weight:660;line-height:1.05;color:{{ k.color }};font-variant-numeric:tabular-nums;white-space:nowrap;">{{ k.v1 }}</div>
               </div>
               <div style="flex:1;min-width:0;">
-                <div style="font-size:26px;font-weight:520;color:var(--dim,#8e9bb0);white-space:nowrap;">{{ k.l2 }}</div>
-                <div style="font-size:46px;font-weight:660;line-height:1.05;color:var(--fg,#f2f5fa);font-variant-numeric:tabular-nums;white-space:nowrap;">{{ k.v2 }}</div>
+                <div style="font-size:calc(26px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);white-space:nowrap;">{{ k.l2 }}</div>
+                <div style="font-size:calc(46px*var(--fz,1));font-weight:660;line-height:1.05;color:var(--fg,#f2f5fa);font-variant-numeric:tabular-nums;white-space:nowrap;">{{ k.v2 }}</div>
               </div>
               <div style="flex:1;min-width:0;">
-                <div style="font-size:26px;font-weight:520;color:var(--dim,#8e9bb0);white-space:nowrap;">{{ k.l3 }}</div>
-                <div style="font-size:46px;font-weight:660;line-height:1.05;color:var(--fg,#f2f5fa);font-variant-numeric:tabular-nums;white-space:nowrap;">{{ k.v3 }}</div>
+                <div style="font-size:calc(26px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);white-space:nowrap;">{{ k.l3 }}</div>
+                <div style="font-size:calc(46px*var(--fz,1));font-weight:660;line-height:1.05;color:var(--fg,#f2f5fa);font-variant-numeric:tabular-nums;white-space:nowrap;">{{ k.v3 }}</div>
               </div>
             </div>
           </sc-for>
@@ -1018,20 +1372,20 @@ http://scripts.sil.org/OFL
       </sc-if>
 
       <div style="width:460px;border-radius:24px;padding:24px 32px;display:flex;flex-direction:column;justify-content:center;gap:6px;background:{{ levelBg }};border:3px solid {{ levelBorder }};">
-        <div style="font-size:34px;font-weight:570;letter-spacing:.06em;color:{{ levelSub }};">관서 상황단계</div>
-        <div style="font-size:118px;font-weight:660;line-height:1;color:{{ levelFg }};letter-spacing:-.02em;">{{ levelName }}</div>
-        <div style="font-size:32px;font-weight:520;color:{{ levelSub }};">{{ levelReason }}</div>
+        <div style="font-size:calc(34px*var(--fz,1));font-weight:570;letter-spacing:.06em;color:{{ levelSub }};">관서 상황단계</div>
+        <div style="font-size:calc(118px*var(--fz,1));font-weight:660;line-height:1;color:{{ levelFg }};letter-spacing:-.02em;">{{ levelName }}</div>
+        <div style="font-size:calc(32px*var(--fz,1));font-weight:520;color:{{ levelSub }};">{{ levelReason }}</div>
       </div>
 
       <div style="width:640px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:24px;padding:0 40px;display:flex;flex-direction:column;justify-content:center;gap:8px;">
-        <div style="font-size:132px;font-weight:660;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em;">{{ clock }}</div>
+        <div style="font-size:calc(132px*var(--fz,1));font-weight:660;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em;">{{ clock }}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
-          <div style="font-size:36px;font-weight:520;color:var(--dim,#8e9bb0);white-space:nowrap;">{{ dateText }}</div>
+          <div style="font-size:calc(36px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);white-space:nowrap;">{{ dateText }}</div>
           <div style="display:flex;gap:10px;">
-            <div sc-camel-on-click="{{ togglePlay }}" style="cursor:pointer;width:64px;height:56px;border-radius:12px;border:2px solid var(--line,#28313f);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:570;color:var(--dim,#8e9bb0);" style-hover="border-color:var(--acc,#ff7a2f);color:var(--fg,#f2f5fa)">{{ playIcon }}</div>
-            <div sc-camel-on-click="{{ prevStation }}" style="cursor:pointer;width:64px;height:56px;border-radius:12px;border:2px solid var(--line,#28313f);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:570;color:var(--dim,#8e9bb0);" style-hover="border-color:var(--acc,#ff7a2f);color:var(--fg,#f2f5fa)">‹</div>
-            <div sc-camel-on-click="{{ nextStation }}" style="cursor:pointer;width:64px;height:56px;border-radius:12px;border:2px solid var(--line,#28313f);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:570;color:var(--dim,#8e9bb0);" style-hover="border-color:var(--acc,#ff7a2f);color:var(--fg,#f2f5fa)">›</div>
-            <div sc-camel-on-click="{{ toggleTheme }}" style="cursor:pointer;width:64px;height:56px;border-radius:12px;border:2px solid var(--line,#28313f);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:570;color:var(--dim,#8e9bb0);" style-hover="border-color:var(--acc,#ff7a2f);color:var(--fg,#f2f5fa)">{{ themeIcon }}</div>
+            <div sc-camel-on-click="{{ togglePlay }}" style="cursor:pointer;width:64px;height:56px;border-radius:12px;border:2px solid var(--line,#28313f);display:flex;align-items:center;justify-content:center;font-size:calc(28px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);" style-hover="border-color:var(--acc,#ff7a2f);color:var(--fg,#f2f5fa)">{{ playIcon }}</div>
+            <div sc-camel-on-click="{{ prevStation }}" style="cursor:pointer;width:64px;height:56px;border-radius:12px;border:2px solid var(--line,#28313f);display:flex;align-items:center;justify-content:center;font-size:calc(28px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);" style-hover="border-color:var(--acc,#ff7a2f);color:var(--fg,#f2f5fa)">‹</div>
+            <div sc-camel-on-click="{{ nextStation }}" style="cursor:pointer;width:64px;height:56px;border-radius:12px;border:2px solid var(--line,#28313f);display:flex;align-items:center;justify-content:center;font-size:calc(28px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);" style-hover="border-color:var(--acc,#ff7a2f);color:var(--fg,#f2f5fa)">›</div>
+            <div sc-camel-on-click="{{ toggleTheme }}" style="cursor:pointer;width:64px;height:56px;border-radius:12px;border:2px solid var(--line,#28313f);display:flex;align-items:center;justify-content:center;font-size:calc(26px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);" style-hover="border-color:var(--acc,#ff7a2f);color:var(--fg,#f2f5fa)">{{ themeIcon }}</div>
           </div>
         </div>
       </div>
@@ -1045,102 +1399,102 @@ http://scripts.sil.org/OFL
     <!-- ===== ALERT BANNER ===== -->
     <sc-if value="{{ isAlert }}" hint-placeholder-val="{{ false }}">
       <div style="height:140px;flex:none;border-radius:22px;background:{{ levelBg }};border:3px solid {{ levelBorder }};display:flex;align-items:center;gap:36px;padding:0 44px;animation:alertBar 1.8s ease-in-out infinite;">
-        <div style="font-size:70px;line-height:1;flex:none;">⚠</div>
+        <div style="font-size:calc(70px*var(--fz,1));line-height:1;flex:none;">⚠</div>
         <div style="display:flex;flex-direction:column;gap:4px;min-width:0;">
-          <div style="font-size:60px;font-weight:660;line-height:1.1;color:{{ levelFg }};white-space:nowrap;">{{ alertHead }}</div>
-          <div style="font-size:33px;font-weight:520;color:{{ levelSub }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ alertSub }}</div>
+          <div style="font-size:calc(60px*var(--fz,1));font-weight:660;line-height:1.1;color:{{ levelFg }};white-space:nowrap;">{{ alertHead }}</div>
+          <div style="font-size:calc(33px*var(--fz,1));font-weight:520;color:{{ levelSub }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ alertSub }}</div>
         </div>
         <div style="margin-left:auto;flex:none;text-align:right;">
-          <div style="font-size:28px;font-weight:570;color:{{ levelSub }};letter-spacing:.06em;">대응 단계</div>
-          <div style="font-size:52px;font-weight:660;color:{{ levelFg }};line-height:1.15;white-space:nowrap;">{{ alertAction }}</div>
+          <div style="font-size:calc(28px*var(--fz,1));font-weight:570;color:{{ levelSub }};letter-spacing:.06em;">대응 단계</div>
+          <div style="font-size:calc(52px*var(--fz,1));font-weight:660;color:{{ levelFg }};line-height:1.15;white-space:nowrap;">{{ alertAction }}</div>
         </div>
       </div>
     </sc-if>
 
     <!-- ===== MAIN GRID ===== -->
-    <div style="flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:28px;">
+    <div data-wall-grid style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));grid-template-rows:repeat(24,minmax(0,1fr));gap:0;margin:-14px;">
 
       <!-- COLUMN A -->
-      <div style="display:grid;grid-template-rows:auto 1fr;gap:28px;min-height:0;">
+      <div style="display:contents;">
 
-        <div style="background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:20px;">
+        <div data-card="obs" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:20px;grid-column:var(--wl-obs-c,1)/span var(--wl-obs-cs,4);grid-row:var(--wl-obs-r,1)/span var(--wl-obs-rs,8);display:var(--wl-obs-d,flex);--fz:var(--wl-obs-fz,1);min-height:0;min-width:0;overflow:hidden;">
           <div style="display:flex;align-items:baseline;justify-content:space-between;">
-            <div style="font-size:40px;font-weight:660;letter-spacing:-.01em;">현재 실황</div>
-            <div style="font-size:30px;font-weight:520;color:var(--dim,#8e9bb0);">{{ obsTime }} 관측 · 기상청 AWS</div>
+            <div style="font-size:calc(40px*var(--fz,1));font-weight:660;letter-spacing:-.01em;">현재 실황</div>
+            <div style="font-size:calc(30px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">{{ obsTime }} 관측 · 기상청 AWS</div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;">
             <div style="background:var(--panel2,#1b2230);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:6px;">
-              <div style="font-size:29px;font-weight:520;color:var(--dim,#8e9bb0);">시간당 강수</div>
-              <div style="display:flex;align-items:baseline;gap:6px;"><div style="font-size:74px;font-weight:660;line-height:1;font-variant-numeric:tabular-nums;">{{ rain1h }}</div><div style="font-size:30px;font-weight:520;color:var(--dim,#8e9bb0);">mm</div></div>
+              <div style="font-size:calc(29px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">시간당 강수</div>
+              <div style="display:flex;align-items:baseline;gap:6px;"><div style="font-size:calc(74px*var(--fz,1));font-weight:660;line-height:1;font-variant-numeric:tabular-nums;">{{ rain1h }}</div><div style="font-size:calc(30px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">mm</div></div>
             </div>
             <div style="background:var(--panel2,#1b2230);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:6px;">
-              <div style="font-size:29px;font-weight:520;color:var(--dim,#8e9bb0);">습도</div>
-              <div style="display:flex;align-items:baseline;gap:6px;"><div style="font-size:74px;font-weight:660;line-height:1;font-variant-numeric:tabular-nums;">{{ humid }}</div><div style="font-size:30px;font-weight:520;color:var(--dim,#8e9bb0);">%</div></div>
+              <div style="font-size:calc(29px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">습도</div>
+              <div style="display:flex;align-items:baseline;gap:6px;"><div style="font-size:calc(74px*var(--fz,1));font-weight:660;line-height:1;font-variant-numeric:tabular-nums;">{{ humid }}</div><div style="font-size:calc(30px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">%</div></div>
             </div>
             <div style="background:var(--panel2,#1b2230);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:6px;">
-              <div style="font-size:29px;font-weight:520;color:var(--dim,#8e9bb0);">실효습도</div>
-              <div style="display:flex;align-items:baseline;gap:6px;"><div style="font-size:74px;font-weight:660;line-height:1;font-variant-numeric:tabular-nums;color:{{ effHumColor }};">{{ effHum }}</div><div style="font-size:30px;font-weight:520;color:var(--dim,#8e9bb0);">%</div></div>
+              <div style="font-size:calc(29px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">실효습도</div>
+              <div style="display:flex;align-items:baseline;gap:6px;"><div style="font-size:calc(74px*var(--fz,1));font-weight:660;line-height:1;font-variant-numeric:tabular-nums;color:{{ effHumColor }};">{{ effHum }}</div><div style="font-size:calc(30px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">%</div></div>
             </div>
             <div style="background:var(--panel2,#1b2230);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:6px;">
-              <div style="font-size:29px;font-weight:520;color:var(--dim,#8e9bb0);">풍속 / 순간</div>
-              <div style="display:flex;align-items:baseline;gap:6px;"><div style="font-size:74px;font-weight:660;line-height:1;font-variant-numeric:tabular-nums;color:{{ windColor }};">{{ wind }}</div><div style="font-size:30px;font-weight:520;color:var(--dim,#8e9bb0);">/ {{ gust }} m/s</div></div>
+              <div style="font-size:calc(29px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">풍속 / 순간</div>
+              <div style="display:flex;align-items:baseline;gap:6px;"><div style="font-size:calc(74px*var(--fz,1));font-weight:660;line-height:1;font-variant-numeric:tabular-nums;color:{{ windColor }};">{{ wind }}</div><div style="font-size:calc(30px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">/ {{ gust }} m/s</div></div>
             </div>
             <div style="background:var(--panel2,#1b2230);border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:6px;">
-              <div style="font-size:29px;font-weight:520;color:var(--dim,#8e9bb0);">풍향</div>
-              <div style="display:flex;align-items:center;gap:12px;"><div style="font-size:74px;font-weight:660;line-height:1;">{{ windDir }}</div><div style="font-size:52px;line-height:1;color:var(--acc,#ff7a2f);transform:rotate({{ windDeg }}deg);">{{ windArrow }}</div></div>
+              <div style="font-size:calc(29px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">풍향</div>
+              <div style="display:flex;align-items:center;gap:12px;"><div style="font-size:calc(74px*var(--fz,1));font-weight:660;line-height:1;">{{ windDir }}</div><div style="font-size:calc(52px*var(--fz,1));line-height:1;color:var(--acc,#ff7a2f);transform:rotate({{ windDeg }}deg);">{{ windArrow }}</div></div>
             </div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
             <div style="background:var(--panel2,#1b2230);border-radius:16px;padding:16px 22px;display:flex;align-items:baseline;justify-content:space-between;">
-              <div style="font-size:29px;font-weight:520;color:var(--dim,#8e9bb0);">1시간 누적</div><div style="font-size:46px;font-weight:660;font-variant-numeric:tabular-nums;">{{ acc1 }}</div>
+              <div style="font-size:calc(29px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">1시간 누적</div><div style="font-size:calc(46px*var(--fz,1));font-weight:660;font-variant-numeric:tabular-nums;">{{ acc1 }}</div>
             </div>
             <div style="background:var(--panel2,#1b2230);border-radius:16px;padding:16px 22px;display:flex;align-items:baseline;justify-content:space-between;">
-              <div style="font-size:29px;font-weight:520;color:var(--dim,#8e9bb0);">3시간</div><div style="font-size:46px;font-weight:660;font-variant-numeric:tabular-nums;">{{ acc3 }}</div>
+              <div style="font-size:calc(29px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">3시간</div><div style="font-size:calc(46px*var(--fz,1));font-weight:660;font-variant-numeric:tabular-nums;">{{ acc3 }}</div>
             </div>
             <div style="background:var(--panel2,#1b2230);border-radius:16px;padding:16px 22px;display:flex;align-items:baseline;justify-content:space-between;">
-              <div style="font-size:29px;font-weight:520;color:var(--dim,#8e9bb0);">6시간</div><div style="font-size:46px;font-weight:660;font-variant-numeric:tabular-nums;">{{ acc6 }}</div>
+              <div style="font-size:calc(29px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">6시간</div><div style="font-size:calc(46px*var(--fz,1));font-weight:660;font-variant-numeric:tabular-nums;">{{ acc6 }}</div>
             </div>
             <div style="background:var(--panel2,#1b2230);border-radius:16px;padding:16px 22px;display:flex;align-items:baseline;justify-content:space-between;">
-              <div style="font-size:29px;font-weight:520;color:var(--dim,#8e9bb0);">12시간</div><div style="font-size:46px;font-weight:660;font-variant-numeric:tabular-nums;">{{ acc12 }}</div>
+              <div style="font-size:calc(29px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">12시간</div><div style="font-size:calc(46px*var(--fz,1));font-weight:660;font-variant-numeric:tabular-nums;">{{ acc12 }}</div>
             </div>
           </div>
         </div>
 
-        <div style="background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:18px;min-height:0;">
+        <div data-card="hourly" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:18px;min-height:0;grid-column:var(--wl-hourly-c,1)/span var(--wl-hourly-cs,4);grid-row:var(--wl-hourly-r,9)/span var(--wl-hourly-rs,16);display:var(--wl-hourly-d,flex);--fz:var(--wl-hourly-fz,1);min-height:0;min-width:0;overflow:hidden;">
           <div style="display:flex;align-items:baseline;justify-content:space-between;">
-            <div style="font-size:40px;font-weight:660;">시간대별 예보 · 12시간</div>
-            <div style="font-size:30px;font-weight:520;color:var(--dim,#8e9bb0);">최고 {{ tMax }}° · 최저 {{ tMin }}° · 강수확률 {{ pop }}%</div>
+            <div style="font-size:calc(40px*var(--fz,1));font-weight:660;">시간대별 예보 · 12시간</div>
+            <div style="font-size:calc(30px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">최고 {{ tMax }}° · 최저 {{ tMin }}° · 강수확률 {{ pop }}%</div>
           </div>
           <div style="flex:1;min-height:0;">{{ meteo }}</div>
         </div>
       </div>
 
       <!-- COLUMN B -->
-      <div style="display:grid;grid-template-rows:1fr 1fr 1.15fr;gap:28px;min-height:0;">
+      <div style="display:contents;">
 
-        <div style="background:var(--panel,#151b26);border:3px solid {{ warnBorder }};border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;">
+        <div data-card="warn" style="margin:14px;background:var(--panel,#151b26);border:3px solid {{ warnBorder }};border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;grid-column:var(--wl-warn-c,5)/span var(--wl-warn-cs,4);grid-row:var(--wl-warn-r,1)/span var(--wl-warn-rs,6);display:var(--wl-warn-d,flex);--fz:var(--wl-warn-fz,1);min-height:0;min-width:0;overflow:hidden;">
           <div style="display:flex;align-items:baseline;justify-content:space-between;">
-            <div style="font-size:40px;font-weight:660;">기상특보</div>
-            <div style="font-size:30px;font-weight:570;color:var(--dim,#8e9bb0);">발효 {{ warnCount }}건 · 기상청</div>
+            <div style="font-size:calc(40px*var(--fz,1));font-weight:660;">기상특보</div>
+            <div style="font-size:calc(30px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);">발효 {{ warnCount }}건 · 기상청</div>
           </div>
           <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;overflow:hidden;">
             <sc-for list="{{ warns }}" as="w" hint-placeholder-count="2">
               <div style="flex:1 1 auto;min-height:104px;display:flex;align-items:center;gap:24px;border-radius:16px;padding:0 28px;background:{{ w.bg }};border-left:14px solid {{ w.color }};">
-                <div style="font-size:58px;font-weight:660;color:{{ w.color }};white-space:nowrap;">{{ w.type }}</div>
-                <div style="font-size:34px;font-weight:520;color:var(--dim,#8e9bb0);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ w.area }}</div>
-                <div style="margin-left:auto;font-size:34px;font-weight:570;color:var(--dim,#8e9bb0);font-variant-numeric:tabular-nums;white-space:nowrap;">{{ w.time }}</div>
+                <div style="font-size:calc(58px*var(--fz,1));font-weight:660;color:{{ w.color }};white-space:nowrap;">{{ w.type }}</div>
+                <div style="font-size:calc(34px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ w.area }}</div>
+                <div style="margin-left:auto;font-size:calc(34px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);font-variant-numeric:tabular-nums;white-space:nowrap;">{{ w.time }}</div>
               </div>
             </sc-for>
             <sc-if value="{{ noWarn }}" hint-placeholder-val="{{ false }}">
-              <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:570;color:var(--dim,#8e9bb0);">발효 중인 기상특보 없음</div>
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:calc(44px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);">발효 중인 기상특보 없음</div>
             </sc-if>
           </div>
         </div>
 
-        <div style="background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;">
+        <div data-card="river" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;grid-column:var(--wl-river-c,5)/span var(--wl-river-cs,4);grid-row:var(--wl-river-r,7)/span var(--wl-river-rs,6);display:var(--wl-river-d,flex);--fz:var(--wl-river-fz,1);min-height:0;min-width:0;overflow:hidden;">
           <div style="display:flex;align-items:baseline;justify-content:space-between;">
-            <div style="font-size:40px;font-weight:660;">하천 수위 · 관할</div>
-            <div style="font-size:30px;font-weight:520;color:var(--dim,#8e9bb0);">한강홍수통제소 · 하천 위험수위 / 댐 저수율</div>
+            <div style="font-size:calc(40px*var(--fz,1));font-weight:660;">하천 수위 · 관할</div>
+            <div style="font-size:calc(30px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">한강홍수통제소 · 하천 위험수위 / 댐 저수율</div>
           </div>
           <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;">
             <sc-for list="{{ rivers }}" as="r" hint-placeholder-count="3">
@@ -1161,20 +1515,20 @@ http://scripts.sil.org/OFL
           </div>
         </div>
 
-        <div style="background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;">
+        <div data-card="impact" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;grid-column:var(--wl-impact-c,5)/span var(--wl-impact-cs,4);grid-row:var(--wl-impact-r,13)/span var(--wl-impact-rs,12);display:var(--wl-impact-d,flex);--fz:var(--wl-impact-fz,1);min-height:0;min-width:0;overflow:hidden;">
           <div style="display:flex;align-items:baseline;justify-content:space-between;">
-            <div style="font-size:40px;font-weight:660;">출동 영향 판단</div>
-            <div style="font-size:28px;font-weight:520;color:var(--dim,#8e9bb0);">현재 기상값 기반 자동 판정</div>
+            <div style="font-size:calc(40px*var(--fz,1));font-weight:660;">출동 영향 판단</div>
+            <div style="font-size:calc(28px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">현재 기상값 기반 자동 판정</div>
           </div>
           <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;">
             <sc-for list="{{ impacts }}" as="i" hint-placeholder-count="4">
               <div style="flex:1 1 auto;min-height:76px;display:flex;align-items:center;gap:24px;border-radius:16px;padding:0 26px;background:{{ i.bg }};border-left:12px solid {{ i.color }};">
-                <div style="font-size:44px;line-height:1;flex:none;">{{ i.icon }}</div>
+                <div style="font-size:calc(44px*var(--fz,1));line-height:1;flex:none;">{{ i.icon }}</div>
                 <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
-                  <div style="font-size:38px;font-weight:545;line-height:1.05;white-space:nowrap;">{{ i.title }}</div>
-                  <div style="font-size:29px;font-weight:445;line-height:1.15;color:var(--dim,#8e9bb0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ i.note }}</div>
+                  <div style="font-size:calc(38px*var(--fz,1));font-weight:545;line-height:1.05;white-space:nowrap;">{{ i.title }}</div>
+                  <div style="font-size:calc(29px*var(--fz,1));font-weight:445;line-height:1.15;color:var(--dim,#8e9bb0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ i.note }}</div>
                 </div>
-                <div style="margin-left:auto;flex:none;font-size:44px;font-weight:615;color:{{ i.color }};white-space:nowrap;">{{ i.level }}</div>
+                <div style="margin-left:auto;flex:none;font-size:calc(44px*var(--fz,1));font-weight:615;color:{{ i.color }};white-space:nowrap;">{{ i.level }}</div>
               </div>
             </sc-for>
           </div>
@@ -1182,55 +1536,76 @@ http://scripts.sil.org/OFL
       </div>
 
       <!-- COLUMN C -->
-      <div style="display:grid;grid-template-rows:minmax(0,1.55fr) minmax(600px,1fr);gap:28px;min-height:0;">
+      <div style="display:contents;">
 
-        <div style="background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;">
+        <div data-card="msg" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;grid-column:var(--wl-msg-c,9)/span var(--wl-msg-cs,4);grid-row:var(--wl-msg-r,1)/span var(--wl-msg-rs,10);display:var(--wl-msg-d,flex);--fz:var(--wl-msg-fz,1);min-height:0;min-width:0;overflow:hidden;">
           <div style="display:flex;align-items:baseline;justify-content:space-between;">
-            <div style="font-size:40px;font-weight:660;">재난문자 · 관할 시군</div>
-            <div style="font-size:30px;font-weight:570;color:var(--acc,#ff7a2f);">{{ msgCount }}건</div>
+            <div style="font-size:calc(40px*var(--fz,1));font-weight:660;">재난문자 · 관할 시군</div>
+            <div style="font-size:calc(30px*var(--fz,1));font-weight:570;color:var(--acc,#ff7a2f);">{{ msgCount }}건</div>
           </div>
           <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;overflow:hidden;">
             <sc-for list="{{ msgs }}" as="m" hint-placeholder-count="3">
               <div style="flex:1 1 auto;min-height:150px;border-radius:16px;padding:20px 26px;background:{{ m.bg }};border-left:12px solid {{ m.color }};display:flex;flex-direction:column;gap:8px;overflow:hidden;">
                 <div style="display:flex;align-items:baseline;gap:16px;">
-                  <div style="font-size:34px;font-weight:660;color:{{ m.color }};white-space:nowrap;">{{ m.sender }}</div>
-                  <div style="font-size:30px;font-weight:520;color:var(--dim,#8e9bb0);white-space:nowrap;">{{ m.kind }}</div>
-                  <div style="margin-left:auto;font-size:30px;font-weight:570;color:var(--dim,#8e9bb0);font-variant-numeric:tabular-nums;">{{ m.time }}</div>
+                  <div style="font-size:calc(34px*var(--fz,1));font-weight:660;color:{{ m.color }};white-space:nowrap;">{{ m.sender }}</div>
+                  <div style="font-size:calc(30px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);white-space:nowrap;">{{ m.kind }}</div>
+                  <div style="margin-left:auto;font-size:calc(30px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);font-variant-numeric:tabular-nums;">{{ m.time }}</div>
                 </div>
-                <div style="font-size:34px;font-weight:500;line-height:1.42;overflow:hidden;text-wrap:pretty;">{{ m.text }}</div>
+                <div style="font-size:calc(34px*var(--fz,1));font-weight:500;line-height:1.42;overflow:hidden;text-wrap:pretty;">{{ m.text }}</div>
               </div>
             </sc-for>
             <sc-if value="{{ noMsg }}" hint-placeholder-val="{{ false }}">
-              <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:570;color:var(--dim,#8e9bb0);">발령된 재난문자 없음</div>
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:calc(44px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);">발령된 재난문자 없음</div>
             </sc-if>
           </div>
         </div>
 
-        <div style="display:grid;grid-template-rows:auto 1fr;gap:28px;min-height:0;">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">
+        <div style="display:contents;">
+          <div data-card="idx" style="margin:14px;grid-column:var(--wl-idx-c,9)/span var(--wl-idx-cs,4);grid-row:var(--wl-idx-r,11)/span var(--wl-idx-rs,6);display:var(--wl-idx-d,grid);--fz:var(--wl-idx-fz,1);min-height:0;min-width:0;overflow:hidden;display:var(--wl-idx-d,grid);grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;">
             <div style="background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:22px 26px;display:flex;flex-direction:column;gap:6px;">
-              <div style="font-size:30px;font-weight:520;color:var(--dim,#8e9bb0);">산불위험</div>
-              <div style="font-size:62px;font-weight:660;line-height:1.05;color:{{ fireColor }};">{{ fireLevel }}</div>
-              <div style="font-size:27px;font-weight:520;color:var(--dim,#8e9bb0);">국립산림과학원</div>
+              <div style="font-size:calc(30px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">산불위험</div>
+              <div style="font-size:calc(62px*var(--fz,1));font-weight:660;line-height:1.05;color:{{ fireColor }};">{{ fireLevel }}</div>
+              <div style="font-size:calc(27px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">국립산림과학원</div>
             </div>
             <div style="background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:22px 26px;display:flex;flex-direction:column;gap:6px;">
-              <div style="font-size:30px;font-weight:520;color:var(--dim,#8e9bb0);">미세먼지 PM10</div>
-              <div style="display:flex;align-items:baseline;gap:12px;"><div style="font-size:62px;font-weight:660;line-height:1.05;font-variant-numeric:tabular-nums;">{{ pm10 }}</div><div style="font-size:34px;font-weight:570;color:{{ pmColor }};">{{ pmGrade }}</div></div>
-              <div style="font-size:27px;font-weight:520;color:var(--dim,#8e9bb0);">에어코리아</div>
+              <div style="font-size:calc(30px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">미세먼지 PM10</div>
+              <div style="display:flex;align-items:baseline;gap:12px;"><div style="font-size:calc(62px*var(--fz,1));font-weight:660;line-height:1.05;font-variant-numeric:tabular-nums;">{{ pm10 }}</div><div style="font-size:calc(34px*var(--fz,1));font-weight:570;color:{{ pmColor }};">{{ pmGrade }}</div></div>
+              <div style="font-size:calc(27px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">에어코리아</div>
             </div>
             <div style="background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:22px 26px;display:flex;flex-direction:column;gap:6px;">
-              <div style="font-size:30px;font-weight:520;color:var(--dim,#8e9bb0);">일출 · 일몰</div>
-              <div style="font-size:52px;font-weight:660;line-height:1.05;font-variant-numeric:tabular-nums;">{{ sunrise }} / {{ sunset }}</div>
-              <div style="font-size:27px;font-weight:520;color:var(--dim,#8e9bb0);">야간 활동 기준</div>
+              <div style="font-size:calc(30px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">일출 · 일몰</div>
+              <div style="font-size:calc(52px*var(--fz,1));font-weight:660;line-height:1.05;font-variant-numeric:tabular-nums;">{{ sunrise }} / {{ sunset }}</div>
+              <div style="font-size:calc(27px*var(--fz,1));font-weight:520;color:var(--dim,#8e9bb0);">야간 활동 기준</div>
             </div>
           </div>
 
-          <div style="background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;">
+          <div data-card="ultra" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;grid-column:var(--wl-ultra-c,9)/span var(--wl-ultra-cs,4);grid-row:var(--wl-ultra-r,17)/span var(--wl-ultra-rs,8);display:var(--wl-ultra-d,flex);--fz:var(--wl-ultra-fz,1);min-height:0;min-width:0;overflow:hidden;">
             <div style="display:flex;align-items:baseline;justify-content:space-between;">
-              <div style="font-size:40px;font-weight:660;">6시간 강수예측</div>
-              <div style="font-size:28px;font-weight:570;color:var(--dim,#8e9bb0);">{{ ultraSum }}</div>
+              <div style="font-size:calc(40px*var(--fz,1));font-weight:660;">6시간 강수예측</div>
+              <div style="font-size:calc(28px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);">{{ ultraSum }}</div>
             </div>
             <div style="flex:1;min-height:0;display:flex;">{{ ultraEl }}</div>
+          </div>
+          <div data-card="radar" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;grid-column:var(--wl-radar-c,9)/span var(--wl-radar-cs,4);grid-row:var(--wl-radar-r,17)/span var(--wl-radar-rs,8);display:var(--wl-radar-d,none);--fz:var(--wl-radar-fz,1);min-height:0;min-width:0;overflow:hidden;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;">
+              <div style="font-size:calc(40px*var(--fz,1));font-weight:660;">레이더 영상</div>
+              <div style="font-size:calc(28px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);">기상청 합성 · {{ radarTs }}</div>
+            </div>
+            <div style="flex:1;min-height:0;display:flex;">{{ radarEl }}</div>
+          </div>
+          <div data-card="typhoon" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;grid-column:var(--wl-typhoon-c,9)/span var(--wl-typhoon-cs,4);grid-row:var(--wl-typhoon-r,17)/span var(--wl-typhoon-rs,8);display:var(--wl-typhoon-d,none);--fz:var(--wl-typhoon-fz,1);min-height:0;min-width:0;overflow:hidden;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;">
+              <div style="font-size:calc(40px*var(--fz,1));font-weight:660;">태풍 현황</div>
+              <div style="font-size:calc(28px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);">기상청 태풍정보</div>
+            </div>
+            <div style="flex:1;min-height:0;display:flex;">{{ typhoonEl }}</div>
+          </div>
+          <div data-card="tide" style="margin:14px;background:var(--panel,#151b26);border:2px solid var(--line,#28313f);border-radius:22px;padding:26px 30px;display:flex;flex-direction:column;gap:16px;min-height:0;grid-column:var(--wl-tide-c,9)/span var(--wl-tide-cs,4);grid-row:var(--wl-tide-r,17)/span var(--wl-tide-rs,8);display:var(--wl-tide-d,none);--fz:var(--wl-tide-fz,1);min-height:0;min-width:0;overflow:hidden;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;">
+              <div style="font-size:calc(40px*var(--fz,1));font-weight:660;">물때 · 파주 두포리</div>
+              <div style="font-size:calc(28px*var(--fz,1));font-weight:570;color:var(--dim,#8e9bb0);">국립해양조사원 · 강화대교 +2h</div>
+            </div>
+            <div style="flex:1;min-height:0;display:flex;">{{ tideEl }}</div>
           </div>
         </div>
       </div>
@@ -1242,18 +1617,18 @@ http://scripts.sil.org/OFL
         <div sc-camel-on-click="{{ s.go }}" style="cursor:pointer;border-radius:18px;padding:12px 12px;display:flex;flex-direction:column;justify-content:center;gap:5px;background:{{ s.bg }};border:3px solid {{ s.border }};">
           <div style="display:flex;align-items:center;gap:10px;">
             <div style="width:14px;height:14px;border-radius:50%;background:{{ s.dot }};flex:none;"></div>
-            <div style="font-size:36px;font-weight:660;color:{{ s.fg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s.name }}</div>
+            <div style="font-size:calc(36px*var(--fz,1));font-weight:660;color:{{ s.fg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s.name }}</div>
           </div>
           <div style="display:flex;align-items:baseline;gap:10px;">
-            <div style="font-size:44px;font-weight:660;line-height:1;font-variant-numeric:tabular-nums;color:{{ s.fg }};">{{ s.temp }}°</div>
-            <div style="font-size:28px;font-weight:520;color:{{ s.sub }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s.tag }}</div>
+            <div style="font-size:calc(44px*var(--fz,1));font-weight:660;line-height:1;font-variant-numeric:tabular-nums;color:{{ s.fg }};">{{ s.temp }}°</div>
+            <div style="font-size:calc(28px*var(--fz,1));font-weight:520;color:{{ s.sub }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s.tag }}</div>
           </div>
-          <div style="font-size:25px;font-weight:{{ s.rainWeight }};color:{{ s.rainColor }};opacity:{{ s.rainOpacity }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1;">{{ s.rainTxt }}</div>
+          <div style="font-size:calc(25px*var(--fz,1));font-weight:{{ s.rainWeight }};color:{{ s.rainColor }};opacity:{{ s.rainOpacity }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1;">{{ s.rainTxt }}</div>
         </div>
       </sc-for>
     </div>
 
-    <div style="height:38px;flex:none;display:flex;align-items:center;gap:28px;font-size:26px;font-weight:500;color:var(--dim,#8e9bb0);">
+    <div style="height:38px;flex:none;display:flex;align-items:center;gap:28px;font-size:calc(26px*var(--fz,1));font-weight:500;color:var(--dim,#8e9bb0);">
       <div>데이터 · 기상청 / 행정안전부 / 한강홍수통제소 / 에어코리아 / 국립산림과학원</div>
       <div style="width:2px;height:22px;background:var(--line,#28313f);"></div>
       <div>제작 · 소방위 한경승 · 동두천소방서 &nbsp;|&nbsp; 도움 · 소방장 온재웅, 이국신</div>
@@ -1267,7 +1642,7 @@ http://scripts.sil.org/OFL
 const C = {
   red:'#ff4d4d', amber:'var(--cAmber,#ffb020)', green:'var(--cGreen,#2ad19a)', blue:'var(--cBlue,#54aaff)', dim:'#8e9bb0'
 };
-const NAMES = ((typeof window!=='undefined'&&window.REGION_CONF&&window.REGION_CONF.order) || ['고양','일산','파주','연천','의정부','양주','동두천','포천','가평','남양주','구리']);
+const NAMES = (function(){ var RC=(typeof window!=='undefined'&&window.REGION_CONF)||{}; var base=RC.order||['고양','일산','파주','연천','의정부','양주','동두천','포천','가평','남양주','구리']; var sc=null; try{ sc=new URLSearchParams(location.search).get('scope'); }catch(e){} var g=RC.scopes||{}; try{ if(sc && !g[sc] && g['경기'+sc]) sc='경기'+sc; }catch(e){} try{ if(!sc && typeof localStorage!=='undefined'){ var v=localStorage.getItem('ggScope'); if(v==='전체') return base; if(v && g[v]) sc=v; } }catch(e){} try{ if(!sc) sc=(RC.hostScope||{})[location.hostname.split('.')[0]]||null; }catch(e){} if(sc && g[sc]) base=base.filter(function(n){ return g[sc].indexOf(n)>=0; }); return base; })();
 const SKY = [['맑음','☀️'],['구름많음','⛅'],['흐림','☁️'],['비','🌧️'],['소나기','⛈️']];
 const RIVERS = {
   고양:[['창릉천 화전교',2.1,4.5],['공릉천 신원교',1.8,4.2]],
@@ -1330,11 +1705,13 @@ const REGIME = { 2:{rain:26.5,wind:13.4,temp:24.2,humid:94}, 7:{rain:11.2,wind:8
 const EXT = () => (typeof window !== 'undefined' && window.WALL_DATA) || {};
 
 class Component extends DCLogic {
-  state = { idx:5, now:new Date(), started:Date.now(), playing:true, theme:'dark' };
+  state = { idx:(function(){ var RC=window.REGION_CONF||{}; var i=NAMES.indexOf(RC.home); return i>=0 ? i : 0; })(), now:new Date(), started:Date.now(), playing:true, theme:'dark' };
 
   componentDidMount(){
     this.setState({ theme: this.props.startTheme || 'dark' });
     this.fit(); window.addEventListener('resize', this._fit = ()=>this.fit());
+    /* 배치 편집기(wall_layout.js)가 켜지면 순환을 멈추고, 끄면 편집 전 상태로 복원 */
+    window.addEventListener('wall:edit', this._edit = (e)=>{ if(e.detail.on){ this._wasPlaying=this.state.playing; this.setState({playing:false}); } else { this.setState({playing:this._wasPlaying!==false}); } });
     this.timer = setInterval(()=>{
       const rot = (Math.max(6, Math.min(15, Math.round(170 / Math.max(1, NAMES.length))))) * 1000;
       const st = this.state;
@@ -1525,7 +1902,7 @@ class Component extends DCLogic {
     const cell=(o,i)=>{
       const wet=(o.rain||0)>0, hi=(o.pop||0)>=60;
       return R('div',{key:i,style:{flex:'1 1 0',minWidth:0,display:'flex',flexDirection:'column',
-        alignItems:'center',justifyContent:'center',gap:'6px',padding:'10px 4px',borderRadius:'14px',
+        alignItems:'center',justifyContent:'space-evenly',gap:'6px',padding:'10px 4px',borderRadius:'14px',
         background:(wet?'rgba(84,170,255,.10)':'transparent')}},
         R('div',{style:{fontSize:'27px',fontWeight:570,color:DIM,whiteSpace:'nowrap'}}, o.time||'-'),
         R('div',{style:{fontSize:'46px',fontWeight:660,lineHeight:1.2,whiteSpace:'nowrap',
@@ -1543,6 +1920,57 @@ class Component extends DCLogic {
     };
     return R('div',{style:{flex:1,minHeight:0,display:'flex',alignItems:'stretch',gap:'6px'}},
       rows.map(cell));
+  }
+
+  radarEl(){
+    const R = window.React.createElement, DIM='var(--dim,#8e9bb0)';
+    const ki=(EXT().kmaImages)||{}, ok=ki.radar && ki.radar.ok;
+    if(!ok) return R('div',{style:{flex:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'38px',fontWeight:570,color:DIM}},'레이더 영상 없음');
+    /* 이미지 주소는 data.js 를 받는 곳과 같은 폴더 — 5분마다 ts 가 바뀌어 캐시가 갈린다 */
+    return R('div',{style:{flex:1,minHeight:0,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',borderRadius:'16px',background:'var(--panel2,#1b2230)'}},
+      R('img',{src:'images/kma_radar.png?t='+encodeURIComponent(ki.radar.ts||''),alt:'레이더 합성',
+        style:{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',display:'block'}}));
+  }
+  typhoonEl(){
+    const R = window.React.createElement, DIM='var(--dim,#8e9bb0)', GREEN='var(--cGreen,#2ad19a)', RED='var(--cRed,#ff5a5a)', AMBER='var(--cAmber,#ffb020)';
+    const list=(EXT().typhoon)||[];
+    if(!list.length) return R('div',{style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'12px'}},
+      R('div',{style:{fontSize:'64px',fontWeight:660,color:GREEN}},'활동 태풍 없음'),
+      R('div',{style:{fontSize:'28px',fontWeight:520,color:DIM}},'기상청 태풍정보'));
+    const rows=list.slice(0,2).map((t,i)=>{
+      const near=!!t.near_kr, col=near?RED:(String(t.eff)==='4'?DIM:AMBER), n=t.now||{};
+      return R('div',{key:i,style:{display:'flex',flexDirection:'column',gap:'8px',padding:'14px 20px',borderRadius:'16px',background:'var(--panel2,#1b2230)',borderLeft:'12px solid '+col}},
+        R('div',{style:{display:'flex',alignItems:'baseline',gap:'16px'}},
+          R('div',{style:{fontSize:'44px',fontWeight:660,whiteSpace:'nowrap'}},'제'+(t.seq||'?')+'호 '+(t.name||'')),
+          R('div',{style:{fontSize:'32px',fontWeight:570,color:col,whiteSpace:'nowrap'}}, t.eff_txt||'')),
+        R('div',{style:{display:'flex',gap:'26px',fontSize:'30px',fontWeight:520,color:DIM,flexWrap:'wrap'}},
+          R('span',null,'중심기압 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.ps!=null?n.ps+'hPa':'-'))),
+          R('span',null,'최대풍속 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.ws!=null?n.ws+'m/s':'-'))),
+          R('span',null,'이동 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.dir||'-')+' '+(n.sp!=null?n.sp+'km/h':''))),
+          R('span',null,'위치 ', R('b',{style:{color:'var(--fg,#f2f5fa)'}},(n.lat!=null?(n.lat+'N '+n.lon+'E'):'-')))));
+    });
+    return R('div',{style:{flex:1,minHeight:0,display:'flex',flexDirection:'column',gap:'14px',justifyContent:'center'}},rows);
+  }
+  tideEl(){
+    const R = window.React.createElement, DIM='var(--dim,#8e9bb0)', BLUE='var(--cBlue,#54aaff)';
+    const td=(EXT().tide)||null;
+    if(!td || !td.events || !td.events.length) return R('div',{style:{flex:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'38px',fontWeight:570,color:DIM}},'물때 자료 없음');
+    const now=new Date(), hm=now.getHours()*60+now.getMinutes();
+    const toMin=s=>{ const m=String(s||'').match(/^(\d+):(\d+)$/); return m?(+m[1]*60+ +m[2]):null; };
+    /* 다음 고조/저조 하나를 강조 — 파주 두포리 시각(dupo) 기준 */
+    let nextIdx=-1; td.events.forEach((e,i)=>{ const mm=toMin(e.dupo); if(nextIdx<0 && mm!=null && mm>=hm) nextIdx=i; });
+    const cells=td.events.map((e,i)=>{
+      const hi=e.kind==='high', isNext=i===nextIdx;
+      return R('div',{key:i,style:{flex:'1 1 0',minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'6px',padding:'12px 6px',borderRadius:'14px',
+        background:isNext?'rgba(84,170,255,.14)':'transparent',border:isNext?'3px solid '+BLUE:'3px solid transparent'}},
+        R('div',{style:{fontSize:'28px',fontWeight:570,color:hi?BLUE:DIM,whiteSpace:'nowrap'}}, hi?'만조':'간조'),
+        R('div',{style:{fontSize:'50px',fontWeight:660,lineHeight:1.1,whiteSpace:'nowrap'}}, e.dupo||'-'),
+        R('div',{style:{fontSize:'26px',fontWeight:520,color:DIM,whiteSpace:'nowrap'}}, (e.cm!=null?Math.round(e.cm)+'cm':'-')));
+    });
+    return R('div',{style:{flex:1,minHeight:0,display:'flex',flexDirection:'column',gap:'10px'}},
+      R('div',{style:{display:'flex',alignItems:'stretch',gap:'6px',flex:1}},cells),
+      R('div',{style:{fontSize:'24px',fontWeight:520,color:DIM,textAlign:'right'}},
+        (td.target||'')+' · '+(td.station||'')+' +'+(td.shift_min!=null?Math.round(td.shift_min/60):2)+'h · 물때 '+(td.spring||'-')));
   }
 
   // 특보는 실황값에서 파생 — 상황단계·배너·레일이 모두 이 결과를 공유한다
@@ -1780,6 +2208,8 @@ class Component extends DCLogic {
       msgs: msgs.slice(0,3), noMsg: msgs.length === 0, msgCount: msgs.length,
       risks: risks.slice(0,3), noRisk: risks.length === 0, riskCount: risks.length,
       ultraEl: this.ultraEl((EXT().ultra||{})[s.name]),
+      radarEl: this.radarEl(), typhoonEl: this.typhoonEl(), tideEl: this.tideEl(),
+      radarTs: (((EXT().kmaImages||{}).radar||{}).ts||'').slice(11,16),
       ultraSum: (function(a){ if(!a||!a.length) return '\u2014';
         var t=a.reduce(function(x,o){ return x+(o.rain||0); },0);
         var p=a.reduce(function(x,o){ return Math.max(x,o.pop||0); },0);
@@ -1815,7 +2245,8 @@ class Component extends DCLogic {
   /* 관서 목록·행정명은 region.js(window.REGION_CONF)에서. 지역이 바뀌면 그 파일만 갈아끼운다.
      region.js가 없으면 지금까지 쓰던 경기북부 값으로 동작한다(하위호환). */
   var RC=(typeof window!=='undefined'&&window.REGION_CONF)||{};
-  var NAMES=RC.order||['고양','일산','파주','연천','의정부','양주','동두천','포천','가평','남양주','구리'];
+  /* 권역 필터 — 화면 컴포넌트의 NAMES와 반드시 같은 규칙일 것(둘이 다르면 데이터-화면이 어긋난다) */
+  var NAMES=(function(){ var RC=(typeof window!=='undefined'&&window.REGION_CONF)||{}; var base=RC.order||['고양','일산','파주','연천','의정부','양주','동두천','포천','가평','남양주','구리']; var sc=null; try{ sc=new URLSearchParams(location.search).get('scope'); }catch(e){} var g=RC.scopes||{}; try{ if(sc && !g[sc] && g['경기'+sc]) sc='경기'+sc; }catch(e){} try{ if(!sc && typeof localStorage!=='undefined'){ var v=localStorage.getItem('ggScope'); if(v==='전체') return base; if(v && g[v]) sc=v; } }catch(e){} try{ if(!sc) sc=(RC.hostScope||{})[location.hostname.split('.')[0]]||null; }catch(e){} if(sc && g[sc]) base=base.filter(function(n){ return g[sc].indexOf(n)>=0; }); return base; })();
   var ADMIN=RC.admin||{고양:'고양시',파주:'파주시',연천:'연천군',의정부:'의정부시',양주:'양주시',동두천:'동두천시',포천:'포천시',가평:'가평군',남양주:'남양주시',구리:'구리시'};
   /* SIG = 실제 시군(일산은 고양의 일부라 제외). 하천 표시명에서 '괄호 안이 시군인지' 판정용. */
   /* 관서명 → 데이터상의 시군명. 소방서가 시(市)를 나눠 맡는 곳(분당·송탄·일산)은
@@ -1825,6 +2256,10 @@ class Component extends DCLogic {
        읽도록 바꿔, 관서가 늘어도 코드를 안 고치게 했다. */
   var ALIAS=((typeof window!=='undefined'&&window.REGION_CONF)||{}).alias||{'일산':'고양'};
   var SIG=NAMES.filter(function(n){ return !ALIAS[n]; });
+  /* 이름에서 시군명을 떼어낼 땐 '권역으로 거른 목록'이 아니라 전체 시군을 기준으로 한다.
+     NAMES가 선택 권역만 담게 된 뒤(2026-09-17), 남부를 고르면 임진강 지점의 '연천'이
+     안 떼어져 '연천 필승교'가 상단 카드 칸을 넘쳤다. */
+  var SIG_ALL=(RC.order||NAMES).filter(function(n){ return !ALIAS[n]; });
   function nv(x){ return (x==null||x===''||isNaN(x))?null:+x; }
   function sig(nm){ return ALIAS[nm]||nm; }
   /* 표시명: 괄호 안(예 '임진강 (연천 임진교)'→'연천 임진교'). 단 괄호가 시군뿐이면
@@ -1837,7 +2272,7 @@ class Component extends DCLogic {
   /* 상단바 감시카드용 짧은 이름 — '임진강 (연천 필승교)' → '필승교'.
      칸이 좁아 시군명까지 넣으면 넘친다. 어차피 고정 지점이라 어디인지 다 안다. */
   function keyName(nm){ var s=shortRiver(nm).split(' ');
-    if(s.length>1 && SIG.indexOf(s[0])>=0) s.shift();
+    if(s.length>1 && SIG_ALL.indexOf(s[0])>=0) s.shift();
     return s.join(' '); }
   var ICON={'맑음':'☀️','구름많음':'⛅','구름조금':'🌤️','흐림':'☁️','비':'🌧️','소나기':'🌦️','빗방울':'🌧️','비/눈':'🌨️','눈':'❄️','눈날림':'🌨️','진눈깨비':'🌨️','뇌우':'⛈️'};
   function wicon(w){ return ICON[w]||'☁️'; }
@@ -1851,10 +2286,13 @@ class Component extends DCLogic {
     if(/맑/.test(w)) return night?'moon':'sun';
     return 'cloud'; }
   /* 지도.html _canonRegion 동일 — 특보구역명 → 관서 정규화 */
-  function canon(name){ var n=String(name||'').trim(); if(!n) return null;
-    if(n==='경기북부'||n==='경기남부'||n==='경기도'||n==='수도권'||n==='경기') return '경기도';
+  function canon(name){ var n=String(name||'').trim(); if(!n) return null; var UNITS=RC.order||[];
+    /* 시도 전역 표기(경기도·강원도·서울…)는 '경기도' 표식으로 — 아래 warnsByStation 이 전 관서 발효로 푼다 */
+    if(n==='경기북부'||n==='경기남부'||n==='경기도'||n==='수도권'||n==='경기'||(RC.wideNames||[]).indexOf(n)>=0) return '경기도';
+    if(UNITS.indexOf(n)>=0) return n;   /* 관서 이름 그대로면 그대로 — 광역시 '중구'를 '중'으로 깎지 않게 */
     n=n.replace(/(동북부|서북부|동남부|서남부|남부|북부|동부|서부|중부|내륙|산지|앞바다|해안)/g,'');
     n=n.replace(/(특별자치시|특별자치도|특별시|광역시|자치시|자치도)/g,'');
+    if(UNITS.indexOf(n)>=0) return n;
     n=n.replace(/(시|군|구|도)$/,''); return n.trim()||null; }
   /* 특보 종류 → 색/배경/심각도(sev). 급성경보=3(심각·빨강), 급성주의보=2(경계·주황),
      만성(폭염/한파/건조/황사)=1(주의) — 상황실 24h 빨강맥동 방지. 디자인 팔레트와 동일. */
@@ -1915,20 +2353,22 @@ class Component extends DCLogic {
     var RCODE=((typeof window!=='undefined'&&window.REGION_CONF)||{}).riverCodes||{};
     (D.rivers||[]).forEach(function(rv){
       var sg=rv.sigun;
+      /* 댐 = api:'dam'(원천 플래그). 댐은 '위험수위 대비 %'가 무의미(상시만수위 유지가 정상)라
+         화면에서 저수율·유입·방류로 따로 표기하고, 침수판단(worst)에서는 제외한다. */
+      var isDam=(rv.api==='dam')||!!rv.dam_info, di=rv.dam_info||{};
+      /* ⚠ 반드시 이 entry(화면용 배열)를 넣을 것 — 원시 rv를 넣으면 이름 없는 '0.00m' 행이 된다.
+         2026-08-25 평택·송탄에서 실제 발생(코드 지정 관서만 원시 rv가 들어가고 있었다). */
+      var entry=[shortRiver(rv.name), nv(rv.value), nv(rv.danger), (isDam?'dam':''), (rv.level||'safe'),
+        nv(rv.delta_1h), nv(rv.warning), nv(di.storage_rate), nv(di.inflow),
+        nv(di.total_outflow!=null?di.total_outflow:di.outflow)];
       /* 코드로 지정된 관서에 먼저 넣는다. 지정 관서가 하나라도 있으면 시군 배분은 건너뛴다. */
       var _placed=false;
       NAMES.forEach(function(nm){ var cs=RCODE[nm];
-        if(cs && cs.indexOf(String(rv.code))>=0){ rivers[nm].push(rv); _placed=true; } });
+        if(cs && cs.indexOf(String(rv.code))>=0){ rivers[nm].push(entry); _placed=true; } });
       if(_placed) return;
       if(RCODE[sg]) return;   /* 그 시군은 코드로만 받는다 — 남의 하천이 섞이지 않게 */
       if(!sg){ var best=''; SIG.forEach(function(x){ if(String(rv.name||'').indexOf(x)>=0 && x.length>best.length) best=x; }); sg=best; }
       if(!sg) return;
-      /* 댐 = api:'dam'(원천 플래그). 댐은 '위험수위 대비 %'가 무의미(상시만수위 유지가 정상)라
-         화면에서 저수율·유입·방류로 따로 표기하고, 침수판단(worst)에서는 제외한다. */
-      var isDam=(rv.api==='dam')||!!rv.dam_info, di=rv.dam_info||{};
-      var entry=[shortRiver(rv.name), nv(rv.value), nv(rv.danger), (isDam?'dam':''), (rv.level||'safe'),
-        nv(rv.delta_1h), nv(rv.warning), nv(di.storage_rate), nv(di.inflow),
-        nv(di.total_outflow!=null?di.total_outflow:di.outflow)];
       NAMES.forEach(function(nm){ if(sig(nm)===sg && nm!=='일산') rivers[nm].push(entry); });  /* 시군 관서에만(일산 중복 방지) */
     });
     /* 정렬: 공식 경보 → 주의보 → 하천(위험수위 대비 높은 순) → 댐. 벽면 가독성 위해 최대 5행. */
@@ -1973,7 +2413,9 @@ class Component extends DCLogic {
       });
     });
     return { stations:stations, rivers:rivers, msgs:msgs, warns:warnsByStation(D.warnings),
-             keyRivers:keyRivers, ultra:ultra, updated:D.updated };
+             keyRivers:keyRivers, ultra:ultra, updated:D.updated,
+             /* 새 카드 3장(레이더·태풍·물때, 2026-09-18) 원시 데이터 통과 */
+             kmaImages:(D.kma_images||{}), typhoon:(D.typhoon||[]), tide:(D.tide||null) };
   }
   /* ── 위험구역: 구글시트 관서별 탭 (지도.html loadRiskSheet 포팅, name/type/note만) ── */
   function parseCSV(txt){ var lines=txt.replace(/\r/g,'').split('\n').filter(function(l){return l.length;});

@@ -83,6 +83,10 @@ NORTH_REG_MAP = {
     'L1011400': '가평',  'L1011500': '고양',  'L1011600': '양주',
     'L1011700': '의정부', 'L1011800': '파주',  'L1012200': '구리',
     'L1012300': '남양주',
+    # 2026-05-31 13:30 기상청 특보구역 개편 — 파주가 새 코드(본체+세부 3구역)로 바뀌었다.
+    # 옛 코드(L1011800)는 만료. 표가 옛 코드뿐이라 6~9월 API허브 경로에서 파주 특보가
+    # '관할'로 안 잡혔다(2026-09-18 전국 확장 작업 중 발견). 옛 코드는 무해하니 둔다.
+    'L1013700': '파주', 'L1013710': '파주', 'L1013720': '파주', 'L1013730': '파주',
     'L1010000': '경기도(전체)',  # 광역 발표
 }
 
@@ -250,6 +254,10 @@ SOUTH_REG_MAP = {
     'L1012700': '의왕', 'L1012800': '하남', 'L1012900': '용인', 'L1013000': '이천',
     'L1013100': '안성', 'L1013200': '화성', 'L1013300': '여주', 'L1013400': '광주',
     'L1013500': '양평',
+    # 2026-05-31 특보구역 개편 — 용인·여주·양평 새 코드(본체+세부). 위 NORTH_REG_MAP 주석 참조.
+    'L1013800': '용인', 'L1013810': '용인', 'L1013820': '용인', 'L1013830': '용인',
+    'L1013900': '여주', 'L1013910': '여주', 'L1013920': '여주',
+    'L1014400': '양평', 'L1014410': '양평', 'L1014420': '양평',
     'L1010000': '경기도(전체)',
 }
 
@@ -354,3 +362,30 @@ def get(name):
     if name not in PROFILES:
         raise SystemExit(f'알 수 없는 지역 프로파일: {name} (가능: {", ".join(PROFILES)})')
     return PROFILES[name]
+
+# ══════════════════════════════════════════════════════════════
+# 생성 프로파일 — tools/profiles/<key>.json (전국 확장, 2026-09-18)
+#   build_region_profile.py --sido <key> 가 원장에서 기계로 만든다. 손으로 고치지 말 것.
+#   손으로 쓴 north·south 와 키가 겹치면 예외 — 어느 쪽이 정본인지 헷갈리면 안 된다.
+# ══════════════════════════════════════════════════════════════
+import json as _json
+import pathlib as _pl
+
+_PROFILE_DIR = _pl.Path(__file__).resolve().parent / 'profiles'
+
+
+def _from_generated(j):
+    prof = dict(j)
+    prof['aws_stations'] = {a: [tuple(x) for x in lst] for a, lst in j['aws_stations'].items()}
+    prof['flood_keywords'] = set(j['flood_keywords'])
+    prof['regions'] = [{'name': r['name'], 'nx': r['nx'], 'ny': r['ny'], 'sgg': r['sgg']}
+                       for r in j['regions']]
+    return prof
+
+
+if _PROFILE_DIR.is_dir():
+    for _f in sorted(_PROFILE_DIR.glob('*.json')):
+        _j = _json.loads(_f.read_text(encoding='utf-8'))
+        if _j.get('key') in PROFILES:
+            raise SystemExit(f'프로파일 키 충돌: {_j.get("key")} ({_f.name})')
+        PROFILES[_j['key']] = _from_generated(_j)

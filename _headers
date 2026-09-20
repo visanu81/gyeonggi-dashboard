@@ -15,6 +15,12 @@
   Cache-Control: no-store, must-revalidate
   Access-Control-Allow-Origin: *
 
+# 시도별 데이터(전국 확장, data-강원=data-gangwon.js …) — 작업장(weather.visanu81.workers.dev)의 시도판이
+# 다른 주소에서 60초 fetch 로 읽으므로 CORS 허용이 없으면 첫 로드 뒤 갱신이 멈춘다(2026-09-20 발견)
+/data-*.js
+  Cache-Control: no-store, must-revalidate
+  Access-Control-Allow-Origin: *
+
 /manifest.json
   Cache-Control: no-cache, must-revalidate
 

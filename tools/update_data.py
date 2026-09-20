@@ -192,7 +192,27 @@ PM_STATIONS = P['pm_stations']
 # 이 상황판이 담당하는 시군 집합 — 특보·재난문자·산불통계 필터의 공통 기준.
 SIGUN_SET = {r['name'] for r in REGIONS}
 # 시(市)가 아니라 군(郡)인 곳 — 재난문자 발신처 표기('연천군' vs '파주시')에 쓴다.
-GUN_NAMES = {'연천', '가평', '양평'} & SIGUN_SET
+GUN_NAMES = set(P.get('gun_names') or ['연천', '가평', '양평']) & SIGUN_SET
+# ── 시도 상수 (전국 확장 1단계, 2026-09-18) ─────────────────────────────
+# 경기 전용으로 박혀 있던 값들. 손으로 쓴 경기 프로파일에는 이 키가 없으므로 기본값이
+# 경기 값이다 — 운영(북부·남부) 동작은 한 글자도 안 바뀐다. 생성 프로파일(tools/profiles/*.json)은
+# 자기 시도 값을 들고 온다.
+SIDO_WORDS = list(P.get('sido_words') or ['경기'])          # 주소·발신처가 이 말로 시작하면 우리 시도
+WIDE_LABEL = P.get('wide_label', '경기도')                   # 시도 전역 발표의 표시명
+WRN_STN = int(P.get('wrn_stn', 109))                        # 기상청 특보 API stnId (109 수도권·105 강원…)
+_wp = P.get('wrn_prefix', 'L101')
+WRN_PREFIX = tuple(_wp) if isinstance(_wp, (list, tuple)) else _wp   # 시도 육상 특보구역 코드 접두(통합시는 둘)
+PM_SIDO = P.get('pm_sido', '경기')                           # 에어코리아 sidoName
+# 발신처 '경기도 광주시'·'경기북부 동두천시'·'강원특별자치도 춘천시' 에서 시군을 뽑는 정규식
+_SIDO_SIGUN_RE = _re.compile('(?:' + '|'.join(_re.escape(w) for w in SIDO_WORDS)
+                             + r')(?:특별자치도|특별자치시|광역시|특별시|도|북부|남부)*\s*([가-힣]+?)(시|군|구)')
+UNIT_ALIAS = P.get('unit_alias') or {}                      # 새 이름 → 프로파일 단위 (인천 제물포구→중구)
+
+
+def _unit_from_match(m):
+    """정규식 결과 → 프로파일 단위명. 시·군은 접미사를 뗀 이름('춘천'), 구는 붙인 이름('남동구')."""
+    name = m.group(1) if m.group(2) in ('시', '군') else m.group(1) + m.group(2)
+    return UNIT_ALIAS.get(name, name)
 
 
 
@@ -229,6 +249,104 @@ def _aws_num(v):
     return None if f < 0 else f
 
 
+# ============================================================
+# 0. 전국 공통 자료 공유 캐시 (2026-09-19 전국 확장 — 공공데이터포털 한도 대책)
+#
+# 특보·재난문자·산불·AWS·하천수위·미세먼지는 '전국 자료를 통째로' 받아 시도별로 골라 쓰는데,
+# 시도 프로파일이 각자 부르면 같은 응답을 시도 수만큼 다시 받는다(경기 둘일 땐 2배, 17개면 17배 —
+# 하루 9만 회, 포털 한도 초과). 여기서는 한 회차에 한 번만 받아 .tmp/shared/ 에 두고 나눠 쓴다.
+#   · 프로파일들이 동시에 뜨므로 파일 잠금으로 '먼저 온 쪽이 받고 나머지는 기다렸다 읽는다'.
+#   · 응답 원문(바이트)만 저장 — 파싱·관할 판정은 프로파일마다 지금처럼 각자 한다.
+#   · 실패 응답은 저장하지 않는다(호출측이 예외를 받아 이전 값 보존).
+#   · 1분 알리미(check_warnings.py)는 SHARED_MAX_AGE=0 으로 항상 새로 받고 캐시도 갱신해 준다.
+# ============================================================
+import base64 as _b64
+import os as _os
+import time as _time
+
+SHARED_DIR = ROOT / '.tmp' / 'shared'
+SHARED_MAX_AGE = None        # None=호출측 기본값, 0=항상 새로 받기(알리미), 숫자=초
+
+
+class _CachedResp:
+    """requests.Response 의 최소 흉내 — 호출측 코드를 안 바꾸기 위해."""
+    def __init__(self, content, status_code, encoding=None):
+        self.content = content
+        self.status_code = status_code
+        self.encoding = encoding
+
+    @property
+    def text(self):
+        return self.content.decode(self.encoding or 'utf-8', errors='replace')
+
+    def json(self):
+        return json.loads(self.content.decode(self.encoding or 'utf-8', errors='replace'))
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise requests.HTTPError(f'{self.status_code} Server Error (cached fetch)')
+
+
+def shared_get(key, url, params=None, timeout=15, max_age=240, headers=None):
+    """전국 공통 GET — key 별로 .tmp/shared/<key>.json 에 max_age 초 동안 공유.
+    같은 key 를 프로파일마다 다른 매개변수로 부르면 안 된다(stnId 처럼 다르면 key 에 넣을 것)."""
+    age_limit = SHARED_MAX_AGE if SHARED_MAX_AGE is not None else max_age
+    SHARED_DIR.mkdir(parents=True, exist_ok=True)
+    path = SHARED_DIR / f'{key}.json'
+    lock = SHARED_DIR / f'{key}.lock'
+
+    def _read():
+        try:
+            j = json.loads(path.read_text(encoding='utf-8'))
+            if _time.time() - j['ts'] <= age_limit:
+                return _CachedResp(_b64.b64decode(j['b64']), j['status'])
+        except Exception:
+            pass
+        return None
+
+    cached = _read()
+    if cached is not None and age_limit > 0:
+        return cached
+
+    # 잠금 — 먼저 온 프로세스가 받는다. 다른 프로세스는 최대 25초 기다렸다가 캐시를 읽는다.
+    got_lock = False
+    try:
+        try:
+            if lock.exists() and _time.time() - lock.stat().st_mtime > 90:
+                lock.unlink()                       # 죽은 프로세스가 남긴 잠금
+            fd = _os.open(str(lock), _os.O_CREAT | _os.O_EXCL | _os.O_WRONLY)
+            _os.close(fd)
+            got_lock = True
+        except FileExistsError:
+            for _ in range(125):
+                _time.sleep(0.2)
+                cached = _read()
+                if cached is not None and age_limit > 0:
+                    return cached
+                if not lock.exists():
+                    break
+        # API허브가 가끔 첫 응답을 15초 넘게 끌다 끊는다(2026-09-20 실측: 직접 호출 1~3초, 간헐적 ReadTimeout).
+        # 한 번 더, 두 배 여유로 다시 묻는다 — 전국 공통 자료라 한 번 실패하면 시도 15개가 같이 빈다.
+        try:
+            r = requests.get(url, params=params, timeout=timeout, headers=headers)
+        except requests.exceptions.Timeout:
+            _time.sleep(1.5)
+            r = requests.get(url, params=params, timeout=timeout * 2, headers=headers)
+        if r.status_code == 200:
+            try:
+                _atomic_write_text(path, json.dumps({'ts': _time.time(), 'status': r.status_code,
+                                                     'b64': _b64.b64encode(r.content).decode('ascii')}))
+            except Exception:
+                pass
+        return _CachedResp(r.content, r.status_code)
+    finally:
+        if got_lock:
+            try:
+                lock.unlink()
+            except Exception:
+                pass
+
+
 def fetch_aws_rain():
     """AWS 매분자료 1회 호출로 전 관서 실측 강수·돌풍 수집.
 
@@ -243,7 +361,7 @@ def fetch_aws_rain():
     tm = (datetime.now() - timedelta(minutes=10)).strftime('%Y%m%d%H%M')
     url = ('https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-aws2_min'
            f'?tm2={tm}&stn=0&disp=0&help=0&authKey={KMA_APIHUB_KEY}')
-    r = requests.get(url, timeout=15)
+    r = shared_get('aws_min', url, timeout=15, max_age=240)
     r.raise_for_status()
     r.encoding = 'euc-kr'
     text = r.text
@@ -262,9 +380,11 @@ def fetch_aws_rain():
             stn = int(f[1])
         except ValueError:
             continue
-        obs[stn] = {'wds': _aws_num(f[4]), 'wss': _aws_num(f[5]), 'ws10': _aws_num(f[7]),
+        obs[stn] = {'wds': _aws_num(f[4]), 'wss': _aws_num(f[5]), 'wd10': _aws_num(f[6]),
+                    'ws10': _aws_num(f[7]), 'ta': _aws_num(f[8]),
                     'rn15': _aws_num(f[10]), 'rn60': _aws_num(f[11]),
-                    'rn12h': _aws_num(f[12]), 'rnday': _aws_num(f[13])}
+                    'rn12h': _aws_num(f[12]), 'rnday': _aws_num(f[13]),
+                    'hm': _aws_num(f[14]) if len(f) > 14 else None, 'tm': f[0]}
     if not obs:
         raise RuntimeError('AWS 응답에 관측 지점 없음')
 
@@ -299,15 +419,40 @@ def fetch_aws_rain():
         return {'wss': o['wss'], 'wds': o.get('wds'), 'ws10': o.get('ws10'),
                 'station': sname, 'stn': stn}
 
+    def pick_obs(area):
+        """기온·습도·풍향의 대표 지점 — 목록의 첫 지점(대표 관측소)부터, 기온이 있는 곳.
+        강수 대표(가장 많이 온 곳)와 다를 수 있다 — 기온은 국지 최악값이 아니라 대표값이 맞다."""
+        po = None
+        for stn, sname in AWS_STATIONS.get(area, []):
+            o = obs.get(stn)
+            if not o:
+                continue
+            if po is None and o.get('ta') is not None and -60 < o['ta'] < 60:
+                po = {'ta': o['ta'], 'hm': o.get('hm'), 'wd10': o.get('wd10'), 'ws10': o.get('ws10'),
+                      'tm': o.get('tm'), 'station': sname, 'stn': stn}
+            elif po is not None:
+                # 대표 지점에 습도·바람 센서가 없으면(양주 남면처럼) 관할 안 다른 지점 값으로 채운다
+                for k in ('hm', 'wd10', 'ws10'):
+                    if po.get(k) is None and o.get(k) is not None:
+                        po[k] = o[k]
+        return po
+
     out = {}
     for area in AWS_STATIONS:
         best, ok = pick(area)
         total = len(AWS_STATIONS.get(area, []))
         alt = None
-        if best is None and area in AWS_FALLBACK:      # 일산처럼 관측소가 전멸한 경우
-            alt = AWS_FALLBACK[area]
-            best, ok = pick(alt)                       # ⚠ ok도 대체분으로 갱신(안 하면 화면에 '자료없음'으로 뜸)
-            total = len(AWS_STATIONS.get(alt, []))     # ok/total을 같은 관서 기준으로 통일
+        if best is None:
+            # 일산처럼 관측소가 전멸한 경우 — 프로파일이 정한 대체 관서, 그다음 가까운 이웃 순서(전국판:
+            # 부산 해운대 937 처럼 원장엔 있는데 자료를 안 보내는 지점이 있다). 대체분은 alt 로 표기한다.
+            for cand in [AWS_FALLBACK.get(area)] + list((P.get('aws_neighbors') or {}).get(area, [])):
+                if not cand or cand == area:
+                    continue
+                b2, ok2 = pick(cand)
+                if b2 is not None:
+                    alt, best, ok = cand, b2, ok2          # ⚠ ok도 대체분으로 갱신(안 하면 화면에 '자료없음'으로 뜸)
+                    total = len(AWS_STATIONS.get(cand, []))   # ok/total을 같은 관서 기준으로 통일
+                    break
         if best is None:
             out[area] = {'ok': 0, 'total': total}      # 자료없음 (0 아님)
             continue
@@ -319,6 +464,9 @@ def fetch_aws_rain():
         w = pick_wind(alt or area)
         if w:
             out[area]['wind'] = w
+        po = pick_obs(alt or area)
+        if po:
+            out[area]['obs'] = po                      # 실황 대체용(기온·습도·풍향) — 아래 fetch_all_regions 참조
         if alt:
             out[area]['alt'] = alt                     # 대체 관서 — 화면에 반드시 표기
     return out
@@ -877,7 +1025,7 @@ def fetch_typhoon():
     yy = datetime.now().year
 
     def _get(url):
-        r = requests.get(url, timeout=12)
+        r = shared_get('typhoon_' + url.split('/')[-1].split('?')[0], url, timeout=12, max_age=600)
         r.raise_for_status()
         r.encoding = 'euc-kr'
         if '활용신청' in r.text[:300]:
@@ -954,11 +1102,26 @@ def fetch_typhoon():
     return out
 
 
+NCST_CACHE_PATH = TMP / 'ncst_cache.json'
+
+
+def _ncst_cache_load():
+    try:
+        return json.loads(NCST_CACHE_PATH.read_text(encoding='utf-8'))
+    except Exception:
+        return {}
+
+
 def fetch_current_observation(region):
     """초단기실황 — 매 정시 발표, 발표 후 ~10분에 안정.
-    실제 측정값(예보 아님): T1H 기온, RN1 1시간 강수, REH 습도, WSD 풍속, VEC 풍향, PTY 강수형태."""
+    실제 측정값(예보 아님): T1H 기온, RN1 1시간 강수, REH 습도, WSD 풍속, VEC 풍향, PTY 강수형태.
+
+    발표시각(base_time) 캐시 (2026-09-18 전국 확장 0단계): 실황은 1시간에 한 번만 바뀌는데
+    5분마다 시군 수만큼 불렀다(경기 34곳 → 하루 9,800회). 같은 격자·같은 발표시각이면
+    캐시를 돌려주고, 미발표(NO_DATA)만 다음 회차에 다시 묻는다 → 시군당 하루 24회."""
     now = datetime.now()
     url = 'https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getUltraSrtNcst'
+    cache = _ncst_cache_load()
 
     def _try(base):
         base_date = base.strftime('%Y%m%d')
@@ -997,8 +1160,18 @@ def fetch_current_observation(region):
         candidates.append(now)
     candidates.append(now - timedelta(hours=1))
     for base in candidates:
+        ck = f"{region['nx']},{region['ny']},{base.strftime('%Y%m%d%H')}"
+        if ck in cache:
+            return dict(cache[ck])
         obs = _try(base)
         if obs is not None:
+            cutoff = (now - timedelta(hours=3)).strftime('%Y%m%d%H')
+            cache = {k: v for k, v in cache.items() if k.rsplit(',', 1)[-1] >= cutoff}
+            cache[ck] = obs
+            try:
+                _atomic_write_text(NCST_CACHE_PATH, json.dumps(cache, ensure_ascii=False))
+            except Exception:
+                pass
             return obs
     raise RuntimeError('초단기실황 NO_DATA (이번·직전 정시 모두)')
 
@@ -1088,6 +1261,43 @@ def persist_today_minmax(region_name, tmax, tmin, hourly):
     return out_max, out_min
 
 
+OBS_FROM_AWS = bool(P.get('obs_from_aws', True))
+
+
+def _obs_from_aws(area, aws):
+    """AWS 관서값 → 초단기실황과 같은 모양 {t1h, rn1, reh, wsd, vec, pty, base_time}. 없으면 None."""
+    a = (aws or {}).get(area) or {}
+    po = a.get('obs')
+    if not po or po.get('ta') is None:
+        return None
+    o = {'t1h': float(po['ta']), 'base_time': '', 'src': 'aws'}
+    if po.get('hm') is not None:
+        o['reh'] = int(round(po['hm']))
+    if po.get('ws10') is not None:
+        o['wsd'] = float(po['ws10'])
+    if po.get('wd10') is not None:
+        o['vec'] = float(po['wd10'])
+    if a.get('rn60') is not None:
+        o['rn1'] = float(a['rn60'])
+    tm = str(po.get('tm') or '')
+    if len(tm) >= 12:
+        o['base_time'] = f'{tm[8:10]}:{tm[10:12]}'
+    # 강수형태 — 6시간 예측(초단기예보) 첫 칸. 비가 실측됐는데 예보가 '없음'이면 '비'로.
+    try:
+        first = (_ULTRA_CACHE.get(area) or [{}])[0]
+        pty = first.get('pty')
+        if pty not in (None, '', 0, '0'):
+            o['pty'] = str(pty)
+        elif (o.get('rn1') or 0) > 0:
+            o['pty'] = '1'
+    except Exception:
+        pass
+    return o
+
+
+_ULTRA_CACHE = {}
+
+
 def fetch_all_regions(aws=None):
     aws = aws or {}
     regions = []
@@ -1101,9 +1311,23 @@ def fetch_all_regions(aws=None):
             print(f'  ✗ {r["name"]}: {e}')
 
         # 초단기실황 + 누적 강수
+        # 2026-09-19 한도 대책: 실황(기온·습도·바람·1시간 강수)은 AWS 매분자료(전국 1회 호출)에 이미 있다.
+        # 전국 233개 시군이 실황 API 를 부르면 하루 5,600회 — 포털 한도(1만/일)의 절반이라 AWS 로 대체한다.
+        # 강수형태(PTY)는 AWS 에 없어 6시간 예측(초단기예보) 첫 칸에서 가져오고, AWS 가 없는 단위만 실황을 부른다.
         detail = {}
         try:
-            obs = fetch_current_observation(r)
+            obs = _obs_from_aws(r['name'], aws) if OBS_FROM_AWS else None
+            if obs is None:
+                obs = fetch_current_observation(r)
+            elif obs.get('reh') is None or obs.get('wsd') is None:
+                # 관할 AWS 전부에 습도나 바람이 없으면 그 항목만 실황으로 채운다(드문 경우, 호출 1회)
+                try:
+                    fill = fetch_current_observation(r)
+                    for k in ('reh', 'wsd', 'vec'):
+                        if obs.get(k) is None and fill.get(k) is not None:
+                            obs[k] = fill[k]
+                except Exception:
+                    pass
             detail['observation'] = obs
             cumul = update_rain_history(r['name'], obs.get('rn1', 0))
             detail['rain_cumul'] = cumul
@@ -1248,7 +1472,46 @@ WRN_TYPES = ['호우경보', '호우주의보', '강풍경보', '강풍주의보
              '한파경보', '한파주의보', '폭염경보', '폭염주의보', '풍랑경보', '풍랑주의보',
              '건조경보', '건조주의보', '황사경보', '태풍경보', '태풍주의보']
 
-NORTH_GG_KEYWORDS = P['keywords']
+# 광역시 특보 권역 → 구 (예: 서울동북권 → 8개 구). 권역명도 키워드에 넣어 '서울'이 '서울동북권' 안에서
+# 잡히지 않게 한다(_kw_in_text 가 긴 이름을 먼저 지운다) — 2026-09-20 전국 확장 ④.
+WRN_AREAS = P.get('wrn_areas') or {}
+NORTH_GG_KEYWORDS = list(dict.fromkeys(list(P['keywords']) + list(WRN_AREAS)))
+
+
+_SEA_ZONE_RE = r'(앞바다|먼바다|전해상|해상|연안바다|평수구역)'
+
+
+def _drop_sea_zones(text):
+    """바다 특보구역을 본문에서 통째로 뺀다 — 육상 관서 매칭 근거가 아니다(2026-09-20 사장님 결정).
+    기상청 바다 구역 이름엔 육상 이름이 그대로 들어간다: '인천·경기북부앞바다'→경기북부 전역, '제주도앞바다'→제주 전역,
+    '남해동부안쪽먼바다'→남해군, '거제시동부앞바다'→거제, '충남북부앞바다(당진, 태안·서산)'→당진·태안·서산.
+    ① '바다구역(세부, 세부)' 묶음은 괄호까지 통째로 ② 남은 조각 중 바다 이름 조각 제거. 허브(S코드) 경로와 같은 결과."""
+    import re as _re
+    t = _re.sub(r'[^,()]*' + _SEA_ZONE_RE + r'[^,()]*\([^()]*\)', '', text or '')
+    parts = [p.strip() for p in t.split(',')]
+    return ', '.join(p for p in parts if p and not _re.search(_SEA_ZONE_RE, p))
+
+
+def _strip_area_wrappers(text):
+    """기상청 특보 본문의 '광역(세부, 세부)' 꼴에서 광역 껍데기를 벗긴다 — 세부구역이 적혀 있으면 광역명은
+    매칭 근거가 아니다. '경기도(파주시, 양주시), 서울(서울동북권)' → '파주시, 양주시, 서울동북권'.
+    (2026-08-17 점검 [높음]: 남부만 발효돼도 '경기도'가 북부에 잡히던 누수.) 괄호가 비었으면 광역명 유지."""
+    import re as _re
+    return _re.sub(r'([^,()\s]+)\s*\(([^()]*)\)', lambda m: m.group(2).strip() or m.group(1), text or '')
+
+
+def _expand_areas(s):
+    """지역 문자열의 권역명(서울동북권)을 그 권역의 구 목록으로 바꾼다 → 화면·상황실·알림이 전부
+    '지역 문자열에 관서 이름이 있나'로 판정하므로 이 한 곳으로 구 단위가 맞아떨어진다.
+    권역명은 남기지 않는다 — '서울'이 들어 있으면 전역 표기로 오인돼 25개 구 전부에 뜬다."""
+    out = []
+    for p in str(s or '').split(','):
+        p = p.strip()
+        if not p:
+            continue
+        base = p[:-4] if p.endswith('(전체)') else p     # '인천(전체)' → '인천'
+        out.extend(WRN_AREAS.get(base) or [p])           # 낱말 단위 — '인천'이 '인천남부' 안에서 바뀌면 안 된다
+    return ', '.join(dict.fromkeys(out))
 
 
 def _kw_in_text(text, kw):
@@ -1279,11 +1542,11 @@ def fetch_warning_bulletins():
 
     # 1) 통보문 본문 (전문)
     try:
-        r = requests.get(f'{base}/getWthrWrnMsg', params={
+        r = shared_get(f'wrn_msg_{WRN_STN}', f'{base}/getWthrWrnMsg', params={
             'serviceKey': DATA_KEY, 'pageNo': 1, 'numOfRows': 15,
-            'dataType': 'JSON', 'stnId': 109,
+            'dataType': 'JSON', 'stnId': WRN_STN,
             'fromTmFc': from_dt, 'toTmFc': to_dt,
-        }, timeout=15)
+        }, timeout=15, max_age=600)
         r.raise_for_status()
         items = r.json()['response']['body'].get('items', {})
         if items:
@@ -1307,11 +1570,11 @@ def fetch_warning_bulletins():
 
     # 2) 기상정보 목록 (매일 발표되는 기상 해설)
     try:
-        r = requests.get(f'{base}/getWthrInfoList', params={
+        r = shared_get(f'wrn_info_{WRN_STN}', f'{base}/getWthrInfoList', params={
             'serviceKey': DATA_KEY, 'pageNo': 1, 'numOfRows': 10,
-            'dataType': 'JSON', 'stnId': 109,
+            'dataType': 'JSON', 'stnId': WRN_STN,
             'fromTmFc': from_dt, 'toTmFc': to_dt,
-        }, timeout=15)
+        }, timeout=15, max_age=600)
         r.raise_for_status()
         items = r.json()['response']['body'].get('items', {})
         if items:
@@ -1331,8 +1594,8 @@ def fetch_warning_bulletins():
     # 3) 기상정보 본문 (전국 해설 — 소나기·안개·폭염 등 현황/전망) — getWthrInfo
     #    레이더 카드 옆에 표시할 최신 기상정보 1건. 108(전국) 우선, 없으면 109(수도권).
     try:
-        for stn in ('108', '109'):
-            r = requests.get(f'{base}/getWthrInfo', params={
+        for stn in ('108', str(WRN_STN)):
+            r = shared_get(f'wrn_infotext_{stn}', f'{base}/getWthrInfo', params={
                 'serviceKey': DATA_KEY, 'pageNo': 1, 'numOfRows': 5,
                 'dataType': 'JSON', 'stnId': stn,
                 'fromTmFc': from_dt, 'toTmFc': to_dt,
@@ -1383,11 +1646,12 @@ def fetch_mid_forecast():
 
     for tmfc in candidates:
         try:
-            r = requests.get(
+            r = shared_get(
+                f'mid_fcst_{tmfc}',
                 'https://apis.data.go.kr/1360000/MidFcstInfoService/getMidFcst',
                 params={'serviceKey': DATA_KEY, 'pageNo': 1, 'numOfRows': 1,
                         'dataType': 'JSON', 'stnId': '108', 'tmFc': tmfc},
-                timeout=15)
+                timeout=15, max_age=1800)
             if r.status_code != 200:
                 continue
             items = r.json()['response']['body'].get('items', {})
@@ -1602,7 +1866,7 @@ def fetch_apihub_warnings():
 
     url = 'https://apihub.kma.go.kr/api/typ01/url/wrn_now_data_new.php'
     try:
-        r = requests.get(url, params={'authKey': KMA_APIHUB_KEY}, timeout=15)
+        r = shared_get('apihub_wrn_now', url, params={'authKey': KMA_APIHUB_KEY}, timeout=15, max_age=240)
         r.raise_for_status()
         # 응답은 EUC-KR 인코딩
         text = r.content.decode('euc-kr', errors='replace')
@@ -1639,7 +1903,7 @@ def fetch_apihub_warnings():
         _rid = str(reg_id or '')
         is_north_gg = _rid in NORTH_GG_REG_MAP
         # 경기 전체(관할 밖 경기 시군 포함) — 화면의 '경기도 특보' 집계용
-        is_gyeonggi = is_north_gg or _rid.startswith('L101')
+        is_gyeonggi = is_north_gg or _rid.startswith(WRN_PREFIX)
 
         # 시간 포맷
         def fmt(s):
@@ -1710,7 +1974,7 @@ def parse_prelim_warnings(t7_text, tmFc=''):
         if m and cur is not None:
             time_str = m.group(1).strip()
             area = m.group(2).strip()
-            north_match = any(k in area for k in NORTH_GG_KEYWORDS)
+            north_match = any(k in _drop_sea_zones(area) for k in NORTH_GG_KEYWORDS)   # 바다 예비특보는 관내 아님
             cur['items'].append({'time': time_str, 'area': area, 'north_match': north_match})
 
     # 발표 시각 형식 변환
@@ -1739,9 +2003,9 @@ def fetch_warnings():
         'pageNo': 1,
         'numOfRows': 50,
         'dataType': 'JSON',
-        'stnId': 109,  # 경기도 (북부)
+        'stnId': WRN_STN,  # 시도 담당 지방기상청 (109 수도권 · 105 강원 …)
     }
-    r = requests.get(url, params=params, timeout=15)
+    r = shared_get(f'pwn_status_{WRN_STN}', url, params=params, timeout=15, max_age=240)
     r.raise_for_status()
     resp = r.json()['response']
     code = str(resp.get('header', {}).get('resultCode', ''))
@@ -1777,10 +2041,11 @@ def fetch_warnings():
             wrn_type = next((w for w in WRN_TYPES if w in head), None)
             if not wrn_type:
                 continue
+            body_text = _strip_area_wrappers(_drop_sea_zones(body_text))   # 바다 구역 제외, '경기도(수원)' 의 '경기도'는 근거가 아니다
             matched = [k for k in NORTH_GG_KEYWORDS if _kw_in_text(body_text, k)]
             if not matched:
                 continue
-            area_text = ', '.join(matched)
+            area_text = _expand_areas(', '.join(matched))
             key = (wrn_type, area_text)
             if key in seen:
                 continue
@@ -1815,18 +2080,21 @@ def pm_grade(pm10, pm25):
 
 def fetch_pm():
     url = 'https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty'
-    params = {
-        'serviceKey': DATA_KEY,
-        'returnType': 'json',
-        'numOfRows': 200,
-        'pageNo': 1,
-        'sidoName': '경기',
-        'ver': '1.3',
-    }
-    r = requests.get(url, params=params, timeout=15)
-    r.raise_for_status()
-    body = r.json()['response']['body']
-    items = body.get('items', [])
+    # 통합시(전남광주)는 에어코리아가 아직 광주·전남으로 나눠 준다 → 시도마다 한 번씩 받아 합친다
+    items = []
+    for sido in ([PM_SIDO] if isinstance(PM_SIDO, str) else PM_SIDO):
+        params = {
+            'serviceKey': DATA_KEY,
+            'returnType': 'json',
+            'numOfRows': 200,
+            'pageNo': 1,
+            'sidoName': sido,
+            'ver': '1.3',
+        }
+        r = shared_get(f'pm_{sido}', url, params=params, timeout=15, max_age=1500)
+        r.raise_for_status()
+        body = r.json()['response']['body']
+        items += body.get('items', []) or []
 
     by_station = {it['stationName']: it for it in items if it.get('stationName')}
 
@@ -1888,7 +2156,7 @@ def fetch_fire_incidents():
     edt = now.strftime('%Y%m%d')
 
     try:
-        r = requests.get(url, params={
+        r = shared_get('fire_incidents', url, max_age=3600, params={
             'ServiceKey': DATA_KEY,  # 활용가이드 표기대로 대문자 S
             'searchStDt': sdt,
             'searchEdDt': edt,
@@ -1938,7 +2206,7 @@ def fetch_fire_incidents():
                 'damage_area': damage,
                 'year': it.get('startyear', ''),
                 'is_north': sigun in north_sigun,
-                'is_gyeonggi': '경기' in sido,
+                'is_gyeonggi': any(w in sido for w in SIDO_WORDS),
                 'is_this_year': it.get('startyear', '') == cur_year,
             }
 
@@ -1971,7 +2239,7 @@ def fetch_fire():
     응답의 d1~d4 는 해당 시군 안에서 각 위험단계(낮음·보통·높음·매우높음) 면적 비율(%).
     한 시군 안에 더 높은 단계가 1%라도 있으면 그 단계로 표시."""
     url = 'https://apis.data.go.kr/1400377/forestPointV2/forestPointListSigunguSearchV2'
-    r = requests.get(url, params={
+    r = shared_get('fire_point', url, max_age=1500, params={
         'serviceKey': DATA_KEY,
         'pageNo': 1,
         'numOfRows': 300,
@@ -1991,7 +2259,7 @@ def fetch_fire():
 
     region_max = {}
     for it in items:
-        if str(it.get('doname', '')) != '경기도':
+        if not str(it.get('doname', '')).startswith(tuple(SIDO_WORDS)):
             continue
         sigun = str(it.get('sigun', '')).strip()
         target = sigun_map.get(sigun)
@@ -2045,8 +2313,8 @@ def river_level(value, warning, danger):
     return 'safe'
 
 
-def fetch_rivers():
-    """관측소별 24시간 수위 시계열 수집.
+def fetch_rivers_by_station():
+    """[폴백] 관측소별 24시간 수위 시계열 수집 — 일괄 수신(fetch_rivers)이 실패했을 때만.
     한강홍수통제소(api.hrfco.go.kr)가 외국 IP(GitHub Actions 미국 서버 등)에서
     매우 느리거나 timeout. 환경별 차등 처리:
     - 정상(한국 IP): timeout 8초 × 2회 재시도 → 첫 시도에서 거의 성공
@@ -2171,60 +2439,211 @@ def fetch_rivers():
     return result
 
 
+# ------------------------------------------------------------
+# 하천 수위 — 일괄 수신 (2026-09-18 전국 확장 0단계)
+#
+# 왜 바꿨나: 관측소마다 24시간 이력을 따로 불렀다(경기 58곳 × 0.8초 간격 ≈ 1분,
+# 1분 알리미는 매분 58회 = 하루 8만 회). 전국(700곳)은 이 방식으로 5분 안에 못 끝난다.
+# 한강홍수통제소는 '전 관측소 최신값'을 한 번에 주는 주소가 있다
+# (waterlevel/list/10M.json = 1,203곳 0.8초 · dam/list/10M.json = 댐 50곳).
+#   · 최신값(value)  ← 10분 일괄 (예전 1시간 값보다 최대 1시간 신선하다)
+#   · 24시간 이력    ← 1시간 일괄(list/1H.json)로 받은 값을 .tmp/river_hist.json 에 쌓는다
+#   · 처음 보는 관측소만 예전 방식(관측소별 24시간)으로 한 번 채운다 — 부트스트랩
+# 일괄 주소가 통째로 실패하면 fetch_rivers_by_station() 으로 물러난다.
+# ------------------------------------------------------------
+RIVER_HIST_PATH = TMP / 'river_hist.json'
+RIVER_HIST_KEEP = 30           # 관측소당 보관 점 수(24시간 + 여유)
+RIVER_BOOT_PER_RUN = 40        # 한 회차에 부트스트랩할 최대 관측소 수(첫 가동 때만 의미)
+
+
+def _hrfco_session():
+    s = requests.Session()
+    s.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                                    '(KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+                      'Accept': 'application/json', 'Connection': 'close'})
+    return s
+
+
+def _fnum(v):
+    try:
+        if v in ('', None) or str(v).strip() == '':
+            return None
+        return float(v)
+    except (ValueError, TypeError):
+        return None
+
+
+def fetch_hrfco_bulk(kind, unit, sess=None):
+    """전 관측소 일괄 조회. kind='waterlevel'|'dam', unit='10M'|'1H' → {코드: 행}.
+    행: {'time': ymdhm, 'value': 수위(하천 wl / 댐 swl), 'row': 원본}. 실패 시 예외."""
+    r = shared_get(f'hrfco_{kind}_{unit}', f'https://api.hrfco.go.kr/{HRFCO_KEY}/{kind}/list/{unit}.json',
+                   timeout=20, max_age=240, headers={'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json'})
+    r.raise_for_status()
+    content = r.json().get('content', [])
+    if not content:
+        raise RuntimeError(f'{kind}/{unit} 일괄 응답이 비었다')
+    code_f = 'dmobscd' if kind == 'dam' else 'wlobscd'
+    val_f = 'swl' if kind == 'dam' else 'wl'
+    out = {}
+    for row in content:
+        code = str(row.get(code_f, '')).strip()
+        v = _fnum(row.get(val_f))
+        if not code or v is None:
+            continue
+        out[code] = {'time': str(row.get('ymdhm', '')), 'value': v, 'row': row}
+    return out
+
+
+def _river_hist_load():
+    try:
+        return json.loads(RIVER_HIST_PATH.read_text(encoding='utf-8'))
+    except Exception:
+        return {}
+
+
+def _river_hist_save(hist):
+    try:
+        _atomic_write_text(RIVER_HIST_PATH, json.dumps(hist, ensure_ascii=False))
+    except Exception as e:
+        print(f'    하천 이력 저장 실패: {type(e).__name__}')
+
+
+def _hist_add(hist, key, time_s, value):
+    """시간(YYYYMMDDHH) 단위 점을 넣는다 — 같은 시각이면 덮어쓰고, 정렬·보관수 유지."""
+    pts = {str(p['time']): p['value'] for p in hist.get(key, []) if p.get('time')}
+    pts[str(time_s)] = value
+    keys = sorted(pts)[-RIVER_HIST_KEEP:]
+    hist[key] = [{'time': k, 'value': pts[k]} for k in keys]
+
+
+def _river_bootstrap(hist, stations, sess):
+    """이력이 없는 관측소만 예전 방식(관측소별 24시간)으로 채운다. 첫 가동·캐시 유실 때만 돈다."""
+    now = datetime.now()
+    sdt = (now - timedelta(hours=24)).strftime('%Y%m%d%H')
+    edt = now.strftime('%Y%m%d%H')
+    done = 0
+    seen = set()
+    for st in stations:
+        api = st.get('api', 'waterlevel')
+        key = f"{st['code']}|{api}"
+        if key in seen or len(hist.get(key, [])) >= 2:
+            continue
+        seen.add(key)
+        if done >= RIVER_BOOT_PER_RUN:
+            print(f'    부트스트랩 {RIVER_BOOT_PER_RUN}곳 한도 — 나머지는 다음 회차')
+            break
+        wl_field = 'swl' if api == 'dam' else 'wl'
+        try:
+            time.sleep(0.3)
+            r = sess.get(f'https://api.hrfco.go.kr/{HRFCO_KEY}/{api}/list/1H/{st["code"]}/{sdt}/{edt}.json',
+                         timeout=8)
+            r.raise_for_status()
+            for entry in r.json().get('content', []):
+                v = _fnum(entry.get(wl_field))
+                if v is not None and entry.get('ymdhm'):
+                    _hist_add(hist, key, entry['ymdhm'], v)
+            done += 1
+        except Exception as e:
+            print(f'    부트스트랩 실패 {st["name"]}: {type(e).__name__}')
+    if done:
+        print(f'    이력 부트스트랩 {done}곳(처음 보는 관측소)')
+    return done
+
+
+def _assemble_river(st, latest, hist):
+    """관측소 1건을 화면 형식으로 조립. latest={'time','value','row'}|None, hist=시간 단위 점 목록."""
+    api = st.get('api', 'waterlevel')
+    series = list(hist)
+    if latest and (not series or str(latest['time'])[:10] >= str(series[-1]['time'])[:10]):
+        series.append({'time': latest['time'], 'value': latest['value']})
+    if not series:
+        return None
+    value = series[-1]['value']
+
+    def delta(n):
+        return round(value - series[-(n + 1)]['value'], 2) if len(series) > n else None
+
+    item = {
+        'name': st['name'], 'code': st['code'], 'sigun': st.get('sigun', ''),
+        'value': value, 'warning': st.get('warning'), 'danger': st.get('danger'),
+        'level': river_level(value, st.get('warning'), st.get('danger')),
+        'history': series[-24:], 'delta_1h': delta(1), 'delta_3h': delta(3),
+        'has_cctv': st.get('has_cctv', True), 'api': api,
+    }
+    if api == 'dam' and latest:
+        row = latest['row']
+        item['dam_info'] = {'storage_rate': _fnum(row.get('ecpc')), 'inflow': _fnum(row.get('inf')),
+                            'outflow': _fnum(row.get('sfw')), 'total_outflow': _fnum(row.get('tototf'))}
+    return item
+
+
+def fetch_rivers():
+    """하천·댐 수위 — 일괄 수신(최대 4회 호출) + 이력 누적. 일괄이 안 되면 관측소별로 폴백."""
+    if not RIVER_STATIONS:
+        return []
+    sess = _hrfco_session()
+    kinds = sorted({st.get('api', 'waterlevel') for st in RIVER_STATIONS})
+    latest, hourly = {}, {}
+    try:
+        for kind in kinds:
+            latest[kind] = fetch_hrfco_bulk(kind, '10M', sess)
+    except Exception as e:
+        print(f'    일괄 최신값 실패({type(e).__name__}) → 관측소별 수집으로 폴백')
+        return fetch_rivers_by_station()
+    for kind in kinds:
+        try:
+            hourly[kind] = fetch_hrfco_bulk(kind, '1H', sess)
+        except Exception as e:
+            hourly[kind] = {}
+            print(f'    1시간 일괄 실패({kind}, {type(e).__name__}) — 이력은 이전 것 유지')
+
+    hist = _river_hist_load()
+    for st in RIVER_STATIONS:
+        api = st.get('api', 'waterlevel')
+        row = hourly.get(api, {}).get(st['code'])
+        if row and row['time']:
+            _hist_add(hist, f"{st['code']}|{api}", row['time'][:10], row['value'])
+    _river_bootstrap(hist, RIVER_STATIONS, sess)
+    _river_hist_save(hist)
+
+    result, missing = [], []
+    for st in RIVER_STATIONS:
+        api = st.get('api', 'waterlevel')
+        item = _assemble_river(st, latest.get(api, {}).get(st['code']),
+                               hist.get(f"{st['code']}|{api}", []))
+        if item is None:
+            missing.append(st['name'])
+            continue
+        result.append(item)
+    if missing:
+        print(f'    자료 없는 관측소 {len(missing)}곳: {", ".join(missing[:5])}{" …" if len(missing) > 5 else ""}')
+    print(f'    일괄 수신 {len(result)}/{len(RIVER_STATIONS)}곳 (호출 {len(kinds) * 2}회)')
+    return result
+
+
 def fetch_rivers_light():
     """하천 '현재 수위·단계'만 가볍게 수집 — 1분 알리미(check_warnings.py)용.
-    fetch_rivers는 24시간 이력을 받아 무겁다. 여기선 최근 3시간만 받아 최신값·단계만 판정한다.
+    예전엔 관측소마다 최근 3시간을 불렀다(매분 58회). 지금은 일괄 최신값 1~2회로 끝난다.
     실패한 관측소는 결과에서 제외(omit) → notify_rivers가 이전 상태를 보존해 오알림을 막는다."""
-    if not HRFCO_KEY:
+    if not HRFCO_KEY or not RIVER_STATIONS:
         return []
-    now = datetime.now()
-    sdt = (now - timedelta(hours=3)).strftime('%Y%m%d%H')
-    edt = now.strftime('%Y%m%d%H')
-    sess = requests.Session()
-    sess.headers.update({'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json',
-                         'Connection': 'close'})
-    out = []
-    seen = {}   # 여러 관서가 공유하는 관측소는 한 번만 호출하고 값을 돌려쓴다
-    for i, st in enumerate(RIVER_STATIONS):
-        api = st.get('api', 'waterlevel')
-        key = (st['code'], api)
-        if key in seen:
-            if seen[key] is not None:
-                out.append(dict(seen[key], name=st['name'],
-                                warning=st.get('warning'), danger=st.get('danger'),
-                                level=river_level(seen[key]['value'], st.get('warning'),
-                                                  st.get('danger'))))
-            continue
-        if i > 0:
-            time.sleep(0.2)
-        wl_field = 'swl' if api == 'dam' else 'wl'
-        seen[key] = None
+    sess = _hrfco_session()
+    latest = {}
+    for kind in sorted({st.get('api', 'waterlevel') for st in RIVER_STATIONS}):
         try:
-            url = f'https://api.hrfco.go.kr/{HRFCO_KEY}/{api}/list/1H/{st["code"]}/{sdt}/{edt}.json'
-            r = sess.get(url, timeout=6)
-            r.raise_for_status()
-            content = r.json().get('content', [])
-            best_t, latest = '', None
-            for entry in content:                     # content 정렬을 신뢰하지 않고 최대 ymdhm 채택
-                v = entry.get(wl_field, '')
-                if v in ('', None) or str(v).strip() == '':
-                    continue
-                try:
-                    vf = float(v)
-                except (ValueError, TypeError):
-                    continue
-                t = str(entry.get('ymdhm', ''))
-                if t >= best_t:                        # YYYYMMDDHH 사전순 = 시간순
-                    best_t, latest = t, vf
-            if latest is None:
-                continue
-            level = river_level(latest, st.get('warning'), st.get('danger'))
-            rec = {'name': st['name'], 'code': st['code'], 'value': round(latest, 3),
-                   'warning': st['warning'], 'danger': st['danger'], 'level': level, 'api': api}
-            seen[key] = rec
-            out.append(rec)
+            latest[kind] = fetch_hrfco_bulk(kind, '10M', sess)
         except Exception:
-            continue   # 실패 관측소는 제외 → notify_rivers가 이전 상태 보존
+            latest[kind] = {}      # 그 종류 전부 제외 → 이전 상태 보존
+    out = []
+    for st in RIVER_STATIONS:
+        api = st.get('api', 'waterlevel')
+        row = latest.get(api, {}).get(st['code'])
+        if not row:
+            continue
+        out.append({'name': st['name'], 'code': st['code'], 'value': round(row['value'], 3),
+                    'warning': st.get('warning'), 'danger': st.get('danger'),
+                    'level': river_level(row['value'], st.get('warning'), st.get('danger')),
+                    'api': api})
     return out
 
 
@@ -2250,7 +2669,7 @@ def fetch_flood_forecast():
     ci_timeout = 5 if os.environ.get('GITHUB_ACTIONS') else 15
     url = f'https://api.hrfco.go.kr/{HRFCO_KEY}/fldfct/list.json'
     try:
-        r = requests.get(url, timeout=ci_timeout, headers={
+        r = shared_get('flood_fcst', url, timeout=ci_timeout, max_age=240, headers={
             'User-Agent': 'Mozilla/5.0',
             'Accept': 'application/json',
         })
@@ -2336,19 +2755,19 @@ def fetch_messages():
         - 반대편 광역('경기남부'↔'경기북부') 또는 관할 밖 시군 → 제외
         - 서울·인천 등 비경기 → 제외"""
         s = rcptn.strip()
-        if not s.startswith('경기'):
+        if not s.startswith(tuple(SIDO_WORDS)):
             return False
-        if s.startswith(P['exclude_prefix']):
+        if P['exclude_prefix'] and s.startswith(P['exclude_prefix']):
             return False
         if any(k in s for k in north_sigun):
             return True
-        m = _re.search(r'경기[도북부남]*\s*([가-힣]+?)(시|군)', s)
+        m = _SIDO_SIGUN_RE.search(s)
         if m:
-            return m.group(1) in north_sigun   # 특정 시군이면 북부만
+            return _unit_from_match(m) in north_sigun   # 특정 시군이면 관할만
         return True   # 시군명 없는 경기 전역
 
     try:
-        r = requests.get(url, params={
+        r = shared_get('safety_msgs', url, max_age=240, params={
             'serviceKey': SAFETY_KEY,
             'pageNo': 1,
             'numOfRows': 100,
@@ -2379,14 +2798,14 @@ def fetch_messages():
 
         # 북부가 아니면: "경기도 광주시" 같은 패턴에서 시군명 추출
         if not region:
-            m = _re.search(r'경기[도북부남]*\s+([가-힣]+?)(시|군)', rcptn)
+            m = _SIDO_SIGUN_RE.search(rcptn)
             if m:
                 sender = m.group(1) + m.group(2)
-                region = m.group(1)
+                region = _unit_from_match(m)
             else:
                 # "경기도", "경기북부" 등 도 전역
-                sender = '경기도'
-                region = '경기도'
+                sender = WIDE_LABEL
+                region = WIDE_LABEL
 
         result.append({
             'sender': sender,
@@ -2829,7 +3248,7 @@ def merge_apihub_warnings(d):
         #   warnings에 섞여 텔레그램 알림까지 나간다. 정식 특보명만 통과시킨다.
         if typ not in WRN_TYPES:
             continue
-        area = w.get('region_name') or w.get('reg_ko')
+        area = _expand_areas(w.get('region_name') or w.get('reg_ko'))
         key = f"{typ}|{area}"
         if key in existing:
             continue
@@ -2913,10 +3332,15 @@ def _canon_region(name):
     n = (name or '').strip()
     if not n:
         return None
-    if n in ('경기북부', '경기남부', '경기도', '수도권', '경기'):
-        return '경기도'
+    if (n in ('경기북부', '경기남부', '경기도', '수도권', '경기') or n in SIDO_WORDS
+            or n in (WIDE_LABEL, P.get('full'))):
+        return WIDE_LABEL
+    if n in SIGUN_SET:          # 관서 이름 그대로면 그대로 — 광역시 '중구'를 '중'으로, 강원 '양구'를 '양'으로 깎지 않게
+        return n
     n = _re.sub(r'(동북부|서북부|동남부|서남부|남부|북부|동부|서부|중부|내륙|산지|앞바다|해안)', '', n)
     n = _re.sub(r'(특별자치시|특별자치도|특별시|광역시|자치시|자치도)', '', n)
+    if n in SIGUN_SET:
+        return n
     n = _re.sub(r'(시|군|구|도)$', '', n)
     return n.strip() or None
 
@@ -3259,6 +3683,7 @@ def main():
     print('[6시간 강수예측]')
     try:
         data['ultra_fcst'] = fetch_ultra_short_fcst_all()
+        _ULTRA_CACHE.update(data['ultra_fcst'] or {})
         print(f'  ✓ 6시간 예측 {len(data["ultra_fcst"])}개 관서')
     except Exception as e:
         data['ultra_fcst'] = prev.get('ultra_fcst') or {}

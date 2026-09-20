@@ -152,6 +152,13 @@ def main():
             '경기남부': [x for x in order if x not in set(n['order'])],
         },
         'wideNames': ['경기북부', '경기남부'],
+        # 접속 주소(호스트 첫 토막) → 기본 권역/기본 관서. 세 주소가 같은 전체판을
+        # 서빙하되, 북부 주소로 열면 북부부터 보이게 한다(2026-08-28 사장님 결정).
+        # 저장된 사용자 선택(localStorage)이 있으면 그게 우선이다.
+        'hostScope': {'gyeonggi-dashboard': '경기북부', 'gyeonggi-dashboard-2': '경기북부',
+                      'weather': '경기남부'},
+        'hostHome': {'gyeonggi-dashboard': '동두천', 'gyeonggi-dashboard-2': '동두천',
+                     'weather': '수원'},
         'order': order,
         'warnOrder': ['경기도'] + order,
         'pos': build_pos(cent, order),
