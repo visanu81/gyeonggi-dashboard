@@ -2,8 +2,10 @@
 """weather 개조 작업장 빌드 — 2026-09-17 사장님 지시.
 
 weather.visanu81.workers.dev:
-  /            → 경기 전체판(권역 선택 포함) — 2026-09-20 사장님 지시로 /new/ 에서 루트로 올림
-  /<시도>/     → 시도판(강원·서울·…), /전국.html → 시도 고르기
+  /            → 대문. 처음 온 사람은 /전국.html(시도 고르기)로, 고른 적 있으면 그 시도(/서울/)로,
+                 경기를 골랐으면 그 자리에서 경기 전체판 지도가 뜬다(주소가 /지도 로 안 바뀜) — 2026-09-20
+  /<시도>/     → 그 시도 지도(index=지도 화면). 어느 화면이든 열면 그 시도가 '고른 시도'로 기억된다(localStorage.ggSido)
+  /전국.html   → 시도 고르기
   /new/*       → 옛 주소. _redirects 로 같은 경로의 루트로 301 (북마크 보호)
 (2026-09-17~19 에는 루트가 '서비스 개편 중' 안내였고 작업 화면은 /new/ 아래였다.)
 
@@ -39,6 +41,15 @@ OLD_DIRS = ['new']              # 예전 하위 경로 — 같은 경로의 루�
 
 # Cloudflare Workers 정적 자산의 _redirects (Pages 와 같은 문법). 옛 /new/상황실.html 북마크가 계속 열리게.
 REDIRECTS = ''.join(f'/{d}/* /:splat 301\n' for d in OLD_DIRS)
+
+# 루트 대문 스크립트 — 처음 온 사람은 전국에서 시도를 고르고, 고른 적 있으면 그 시도로 (2026-09-20 사장님 지시).
+# 옛 값('/new/서울/')이 남아 있어도 _redirects 가 /서울/ 로 넘기고 거기서 새 값으로 덮어쓴다.
+GATE = """<script>
+(function(){ try{ var s=localStorage.getItem('ggSido');
+  if(!s){ location.replace('전국.html'); }
+  else if(s!=='/' && s.charAt(0)==='/' && s.indexOf('//')<0){ location.replace(s); } }catch(e){} })();
+</script>
+"""
 
 
 WRANGLER = """# weather 개조 작업장 배포 설정 — tools/build_weather_dev.py 가 만든다.
@@ -150,15 +161,18 @@ def inject_sido_list(root, sidos):
         if not path.exists():
             continue
         body = path.read_text(encoding='utf-8')
+        base = next((e['base'] for e in ordered if e['label'] == cur), BASE)
         body += (f'\n// 전국판 시도 선택 — tools/build_weather_dev.py 가 배포할 때 붙인다\n'
                  f'window.REGION_CONF.sidoList = {lst};\n'
-                 f'window.REGION_CONF.sidoCurrent = {json.dumps(cur, ensure_ascii=False)};\n')
+                 f'window.REGION_CONF.sidoCurrent = {json.dumps(cur, ensure_ascii=False)};\n'
+                 f'// 이 시도의 어느 화면이든 열면 "고른 시도"로 기억 → 다음에 대문(/)이 바로 여기로 (2026-09-20)\n'
+                 f'try{{ localStorage.setItem("ggSido", {json.dumps(base, ensure_ascii=False)}); }}catch(e){{}}\n')
         path.write_text(body, encoding='utf-8')
 
 
 def landing_html(sidos):
     rows = ''.join(
-        f'<a class="row" href="./{folder}/지도.html"><b>{wide}</b>'
+        f'<a class="row" href="./{folder}/" onclick="remember(\'{BASE}{folder}/\')"><b>{wide}</b>'
         f'<span>{"5분마다 갱신" if src == "서버" else "시험판 · 갱신 안 됨"}</span></a>'
         for key, wide, folder, src in sorted(sidos, key=lambda s: (s[3] != '서버', s[2])))
     return f"""<!doctype html>
@@ -174,18 +188,20 @@ def landing_html(sidos):
 </style></head><body><div class="wrap">
 <h1>전국 기상·재난 상황판</h1><p>시도를 고르세요. 화면 안의 '내 관서 선택'에서도 시도를 바꿀 수 있습니다.</p>
 <div id="recent"></div>
-<a class="row gg" href="./지도.html"><b>경기도</b><span>34개 소방서 · 운영과 같은 데이터</span></a>
+<a class="row gg" href="./" onclick="remember('{BASE}')"><b>경기도</b><span>34개 소방서 · 운영과 같은 데이터</span></a>
 {rows}
 </div>
 <script>
-/* 마지막에 본 시도를 맨 위에 — 지도·호우 화면의 시도 선택이 localStorage.ggSido 에 남긴다 */
+/* 고른 시도를 기억 — 다음부터 대문(/)이 바로 그 시도로 간다. 시도 폴더의 region.js 도 열릴 때 같은 값을 쓴다. */
+function remember(base) {{ try {{ localStorage.setItem('ggSido', base); }} catch (e) {{}} }}
+/* 마지막에 본 시도를 맨 위에 */
 try {{
   var b = localStorage.getItem('ggSido');
   if (b) {{
-    var a = document.querySelector('a.row[href="./' + b.replace('{BASE}', '') + '지도.html"]');
+    var a = document.querySelector('a.row[href="./' + b.replace('{BASE}', '') + '"]');
     if (a) {{
       var r = document.getElementById('recent');
-      r.innerHTML = '<a class="row" style="border-color:#ffb020" href="' + b + '지도.html"><b>최근 본 시도 · ' + a.querySelector('b').textContent + '</b><span>바로가기</span></a>';
+      r.innerHTML = '<a class="row" style="border-color:#ffb020" href="' + b + '"><b>최근 본 시도 · ' + a.querySelector('b').textContent + '</b><span>바로가기</span></a>';
     }}
   }}
 }} catch (e) {{}}
@@ -294,6 +310,13 @@ def main():
         f.write_text(body, encoding='utf-8')
     (PUB / DEV_DIR / '전국.html').write_text(landing_html(sidos), encoding='utf-8')
     inject_sido_list(PUB / DEV_DIR, sidos)
+    # 5) 대문 — index.html 을 지도 화면 그대로 (주소가 /지도 로 안 바뀐다). 루트 대문엔 '처음이면 전국에서
+    #    고르고, 고른 적 있으면 그 시도로' 스크립트를 charset 바로 뒤, region.js 보다 앞에 둔다(ggSido 를 덮어쓰기 전).
+    (PUB / DEV_DIR / 'index.html').write_text(
+        (PUB / DEV_DIR / '지도.html').read_text(encoding='utf-8').replace('<meta charset="utf-8">', '<meta charset="utf-8">\n' + GATE, 1),
+        encoding='utf-8')
+    for _, _, folder, _ in sidos:
+        shutil.copy(PUB / DEV_DIR / folder / '지도.html', PUB / DEV_DIR / folder / 'index.html')
     (DEPLOY / 'wrangler.toml').write_text(WRANGLER, encoding='utf-8')
 
     left = []
