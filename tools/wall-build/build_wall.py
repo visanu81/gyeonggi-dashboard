@@ -786,6 +786,11 @@ patch("    return {\n      stageRef: (this.stageRef = this.stageRef || React.cre
 # 5) </body> 앞에 데이터 로더 + 변환기 주입
 INJECT = r'''
 <script src="./risk-zones.js"></script>
+<!-- 하천 CCTV 카드(2026-09-22): 장치번호표·부산 목록·등록표·KBS 토큰(서버가 운영 저장소에 올림) — data.js 보다 먼저(변환기가 판정에 쓴다) -->
+<script src="./cctv-hrfco.js"></script>
+<script src="./cctv-busan.js"></script>
+<script src="./cctv-links.js"></script>
+<script src="https://gyeonggi-dashboard.visanu81.workers.dev/data-cctv.js"></script>
 <script src="https://gyeonggi-dashboard.visanu81.workers.dev/data.js"></script>
 <script>
 /* DASHBOARD_DATA(우리 실시간) → WALL_DATA(디자인 형식) 변환·주입.
@@ -897,6 +902,8 @@ INJECT = r'''
     /* 하천 → 관서. sigun 없으면 이름에서 시군 추출(가장 긴 매칭 우선: '남양주'가 '양주'보다 먼저).
        전 관서를 []로 초기화 → 하천 없는 관서(예:구리)에 남의 하천 샘플이 뜨는 폴백 차단. */
     var rivers={}; NAMES.forEach(function(nm){ rivers[nm]=[]; });
+    /* 관서별 관측소 코드 목록(하천 CCTV 카드용 — rivers 는 화면용 배열이라 코드가 없다). 댐 제외. */
+    var codes={}; NAMES.forEach(function(nm){ codes[nm]=[]; });
     /* 관서별 하천코드 표(region.js riverCodes)가 있으면 시군 배분보다 우선한다.
        소방서가 시를 나눠 맡는 곳에서 남의 하천이 '관할'로 뜨는 것을 막는다. */
     var RCODE=((typeof window!=='undefined'&&window.REGION_CONF)||{}).riverCodes||{};
@@ -912,13 +919,16 @@ INJECT = r'''
         nv(di.total_outflow!=null?di.total_outflow:di.outflow)];
       /* 코드로 지정된 관서에 먼저 넣는다. 지정 관서가 하나라도 있으면 시군 배분은 건너뛴다. */
       var _placed=false;
+      var put=function(nm){ rivers[nm].push(entry);
+        if(!isDam) codes[nm].push({ code:String(rv.code), name:shortRiver(rv.name), level:(rv.level||'safe'),
+          ratio:(nv(rv.danger)?((nv(rv.value)||0)/nv(rv.danger)):0) }); };
       NAMES.forEach(function(nm){ var cs=RCODE[nm];
-        if(cs && cs.indexOf(String(rv.code))>=0){ rivers[nm].push(entry); _placed=true; } });
+        if(cs && cs.indexOf(String(rv.code))>=0){ put(nm); _placed=true; } });
       if(_placed) return;
       if(RCODE[sg]) return;   /* 그 시군은 코드로만 받는다 — 남의 하천이 섞이지 않게 */
       if(!sg){ var best=''; SIG.forEach(function(x){ if(String(rv.name||'').indexOf(x)>=0 && x.length>best.length) best=x; }); sg=best; }
       if(!sg) return;
-      NAMES.forEach(function(nm){ if(sig(nm)===sg && nm!=='일산') rivers[nm].push(entry); });  /* 시군 관서에만(일산 중복 방지) */
+      NAMES.forEach(function(nm){ if(sig(nm)===sg && nm!=='일산') put(nm); });  /* 시군 관서에만(일산 중복 방지) */
     });
     /* 정렬: 공식 경보 → 주의보 → 하천(위험수위 대비 높은 순) → 댐. 벽면 가독성 위해 최대 5행. */
     NAMES.forEach(function(nm){
@@ -961,7 +971,24 @@ INJECT = r'''
                  pty:(o.pty_txt||''), lgt:(nv(o.lgt)||0)>0, temp:nv(o.temp) };
       });
     });
-    return { stations:stations, rivers:rivers, msgs:msgs, warns:warnsByStation(D.warnings),
+    /* 하천 CCTV 순환 목록(벽면 카드, 2026-09-22) — 관서 순환과 무관한 권역 전역 목록. 화면 안에서 틀 수 있는 것만:
+       ① 홍수통제소 관측소 CCTV(장치번호표 cctv-hrfco.js) ② 외부 등록(cctv-links.js: KBS·포항·부산 안전ON HLS·춘천 iframe).
+       순서: 경보→주의보 지점 먼저(rank 0·1), 그다음 관서 순, 같은 관서 안에선 위험수위 대비 높은 순. 같은 지점은 한 번만. */
+    var cctv=[], _seen={};
+    NAMES.forEach(function(nm,si){
+      (codes[nm]||[]).forEach(function(c){
+        if(_seen['h:'+c.code] || !(window.hrfcoCam && window.hrfcoCam(c.code))) return; _seen['h:'+c.code]=1;
+        cctv.push({ stn:nm, name:c.name, x:{hrfco:c.code}, src:'홍수통제소', level:c.level,
+          rank:(c.level==='danger'?0:(c.level==='warning'?1:2)), si:si, ratio:c.ratio });
+      });
+      (window.cctvLinksFor ? window.cctvLinksFor(RC.key, nm, sig(nm)) : []).forEach(function(x){
+        if(!(window.cctvInline && window.cctvInline(x))) return;
+        var k=(window.cctvKey && window.cctvKey(x))||('h:'+x.hrfco); if(_seen[k]) return; _seen[k]=1;
+        cctv.push({ stn:nm, name:x.n, x:x, src:'', level:'safe', rank:2, si:si, ratio:0 });
+      });
+    });
+    cctv.sort(function(a,b){ return (a.rank-b.rank)||(a.si-b.si)||(b.ratio-a.ratio); });
+    return { stations:stations, rivers:rivers, msgs:msgs, warns:warnsByStation(D.warnings), cctv:cctv,
              keyRivers:keyRivers, ultra:ultra, updated:D.updated,
              /* 새 카드 3장(레이더·태풍·물때, 2026-09-18) 원시 데이터 통과 */
              kmaImages:(D.kma_images||{}), typhoon:(D.typhoon||[]), tide:(D.tide||null) };
@@ -1078,6 +1105,47 @@ NEWCARD_EL = r"""radarEl(){
       R('div',{style:{display:'flex',alignItems:'stretch',gap:'6px',flex:1}},cells),
       R('div',{style:{fontSize:'24px',fontWeight:600,color:DIM,textAlign:'right'}},
         (td.target||'')+' · '+(td.station||'')+' +'+(td.shift_min!=null?Math.round(td.shift_min/60):2)+'h · 물때 '+(td.spring||'-')));
+  }
+  /* ── 하천 CCTV 카드(2026-09-22) — 권역 전역 목록을 60초마다 한 지점씩. 관서 순환(6~15초)과는 따로 돈다(통제소 스트림이
+     켜지는 데 몇 초 걸려 관서마다 바꾸면 늘 '연결 중'만 보인다). 경보·주의보 지점이 있으면 그것만 돌리고(상황 집중),
+     순환을 멈춰 둔(❚❚) 관서에 지점이 있으면 그 관서 것만 돌린다. 스트림은 스스로 멈추지 않는다(stopAfter:0). */
+  cctvPick(s){
+    const all=(EXT().cctv)||[]; if(!all.length) return null;
+    const alert=all.filter(x=>x.rank<2); let list=alert.length?alert:all, mode=alert.length?'경보·주의보 지점만':'권역 전체';
+    if(!this.state.playing){ const mine=list.filter(x=>x.stn===s.name); if(mine.length){ list=mine; mode=s.name+' 관할'; } }
+    /* 연결에 실패한 지점은 10분 동안 빼고 바로 다음으로(빈 스트림인 카메라가 한 칸을 60초 내내 차지하지 않게). 전부 실패면 그대로. */
+    const bad=this._cctvBad||{}, t0=Date.now()-600000, ok=list.filter(x=>!(bad[this.cctvKeyOf(x)]>t0)); if(ok.length) list=ok;
+    const slot=Math.floor(Date.now()/60000), i=slot%list.length, cam=list[i];
+    return { list:list, i:i, cam:cam, key:this.cctvKeyOf(cam), mode:mode, n:all.length };
+  }
+  cctvKeyOf(cam){ return cam.x.hrfco?('h:'+cam.x.hrfco):((window.cctvKey&&window.cctvKey(cam.x))||cam.name); }
+  cctvSub(s){ const p=this.cctvPick(s); if(!p) return '홍수통제소 · KBS · 지자체';
+    return (p.i+1)+'/'+p.list.length+' · '+p.mode+' · 60초 순환'; }
+  cctvEl(s){
+    const R=window.React.createElement, DIM='var(--dim,#8e9bb0)', self=this;
+    const p=this.cctvPick(s);
+    if(!p) return R('div',{style:{flex:1,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'38px',fontWeight:700,color:DIM,textAlign:'center'}},'화면 안에서 틀 수 있는 하천 CCTV 없음');
+    const cam=p.cam, key=p.key;
+    const col=cam.rank===0?'var(--cRed,#ff5a5a)':(cam.rank===1?'var(--cOrange,#ff9a3c)':'var(--cGreen,#2ad19a)');
+    const st=(self._cctvSt&&self._cctvSt.key===key)?self._cctvSt.text:'연결 중…';
+    const media=cam.x.frame
+      ? R('iframe',{key:'wf'+key, src:cam.x.frame, loading:'lazy', style:{position:'absolute',top:0,left:0,width:'100%',height:'100%',border:0,background:'#000'}})
+      : R('video',{key:'wv'+key, muted:true, playsInline:true, autoPlay:true, style:{position:'absolute',top:0,left:0,width:'100%',height:'100%',objectFit:'cover',background:'#000'},
+          /* 같은 지점이면 다시 틀지 않는다(0.5초마다 다시 그려도 스트림 유지). 지점이 바뀌면 key 가 달라져 새 video 가 붙고 옛것은 멈춘다. */
+          ref:(el)=>{ if(!el || el._wkey===key) return; el._wkey=key;
+            if(self._cctvEl && self._cctvEl!==el){ try{ window.cctvStop(self._cctvEl); }catch(e){} }
+            self._cctvEl=el; self._cctvSt={key:key,text:'연결 중…'};
+            el.onplaying=function(){ self._cctvSt={key:key,text:''}; };
+            window.cctvPlay(el, Object.assign({}, cam.x, {stopAfter:0}), function(why){
+              self._cctvSt={key:key,text:'연결 실패('+why+') — 다음 지점으로'}; (self._cctvBad=self._cctvBad||{})[key]=Date.now();
+              setTimeout(function(){ el._wkey=null; }, 20000); }); }});
+    return R('div',{style:{flex:1,minHeight:0,position:'relative',borderRadius:'16px',overflow:'hidden',background:'#000',borderLeft:'12px solid '+col}},
+      media,
+      st ? R('div',{style:{position:'absolute',left:0,right:0,top:'42%',textAlign:'center',fontSize:'34px',fontWeight:700,color:'#ffd166',textShadow:'0 2px 8px #000'}}, st) : null,
+      R('div',{style:{position:'absolute',left:0,right:0,bottom:0,padding:'14px 22px',display:'flex',alignItems:'baseline',gap:'18px',background:'linear-gradient(0deg, rgba(0,0,0,.72), transparent)'}},
+        R('div',{style:{fontSize:'40px',fontWeight:800,color:'#fff',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0}}, cam.stn+' · '+cam.name),
+        R('div',{style:{fontSize:'26px',fontWeight:600,color:'#dfe6f2',whiteSpace:'nowrap'}}, cam.src||''),
+        R('div',{style:{marginLeft:'auto',fontSize:'26px',fontWeight:700,color:'#fff',whiteSpace:'nowrap'}}, 'LIVE '+(p.i+1)+'/'+p.list.length)));
   }"""
 patch('  // 특보는 실황값에서 파생',
       '  ' + NEWCARD_EL + '\n\n  // 특보는 실황값에서 파생',
@@ -1085,6 +1153,7 @@ patch('  // 특보는 실황값에서 파생',
 patch("      ultraEl: this.ultraEl((EXT().ultra||{})[s.name]),",
       "      ultraEl: this.ultraEl((EXT().ultra||{})[s.name]),\n"
       "      radarEl: this.radarEl(), typhoonEl: this.typhoonEl(), tideEl: this.tideEl(),\n"
+      "      cctvEl: this.cctvEl(s), cctvSub: this.cctvSub(s),\n"
       "      radarTs: (((EXT().kmaImages||{}).radar||{}).ts||'').slice(11,16),",
       '새 카드 값 바인딩')
 # INJECT 원시 데이터 통과는 INJECT 문자열 원문에 직접 넣었다 — INJECT 는 이 시점엔 아직 h 에 없다.
@@ -1102,8 +1171,9 @@ patch(_ULTRA_CLOSE,
       _ULTRA_CLOSE
       + _card_html('레이더 영상', '기상청 합성 · {{ radarTs }}', '{{ radarEl }}')
       + _card_html('태풍 현황', '기상청 태풍정보', '{{ typhoonEl }}')
-      + _card_html('물때 · 파주 두포리', '국립해양조사원 · 강화대교 +2h', '{{ tideEl }}'),
-      '새 카드 3장 마크업')
+      + _card_html('물때 · 파주 두포리', '국립해양조사원 · 강화대교 +2h', '{{ tideEl }}')
+      + _card_html('하천 CCTV', '{{ cctvSub }}', '{{ cctvEl }}'),
+      '새 카드 4장 마크업')
 
 # ══════════════════════════════════════════════════════════════════════════
 # (L) 카드 배치 편집기 — 2026-09-17 사장님 지시("내 입맛대로 넣고 빼고 배치")
@@ -1114,9 +1184,9 @@ patch(_ULTRA_CLOSE,
 # ══════════════════════════════════════════════════════════════════════════
 def _card_style(cid, extra=''):
     # var() 폴백값 = wall_layout.js 의 DEFAULT 와 같은 값(스크립트가 안 떠도 기본 모양)
-    d = {'obs':(1,1,4,8),'hourly':(1,9,4,16),'warn':(5,1,4,6),'river':(5,7,4,6),'impact':(5,13,4,12),'msg':(9,1,4,10),'idx':(9,11,4,6),'ultra':(9,17,4,8),'radar':(9,17,4,8),'typhoon':(9,17,4,8),'tide':(9,17,4,8)}[cid]
-    # 새 카드 3장은 기본 숨김 — 편집기에서 켠다(폴백 display:none)
-    disp = 'none' if cid in ('radar','typhoon','tide') else ('grid' if cid == 'idx' else 'flex')
+    d = {'obs':(1,1,4,8),'hourly':(1,9,4,16),'warn':(5,1,4,6),'river':(5,7,4,6),'impact':(5,13,4,12),'msg':(9,1,4,10),'idx':(9,11,4,6),'ultra':(9,17,4,8),'radar':(9,17,4,8),'typhoon':(9,17,4,8),'tide':(9,17,4,8),'cctv':(9,17,4,8)}[cid]
+    # 새 카드 4장(레이더·태풍·물때·하천 CCTV)은 기본 숨김 — 편집기에서 켠다(폴백 display:none)
+    disp = 'none' if cid in ('radar','typhoon','tide','cctv') else ('grid' if cid == 'idx' else 'flex')
     return (f'grid-column:var(--wl-{cid}-c,{d[0]})/span var(--wl-{cid}-cs,{d[2]});'
             f'grid-row:var(--wl-{cid}-r,{d[1]})/span var(--wl-{cid}-rs,{d[3]});'
             f'display:var(--wl-{cid}-d,{disp});--fz:var(--wl-{cid}-fz,1);'
@@ -1158,11 +1228,12 @@ _tag_card('ultra',  '6시간 강수예측',        _PANEL)
 _tag_card('radar',  '레이더 영상',           _PANEL)
 _tag_card('typhoon','태풍 현황',             _PANEL)
 _tag_card('tide',   '물때 · 파주 두포리',     _PANEL)
+_tag_card('cctv',   '하천 CCTV',            _PANEL)
 # 지표 칩 3개(산불·미세먼지·일출)는 제목이 없는 서브그리드 — 그 그리드 자체를 카드로 삼는다
 patch('<div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:20px;">',
       '<div data-card="idx" style="' + _card_style('idx', 'display:var(--wl-idx-d,grid);grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;') + '">',
       '지표 칩 묶음 → idx 카드')
-assert h.count('data-card="') == 11, 'data-card 가 11개가 아님: %d' % h.count('data-card="')
+assert h.count('data-card="') == 12, 'data-card 가 12개가 아님: %d' % h.count('data-card="')
 # 카드 사이 간격: 격자 gap 대신 카드 margin (N칸 = 정확히 N/24 이 되도록)
 h = _re.sub(r'(data-card="[a-z]+" style=")', r'\1margin:14px;', h)
 

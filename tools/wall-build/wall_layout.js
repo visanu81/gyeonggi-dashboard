@@ -28,7 +28,9 @@
     /* 2026-09-18 추가 — 기본 숨김. 자리가 겹치므로 켜기 전에 다른 카드를 줄여 자리를 내야 한다 */
     { id: 'radar',  name: '레이더 영상',     min: [3, 5] },
     { id: 'typhoon',name: '태풍 현황',       min: [4, 4] },
-    { id: 'tide',   name: '물때 (파주)',      min: [3, 4] }
+    { id: 'tide',   name: '물때 (파주)',      min: [3, 4] },
+    /* 2026-09-22 추가 — 기본 숨김. 권역 하천 CCTV 를 60초마다 한 지점씩 */
+    { id: 'cctv',   name: '하천 CCTV',       min: [3, 4] }
   ];
   /* 기본 배치 = 지금 화면과 같은 모양을 12×24 로 옮긴 것(실측 튜닝). */
   var DEFAULT = {
@@ -42,7 +44,8 @@
     ultra:  { c: 9, r: 17, cs: 4, rs: 8 },
     radar:  { c: 9, r: 17, cs: 4, rs: 8, hide: true },
     typhoon:{ c: 9, r: 17, cs: 4, rs: 8, hide: true },
-    tide:   { c: 9, r: 17, cs: 4, rs: 8, hide: true }
+    tide:   { c: 9, r: 17, cs: 4, rs: 8, hide: true },
+    cctv:   { c: 9, r: 17, cs: 4, rs: 8, hide: true }
   };
   var BY_ID = {}; CARDS.forEach(function (k) { BY_ID[k.id] = k; });
 
@@ -91,9 +94,11 @@
   function decode(code) {
     try {
       var m = String(code || '').trim().match(/^W(\d)[전북남]?\.(.+)$/); if (!m || +m[1] !== VER) return null;
-      var parts = m[2].split('.'); if (parts.length !== CARDS.length) return null;
+      /* 카드가 늘기 전(11장 이하)에 복사한 코드도 읽는다 — 빠진 카드는 기본값 */
+      var parts = m[2].split('.'); if (parts.length > CARDS.length || parts.length < 8) return null;
       var L = {};
       for (var i = 0; i < CARDS.length; i++) {
+        if (i >= parts.length) { L[CARDS[i].id] = clone(DEFAULT[CARDS[i].id]); continue; }
         var q = parts[i].match(/^([0-9a-z])([0-9a-z])([0-9a-z])([0-9a-z])(x?)([slh]?)$/); if (!q) return null;
         L[CARDS[i].id] = { c: parseInt(q[1], 36), r: parseInt(q[2], 36), cs: parseInt(q[3], 36), rs: parseInt(q[4], 36),
           hide: q[5] === 'x', fz: ({s: 0.8, l: 1.2, h: 1.4})[q[6]] || 1 };

@@ -115,7 +115,9 @@
   window.cctvPlay = function (video, x, onError, onStop) {
     if (!video || !x) return;
     window.cctvStop(video); video._live = true;
-    var armStop = function () { video._stopT = setTimeout(function () { window.cctvStop(video); if (onStop) onStop(); }, 90000); };
+    /* x.stopAfter(ms): 0 이면 스스로 멈추지 않는다 — 상황실 벽면처럼 화면이 60초마다 다음 지점으로 넘기는 곳용. 기본 90초. */
+    var stopMs = (x.stopAfter != null) ? +x.stopAfter : 90000;
+    var armStop = function () { if (stopMs > 0) video._stopT = setTimeout(function () { window.cctvStop(video); if (onStop) onStop(); }, stopMs); };
     if (x.hls) { startHls(video, x.hls, onError); armStop(); return; }
     if (x.hrfco) {
       /* 통제소 스트림은 누가 보기 시작해야 켜진다 — 켜기 요청(응답은 못 읽어도 됨) 뒤 m3u8 이 200 될 때까지 기다린다 */
