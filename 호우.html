@@ -97,8 +97,9 @@
       </div>
       <div style="display:flex; align-items:center; gap:7px;">
         <span style="font-size:11px; color:var(--ink3);">{{updatedTxt}} 기준</span>
-        <button onClick="{{toggleDemo}}" style="{{demoBtnStyle}}">{{demoBtnLabel}}</button>
-        <button onClick="{{toggleTheme}}" style="height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--border2); background:var(--surface); color:var(--ink2); font-size:12.5px; font-weight:800; font-family:inherit; cursor:pointer;">{{themeLabel}}</button>
+        <!-- 유틸(시연·테마)은 아이콘만 — 지도 화면과 같은 규칙 (2026-09-21) -->
+        <button onClick="{{toggleDemo}}" title="{{demoTitle}}" aria-label="시연" style="{{demoBtnStyle}}">{{demoBtnLabel}}</button>
+        <button onClick="{{toggleTheme}}" title="{{themeTitle}}" aria-label="화면 색" style="width:34px; height:34px; padding:0; border-radius:10px; border:1px solid var(--border2); background:var(--surface); color:var(--ink2); font-size:15px; line-height:1; font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">{{themeLabel}}</button>
       </div>
     </div>
   </div>
@@ -560,12 +561,14 @@ class Component extends DCLogic {
         selColor:(s.name===myStation?'var(--brand)':'var(--ink)'),
         selW:(s.name===myStation?800:600),
         pick:()=>this.setMyStation(s.name) })),
-      themeLabel: st.theme==='dark'?'☀ 라이트':'☾ 다크',
+      themeLabel: st.theme==='dark'?'☀':'☾',
+      themeTitle: st.theme==='dark'?'라이트 화면으로 바꾸기':'다크 화면으로 바꾸기',
       toggleTheme:()=>this.setState({theme:this.state.theme==='dark'?'light':'dark'}, ()=>this.applyTheme()),
       // 시연 모드 ({{}}에서 삼항 연산을 못 쓰므로 스타일을 여기서 통째로 만들어 넘긴다)
       demo: st.demo,
-      demoBtnLabel: st.demo?'■ 시연 종료':'▶ 시연 모드',
-      demoBtnStyle: 'height:36px; padding:0 13px; border-radius:10px; border:1px solid '+(st.demo?'var(--severe)':'var(--border2)')+'; background:'+(st.demo?'var(--severe)':'var(--surface)')+'; color:'+(st.demo?'#fff':'var(--ink2)')+'; font-size:12.5px; font-weight:800; font-family:inherit; cursor:pointer;',
+      demoBtnLabel: st.demo?'■':'▶',
+      demoTitle: st.demo?'시연 종료':'시연 모드 — 가상 호우 상황으로 화면 동작 보기',
+      demoBtnStyle: 'width:34px; height:34px; padding:0; border-radius:10px; border:1px solid '+(st.demo?'var(--severe)':'var(--border2)')+'; background:'+(st.demo?'var(--severe)':'var(--surface)')+'; color:'+(st.demo?'#fff':'var(--ink2)')+'; font-size:13px; line-height:1; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-family:inherit; cursor:pointer;',
       toggleDemo:()=>this.setState({demo:!this.state.demo}),
       // 레이아웃
       bannerCols: wide ? '1fr 1fr' : 'minmax(0,1fr)',
