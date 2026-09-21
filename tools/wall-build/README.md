@@ -18,6 +18,8 @@
      renderVals `meteo` 바인딩, 템플릿 막대그리드 → `{{ meteo }}`.
   5. **WALL_DATA 변환기(INJECT)**: data.js(운영 절대URL,5분)→stations(hourly 포함)·rivers·msgs·warns,
      위험구역=구글시트 관서별 탭(30분). 버그수정: 하천 긴시군 매칭·전관서 [] 초기화·worst 가드.
+  6. **하천 CCTV 카드(2026-09-22)**: 변환기가 권역 전역의 재생 가능 지점 목록(cctv)을 만들고 카드가 60초마다 한 곳씩
+     튼다(cctv-links.js 재생기, stopAfter:0). 배치 편집기 id `cctv`, 기본 숨김. 규칙·켜는 법은 workflows/운영현황.md.
 
 재빌드: `python tools/wall-build/build_wall.py`
 디자인 갱신 시: Downloads의 새 단독실행본을 `original_bundle.html`로 교체(폰트·매니페스트 원천) +
