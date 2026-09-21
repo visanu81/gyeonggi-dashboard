@@ -76,8 +76,11 @@
 
   /* ── HLS 재생(hls.js 는 처음 필요할 때 한 번만 내려받음, 사파리는 기본 재생) ── */
   function startHls(video, m3u8, onError) {
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      /* 브라우저 자체 HLS(사파리·일부 크로미움): 실황 목록은 처음 play() 때 아직 준비가 안 돼 거부되기도 한다 → 준비되면 다시 */
+    /* MSE 가 있으면 hls.js 로(일부 크로미움이 자체 HLS 를 '될지도'라 하지만 실황에서 멈추는 일이 있어 — 2026-09-22 실측),
+       없으면(iOS 사파리) 브라우저 자체 HLS 로 */
+    var mse = !!(window.MediaSource || window.WebKitMediaSource);
+    if (!mse && video.canPlayType('application/vnd.apple.mpegurl')) {
+      /* 브라우저 자체 HLS: 실황 목록은 처음 play() 때 아직 준비가 안 돼 거부되기도 한다 → 준비되면 다시 */
       var tryPlay = function () { video.play().catch(function () {}); };
       video.addEventListener('canplay', tryPlay, { once: true }); video.addEventListener('loadedmetadata', tryPlay, { once: true });
       video.src = m3u8; video.load(); tryPlay(); return;
@@ -96,9 +99,12 @@
   }
   /* video 요소에 항목을 튼다. KBS 는 요청 주소를 먼저 GET 하면 본문에 서명된 m3u8 주소가 온다(CORS 허용, 2026-09-21 실측).
      90초 뒤 스스로 멈추고 onStop 을 부른다(지자체 서버 예의; 화면이 '계속 보기' 버튼을 띄운다). */
+  /* 탭이 가려지면 크로미움이 무음 영상을 멈춘다 → 다시 보이면 살아 있는 재생기만 이어 튼다 */
+  if (!window._cctvVisHook) { window._cctvVisHook = true; document.addEventListener('visibilitychange', function () {
+    if (document.hidden) return; document.querySelectorAll('video').forEach(function (v) { if (v._live && v.paused) v.play().catch(function () {}); }); }); }
   window.cctvPlay = function (video, x, onError, onStop) {
     if (!video || !x) return;
-    window.cctvStop(video);
+    window.cctvStop(video); video._live = true;
     var armStop = function () { video._stopT = setTimeout(function () { window.cctvStop(video); if (onStop) onStop(); }, 90000); };
     if (x.hls) { startHls(video, x.hls, onError); armStop(); return; }
     if (x.hrfco) {
@@ -123,7 +129,7 @@
       .catch(function () { if (onError) onError('net'); });
   };
   window.cctvStop = function (video) {
-    if (!video) return;
+    if (!video) return; video._live = false;
     if (video._stopT) { clearTimeout(video._stopT); video._stopT = null; }
     if (video._hls) { try { video._hls.destroy(); } catch (e) {} video._hls = null; }
     try { video.pause(); video.removeAttribute('src'); video.load(); } catch (e) {}
