@@ -14,6 +14,7 @@
      · dc-runtime 을 안 쓰는 순수 HTML — 단순함이 목적이라 의존을 안 둔다. -->
 <script src="region.js"></script>
 <script src="cctv-links.js"></script>
+<script src="data-cctv.js"></script>
 <script src="data.js"></script>
 <style>
   :root{ --bg:#f3f5f9; --card:#ffffff; --ink:#0f172a; --ink2:#334155; --ink3:#64748b; --line:#e2e8f0;
@@ -87,6 +88,11 @@
 <div id="cctv" style="display:none; margin-top:10px; background:var(--card); border:2px solid var(--line); border-radius:18px; padding:14px 16px;">
   <div class="lb" style="font-size:13px; font-weight:800; color:var(--ink3);">📹 관할 하천 실시간 CCTV</div>
   <div id="cctvList" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
+  <div id="kbsBox" style="display:none; margin-top:10px; border-radius:14px; overflow:hidden; background:#000; position:relative;">
+    <video id="kbsVideo" muted playsinline controls style="display:block; width:100%; max-height:60vh; background:#000;"></video>
+    <div id="kbsCap" style="position:absolute; left:0; right:0; top:0; padding:6px 10px; background:linear-gradient(180deg, rgba(0,0,0,.55), transparent); color:#fff; font-size:13px; font-weight:800;"></div>
+    <div id="kbsErr" style="position:absolute; left:10px; bottom:8px; color:#ffd166; font-size:12px; font-weight:700;"></div>
+  </div>
 </div>
 <footer>
   <span id="upd">—</span>
@@ -202,9 +208,12 @@
       list.appendChild(a); });
     /* 외부 공개 영상(지자체·KBS·유튜브) — cctv-links.js 표. 새 창으로 */
     var ext = (window.cctvLinksFor ? window.cctvLinksFor(RC.key, name, sg) : []);
-    ext.forEach(function(x){ var a=document.createElement('a'); a.href=x.u; a.target='_blank'; a.rel='noopener'; a.textContent='📺 '+x.n;
+    ext.forEach(function(x){ var a=document.createElement('a'); var cam=(x.kbs && window.kbsCam) ? window.kbsCam(x.kbs) : null;
+      a.href=cam?'javascript:void(0)':x.u; if(!cam){ a.target='_blank'; a.rel='noopener'; } a.textContent=(cam?'▶ ':'📺 ')+x.n;
       a.style.cssText='display:inline-block; padding:10px 14px; border-radius:12px; border:2px solid var(--line); color:var(--ink2); font-weight:800; font-size:14px; text-decoration:none; background:var(--card);';
+      if(cam) a.onclick=function(){ showKbs(cam); };   /* KBS 는 화면 안에서 재생(정지영상 포스터 + hls.js) */
       list.appendChild(a); });
+    if(!ext.some(function(x){ return x.kbs && window.kbsCam && window.kbsCam(x.kbs); })){ window.kbsStop && window.kbsStop($('kbsVideo')); $('kbsBox').style.display='none'; }
     box.style.display = (cc.length || ext.length) ? 'block' : 'none';
 
     /* 재난문자 */
@@ -232,6 +241,12 @@
     var up = String(D.updated||''); $('upd').textContent = up ? (up.slice(5,16) + ' 자료') : '';
     try{ var t=new Date(up.replace(' ','T')); $('stale').style.display = (up && (Date.now()-t.getTime()) > 40*60000) ? 'block' : 'none'; }catch(e){}
     document.title = (name||'') + ' ' + $('s1').textContent + ' — 쉬운 화면';
+  }
+
+  function showKbs(cam){
+    var v=$('kbsVideo'); window.kbsStop && window.kbsStop(v); v.poster=cam.img||''; $('kbsCap').textContent='📺 KBS 재난감시 CCTV · '+cam.name; $('kbsErr').textContent='';
+    $('kbsBox').style.display='block'; $('kbsBox').scrollIntoView({behavior:'smooth', block:'nearest'});
+    window.kbsPlay(v, cam, function(why){ $('kbsErr').textContent='재생 실패('+why+') — 정지영상만 표시'; });
   }
 
   /* ── 60초마다 새 자료 (다른 화면과 같은 주소·방식) ── */

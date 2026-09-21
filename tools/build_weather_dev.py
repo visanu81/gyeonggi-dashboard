@@ -373,6 +373,11 @@ def main():
         body = body.replace("IMGH=''", f"IMGH='{live}'")
         body = body.replace("'images/kma_", f"'{live}images/kma_").replace('"images/kma_', f'"{live}images/kma_')
         f.write_text(body, encoding='utf-8')
+    # KBS 재난 CCTV 목록(data-cctv.js)은 서버가 운영 저장소에만 올린다 → 모든 화면(시도 폴더 포함)이 운영 주소에서 읽게
+    for f in (PUB / DEV_DIR).rglob('*.html'):
+        body = f.read_text(encoding='utf-8')
+        if 'src="data-cctv.js"' in body:
+            f.write_text(body.replace('src="data-cctv.js"', 'src="https://gyeonggi-dashboard.visanu81.workers.dev/data-cctv.js"'), encoding='utf-8')
     (PUB / DEV_DIR / '전국.html').write_text(landing_html(sidos), encoding='utf-8')
     inject_sido_list(PUB / DEV_DIR, sidos)
     # 5) 대문 — index.html 을 지도 화면 그대로 (주소가 /지도 로 안 바뀐다). 루트 대문엔 '처음이면 전국에서

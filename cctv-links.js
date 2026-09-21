@@ -38,6 +38,35 @@
       '서귀포': [{ n: '서귀포시 실시간 하천 CCTV 27대', u: 'https://www.seogwipo.go.kr/field/safety/live/hls.htm' }],
     },
   };
+  /* KBS 카메라의 재생 요청·정지영상 주소 — 서버가 올리는 data-cctv.js(window.KBS_CCTV, 하루 토큰) 에서 */
+  window.kbsCam = function (id) {
+    var L = (window.KBS_CCTV && window.KBS_CCTV.cams) || [];
+    for (var i = 0; i < L.length; i++) if (String(L[i].id) === String(id)) return L[i];
+    return null;
+  };
+  /* 재생: video 요소에 KBS HLS 를 붙인다(hls.js 는 처음 필요할 때 한 번만 내려받음). 사파리는 기본 재생.
+     cam.url 은 '요청 주소'라 먼저 GET 하면 본문에 서명된 m3u8 주소가 온다(CORS 허용, 2026-09-21 실측). */
+  window.kbsPlay = function (video, cam, onError) {
+    if (!video || !cam || !cam.url) return;
+    var start = function (m3u8) {
+      if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = m3u8; video.play().catch(function () {}); return; }
+      var go = function () {
+        if (!window.Hls || !window.Hls.isSupported()) { if (onError) onError('hls'); return; }
+        if (video._hls) { try { video._hls.destroy(); } catch (e) {} }
+        var h = new window.Hls({ enableWorker: true, lowLatencyMode: false }); video._hls = h;
+        h.on(window.Hls.Events.ERROR, function (ev, d) { if (d && d.fatal && onError) onError(d.type); });
+        h.loadSource(m3u8); h.attachMedia(video);
+        h.on(window.Hls.Events.MANIFEST_PARSED, function () { video.play().catch(function () {}); });
+      };
+      if (window.Hls) return go();
+      var s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js'; s.onload = go;
+      s.onerror = function () { if (onError) onError('load'); }; document.head.appendChild(s);
+    };
+    fetch(cam.url, { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; })
+      .then(function (t) { t = String(t || '').trim(); if (/^https?:\/\//.test(t)) start(t); else if (onError) onError('token'); })
+      .catch(function () { if (onError) onError('net'); });
+  };
+  window.kbsStop = function (video) { if (video && video._hls) { try { video._hls.destroy(); } catch (e) {} video._hls = null; } if (video) { try { video.pause(); video.removeAttribute('src'); video.load(); } catch (e) {} } };
   /* 관서(또는 그 관서의 본체 시군)에 해당하는 링크 목록 */
   window.cctvLinksFor = function (key, station, sigun) {
     var T = window.CCTV_LINKS[key] || {}; var out = [];

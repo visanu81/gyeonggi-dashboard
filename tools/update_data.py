@@ -3746,6 +3746,38 @@ def build_summary():
     return len(rows)
 
 
+KBS_CCTV_PATH = ROOT / 'data-cctv.js'
+
+
+def build_kbs_cctv():
+    """KBS 재난포털 재난감시 CCTV 목록(전국 45대, 하천 15곳) → data-cctv.js (2026-09-21).
+    재생 요청 주소(cctvRequest/…/{토큰}!hls → 서명된 m3u8 주소를 돌려줌)와 정지영상 주소에 하루짜리 토큰이 박혀 있고
+    목록 API 는 다른 주소에서 못 부르므로(CORS 없음) 서버가 대신 받아 둔다. 화면(cctv-links.js kbsCam)이 id 로 찾는다.
+    목록은 6시간 캐시(토큰이 하루 단위) — 배포 회차마다 불러도 하루 28회."""
+    cams = []
+    bucket = datetime.now().strftime('%Y%m%d') + str(datetime.now().hour // 6)
+    for area in range(1, 8):
+        try:
+            r = shared_get(f'kbs_cctv_{area}_{bucket}', 'https://d.kbs.co.kr/special/cctv/list',
+                           params={'area': area, 'disaster': 8}, timeout=15, max_age=6 * 3600,
+                           headers={'X-Requested-With': 'XMLHttpRequest', 'User-Agent': 'Mozilla/5.0'})
+            if r.status_code != 200:
+                continue
+            for c in (r.json().get('cctvList') or []):
+                if c.get('available') != 'Y' or not c.get('cctvId'):
+                    continue
+                cams.append({'id': str(c['cctvId']), 'name': c.get('subtitleMainText') or c.get('name') or '',
+                             'addr': c.get('adressFull') or '', 'lat': c.get('lat'), 'lng': c.get('lng'),
+                             'url': c.get('url') or '', 'img': c.get('imgUrl') or ''})
+        except Exception as e:
+            print(f'  · KBS CCTV 목록 area={area} 실패({type(e).__name__})')
+    if not cams:
+        return 0
+    out = {'generated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'cams': cams}
+    _atomic_write_text(KBS_CCTV_PATH, 'window.KBS_CCTV = ' + json.dumps(out, ensure_ascii=False) + ';\n')
+    return len(cams)
+
+
 def push_only():
     """수집 없이 커밋·푸시·배포만. 지역별 수집을 동시에 돌린 뒤 마지막에 한 번 호출한다.
     (각 수집은 --no-push로 파일만 만들고, 여기서 한꺼번에 올린다 — 푸시 경합 방지)
@@ -3768,6 +3800,10 @@ def push_only():
         print(f'  · 전국 요약 {build_summary()}개 시도 → data-summary.js')
     except Exception as e:
         print(f'  · 전국 요약 실패({type(e).__name__}) — 건너뜀')
+    try:
+        print(f'  · KBS 재난 CCTV {build_kbs_cctv()}대 → data-cctv.js')
+    except Exception as e:
+        print(f'  · KBS CCTV 실패({type(e).__name__}) — 건너뜀')
     git_push_data()
     run_deploy(reason, sig, mins)
     print(f'[{now_str()}] 푸시 완료')
