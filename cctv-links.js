@@ -60,6 +60,16 @@
     },
   };
 
+  /* 부산 안전ON 재난 CCTV(하천·수문·배수, cctv-busan.js — tools/build_busan_cctv.py) — 직접 HLS(CORS *, 2026-09-22 실측) */
+  if (window.BUSAN_CCTV) {
+    var B = window.CCTV_LINKS.busan;
+    Object.keys(window.BUSAN_CCTV).forEach(function (unit) {
+      var items = window.BUSAN_CCTV[unit].map(function (c) { return { n: '부산 안전ON ' + c.n, u: 'https://safecity.busan.go.kr/',
+        hls: 'https://safecity.busan.go.kr:30443/play/hls/' + c.cd + '/index.m3u8' }; });
+      B[unit] = items.concat(B[unit] || []);
+    });
+  }
+
   /* ── 항목 판정 ── */
   window.cctvKey = function (x) { return x.kbs ? 'kbs:' + x.kbs : x.hls ? 'hls:' + x.hls : x.frame ? 'frame:' + x.frame : null; };
   /* KBS 카메라의 재생 요청·정지영상 주소 — 서버가 올리는 data-cctv.js(window.KBS_CCTV, 하루 토큰) 에서 */
