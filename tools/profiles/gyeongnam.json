@@ -785,7 +785,7 @@
    "sigun": "거창",
    "warning": 3.4,
    "danger": 5.4,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -812,7 +812,7 @@
    "sigun": "고성",
    "warning": 2.9,
    "danger": 4.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -821,7 +821,7 @@
    "sigun": "김해",
    "warning": 3.25,
    "danger": 4.9,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -839,7 +839,7 @@
    "sigun": "김해",
    "warning": 4.5,
    "danger": 7.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -875,7 +875,7 @@
    "sigun": "밀양",
    "warning": 4.2,
    "danger": 5.4,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -884,7 +884,7 @@
    "sigun": "밀양",
    "warning": 7.3,
    "danger": 9.4,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -893,7 +893,7 @@
    "sigun": "밀양",
    "warning": 18.79,
    "danger": 22.9,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -920,7 +920,7 @@
    "sigun": "산청",
    "warning": 4.47,
    "danger": 8.7,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -929,7 +929,7 @@
    "sigun": "산청",
    "warning": 5.5,
    "danger": 8.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -947,7 +947,7 @@
    "sigun": "양산",
    "warning": 2.8,
    "danger": 5.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -965,7 +965,7 @@
    "sigun": "양산",
    "warning": 3.5,
    "danger": 5.9,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -974,7 +974,7 @@
    "sigun": "의령",
    "warning": 3.3,
    "danger": 5.3,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -983,7 +983,7 @@
    "sigun": "의령",
    "warning": 6.6,
    "danger": 11.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1001,7 +1001,7 @@
    "sigun": "진주",
    "warning": 3.9,
    "danger": 5.5,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1055,7 +1055,7 @@
    "sigun": "하동",
    "warning": 2.0,
    "danger": 4.9,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1064,7 +1064,7 @@
    "sigun": "하동",
    "warning": 11.0,
    "danger": 14.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1073,7 +1073,7 @@
    "sigun": "하동",
    "warning": 2.2,
    "danger": 5.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1082,7 +1082,7 @@
    "sigun": "함안",
    "warning": 8.0,
    "danger": 12.6,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1091,7 +1091,7 @@
    "sigun": "함안",
    "warning": 26.85,
    "danger": 32.3,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1109,7 +1109,7 @@
    "sigun": "함양",
    "warning": 3.02,
    "danger": 4.4,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1118,7 +1118,7 @@
    "sigun": "함양",
    "warning": 4.8,
    "danger": 6.4,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1136,7 +1136,7 @@
    "sigun": "합천",
    "warning": 5.1,
    "danger": 9.0,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1145,7 +1145,7 @@
    "sigun": "합천",
    "warning": 10.02,
    "danger": 19.1,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1172,7 +1172,7 @@
    "sigun": "의창",
    "warning": 5.4,
    "danger": 9.6,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {
@@ -1181,7 +1181,7 @@
    "sigun": "의창",
    "warning": 2.3,
    "danger": 3.6,
-   "has_cctv": false,
+   "has_cctv": true,
    "api": "waterlevel"
   },
   {

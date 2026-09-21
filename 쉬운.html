@@ -83,6 +83,10 @@
   <a class="tile" id="tMsg" href="지도.html"><div class="ic">📱</div><div class="lb">재난문자</div><div class="v">0<small>건</small></div><div class="d">—</div></a>
   <a class="tile wide" id="tTemp" href="지도.html"><div style="display:flex; align-items:center; gap:16px;"><div class="ic">🌡️</div><div><div class="lb">기온 · 체감 · 바람</div><div class="v" id="tempV">—</div><div class="d" id="tempD">—</div></div></div></a>
 </div>
+<div id="cctv" style="display:none; margin-top:10px; background:var(--card); border:2px solid var(--line); border-radius:18px; padding:14px 16px;">
+  <div class="lb" style="font-size:13px; font-weight:800; color:var(--ink3);">📹 관할 하천 실시간 CCTV</div>
+  <div id="cctvList" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
+</div>
 <footer>
   <span id="upd">—</span>
   <a href="지도.html">자세히 보기 →</a>
@@ -188,6 +192,14 @@
     var tRv=$('tRiver'); tRv.className='tile ' + (rLv==='danger'?'severe': rLv==='warning'?'warn':'safe');
     tRv.querySelector('.v').textContent = top ? (rLv==='danger'?'위험': rLv==='warning'?'주의':'안전') : '—';
     tRv.querySelector('.d').textContent = top ? (shortName(top.r.name) + ' ' + num(top.r.value,2) + 'm · 위험수위의 ' + Math.round(top.pct*100) + '%') : '관할 하천 관측소 없음';
+
+    /* 관할 하천 CCTV — 홍수통제소 실시간 화면(다른 화면의 하천 상세와 같은 출처). 있는 곳만, 최대 6곳 */
+    var cc = mine.filter(function(x){ return x.r.has_cctv; }).slice(0,6);
+    var box=$('cctv'), list=$('cctvList'); list.innerHTML='';
+    cc.forEach(function(x){ var a=document.createElement('a'); a.href='https://n.flood.go.kr/main/cctvView.do?obscd='+encodeURIComponent(x.r.code)+'&fcodvcd=01'; a.target='_blank'; a.rel='noopener';
+      a.textContent='📹 '+shortName(x.r.name); a.style.cssText='display:inline-block; padding:10px 14px; border-radius:12px; border:2px solid var(--brand); color:var(--brand); font-weight:800; font-size:15px; text-decoration:none; background:var(--brandSoft);';
+      list.appendChild(a); });
+    box.style.display = cc.length ? 'block' : 'none';
 
     /* 재난문자 */
     var msgs = (D.messages||[]).filter(function(m){ return !m.region || m.region==='경기도' || m.region===sg || m.region===name; });
