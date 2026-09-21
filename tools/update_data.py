@@ -3771,11 +3771,53 @@ def build_kbs_cctv():
                              'url': c.get('url') or '', 'img': c.get('imgUrl') or ''})
         except Exception as e:
             print(f'  · KBS CCTV 목록 area={area} 실패({type(e).__name__})')
-    if not cams:
-        return 0
-    out = {'generated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'cams': cams}
-    _atomic_write_text(KBS_CCTV_PATH, 'window.KBS_CCTV = ' + json.dumps(out, ensure_ascii=False) + ';\n')
-    return len(cams)
+    return cams
+
+
+def build_hrfco_cctv_table():
+    """홍수통제소 수위관측소 CCTV 장치번호표 (2026-09-22). 화면이 통제소 중계서버(lw.hrfco.go.kr)의 HLS 를 직접 틀 때
+    obscd → 장치번호(ldUrl 저해상도·hdUrl 고해상도)가 필요하다. 화면에 박아 둔 표(cctv-hrfco.js, tools/build_hrfco_cctv.py)는
+    손으로 다시 만들어야 새 카메라가 붙으므로, 서버가 같은 목록을 6시간마다 받아 data-cctv.js 에 같이 올린다 — 화면은 이쪽을 먼저 본다.
+    실패하면 None (화면은 박아 둔 표로 돈다)."""
+    now = datetime.now()
+    bucket = now.strftime('%Y%m%d') + str(now.hour // 6)
+    tm = (now - timedelta(minutes=10)).strftime('%Y%m%d%H%M')
+    r = shared_get(f'hrfco_cctv_{bucket}', 'https://n.flood.go.kr/main/getData.do',
+                   params={'dataType': 'cctv', 'ymdhm': tm}, timeout=30, max_age=6 * 3600,
+                   headers={'User-Agent': 'Mozilla/5.0'})
+    if r.status_code != 200:
+        return None
+    table = {}
+    for it in r.json():
+        code, ld, hd = str(it.get('obscd') or ''), str(it.get('ldUrl') or ''), str(it.get('hdUrl') or '')
+        if not code or not (ld or hd):
+            continue
+        table[code] = {'n': it.get('obsnm') or it.get('media_nm') or '', 'ld': ld, 'hd': hd, 'fc': it.get('fcodvcd') or '01'}
+    return table or None
+
+
+def build_cctv_files():
+    """data-cctv.js = KBS 목록(window.KBS_CCTV) + 통제소 장치번호표(window.HRFCO_CCTV_LIVE). 둘 다 없으면 파일을 건드리지 않는다.
+    한쪽만 실패하면 그 줄만 빠진다(화면은 각각 폴백이 있다)."""
+    gen = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    try:
+        cams = build_kbs_cctv()
+    except Exception as e:
+        print(f'  · KBS CCTV 실패({type(e).__name__}) — 건너뜀'); cams = []
+    try:
+        table = build_hrfco_cctv_table()
+    except Exception as e:
+        print(f'  · 통제소 CCTV 장치번호표 실패({type(e).__name__}) — 건너뜀'); table = None
+    if not cams and not table:
+        return 0, 0
+    lines = []
+    if cams:
+        lines.append('window.KBS_CCTV = ' + json.dumps({'generated': gen, 'cams': cams}, ensure_ascii=False) + ';')
+    if table:
+        lines.append('window.HRFCO_CCTV_LIVE = ' + json.dumps({'generated': gen, 'table': table}, ensure_ascii=False,
+                                                            separators=(',', ':')) + ';')
+    _atomic_write_text(KBS_CCTV_PATH, '\n'.join(lines) + '\n')
+    return len(cams), len(table or {})
 
 
 def push_only():
@@ -3801,9 +3843,10 @@ def push_only():
     except Exception as e:
         print(f'  · 전국 요약 실패({type(e).__name__}) — 건너뜀')
     try:
-        print(f'  · KBS 재난 CCTV {build_kbs_cctv()}대 → data-cctv.js')
+        _nk, _nh = build_cctv_files()
+        print(f'  · CCTV 목록: KBS {_nk}대 · 통제소 장치번호 {_nh}곳 → data-cctv.js')
     except Exception as e:
-        print(f'  · KBS CCTV 실패({type(e).__name__}) — 건너뜀')
+        print(f'  · CCTV 목록 실패({type(e).__name__}) — 건너뜀')
     git_push_data()
     run_deploy(reason, sig, mins)
     print(f'[{now_str()}] 푸시 완료')

@@ -78,8 +78,12 @@
     for (var i = 0; i < L.length; i++) if (String(L[i].id) === String(id)) return L[i];
     return null;
   };
-  /* 홍수통제소 관측소의 장치번호(cctv-hrfco.js) */
-  window.hrfcoCam = function (obscd) { var T = window.HRFCO_CCTV || {}; var e = T[String(obscd)]; return (e && (e.ld || e.hd)) ? e : null; };
+  /* 홍수통제소 관측소의 장치번호 — 서버가 매일 올리는 표(data-cctv.js window.HRFCO_CCTV_LIVE, 새 카메라 자동 반영) 먼저,
+     없으면 화면에 박아 둔 표(cctv-hrfco.js) */
+  window.hrfcoCam = function (obscd) {
+    var L = (window.HRFCO_CCTV_LIVE && window.HRFCO_CCTV_LIVE.table) || {}, T = window.HRFCO_CCTV || {}, k = String(obscd);
+    var e = L[k] || T[k]; return (e && (e.ld || e.hd)) ? e : null;
+  };
   /* 화면 안에서 틀 수 있나(KBS 는 목록 파일이, 홍수통제소는 장치번호표가 있을 때만) */
   window.cctvInline = function (x) { return !!(x.hls || x.frame || (x.kbs && window.kbsCam(x.kbs)) || (x.hrfco && window.hrfcoCam(x.hrfco))); };
   window.cctvPoster = function (x) { if (x.thumb) return x.thumb + (x.thumb.indexOf('?') < 0 ? '?' : '&') + '_t=' + Math.floor(Date.now() / 30000); var c = x.kbs ? window.kbsCam(x.kbs) : null; return c ? c.img : ''; };

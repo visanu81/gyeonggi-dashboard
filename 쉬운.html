@@ -205,7 +205,7 @@
     tRv.querySelector('.d').textContent = top ? (shortName(top.r.name) + ' ' + num(top.r.value,2) + 'm · 위험수위의 ' + Math.round(top.pct*100) + '%') : '관할 하천 관측소 없음';
 
     /* 관할 하천 CCTV — 홍수통제소 실시간 화면(다른 화면의 하천 상세와 같은 출처). 있는 곳만, 최대 6곳 */
-    var cc = mine.filter(function(x){ return x.r.has_cctv; }).slice(0,6);
+    var cc = mine.filter(function(x){ return x.r.has_cctv || (window.hrfcoCam && window.hrfcoCam(x.r.code)); }).slice(0,6);
     var box=$('cctv'), list=$('cctvList'); list.innerHTML='';
     cc.forEach(function(x){ var a=document.createElement('a'); var view='https://n.flood.go.kr/main/cctvView.do?obscd='+encodeURIComponent(x.r.code)+'&fcodvcd=01';
       var item={ n:'홍수통제소 '+shortName(x.r.name), u:view, hrfco:String(x.r.code) };
