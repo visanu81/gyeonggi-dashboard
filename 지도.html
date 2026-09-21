@@ -706,6 +706,10 @@ class Component extends DCLogic {
         return '전체'; })(),
       stationPickerOpen: (function(){ try{ if(sessionStorage.getItem('ggPickerOpen')==='1'){ sessionStorage.removeItem('ggPickerOpen'); return true; } }catch(e){} return false; })()
     };
+    /* 권역이 정해져 있는데 보던/기본 관서가 그 권역에 없으면 권역 첫 관서로 — 전체판은 기본 관서가 수원인데 저장된 권역이
+       북부면 버튼엔 '수원', 자료는 고양이 되던 어긋남(2026-09-21) */
+    (function(self){ var RC=(window.REGION_CONF||{}), g=RC.scopes||{}, sc=self.state.scope;
+      if(sc && sc!=='전체' && g[sc] && g[sc].indexOf(self.state.myStation)<0) self.state.myStation=g[sc][0]; })(this);
   }
   setMyStation(name){ try{ if(typeof localStorage!=='undefined') localStorage.setItem('ggMyStation', name); }catch(e){} this.setState({myStation:name, stationPickerOpen:false}); }
   /* 권역 전환. 지금 보고 있는 관서가 새 권역에 없으면 그 권역 첫 관서로 옮긴다
@@ -1834,9 +1838,16 @@ class Component extends DCLogic {
     // kpi/ribbon chips
     // 댐은 뺀다 — 댐의 기준(계획홍수위)은 평상시에도 90%대라 KPI 가 늘 '100%'로 보였다(강원 광동댐, 2026-09-19).
     const _isDamRow = r => !!(r.raw && (r.raw.dam || (((this.RIVER_META||{})[r.raw.code]||{}).kind==='dam')));
-    const worstRiver = riversByRisk.find(r => !_isDamRow(r)) || riversByRisk[0];
+    // 리본 KPI 최고수위는 '내 관할' 하천 중 가장 높은 곳 — 관서를 바꿔도 전역 최고(마전3교)만 뜨던 것(2026-09-21 사장님).
+    // 관할 하천이 없으면 전역 최고로 되돌아가고 이름표에 '전역'을 붙인다. (riversByRisk 는 위험 근접순 정렬)
+    const _mineRivers = riversByRisk.filter(r => _isMine(r) && !_isDamRow(r));
+    const worstRiver = _mineRivers[0] || riversByRisk.find(r => !_isDamRow(r)) || riversByRisk[0];
+    const _wrScope = _mineRivers.length ? '관할' : '전역';
     // 최고수위 하천의 지점 축약명 (예: "임진강 (군남댐)" → "군남댐", "임진강 (연천 필승교)" → "필승교", "양주 마전3교" → "마전3교")
-    const _wrPlace = worstRiver ? (function(nm){ var m=String(nm||'').match(/\(([^)]+)\)/); var s=m ? m[1] : String(nm||''); return s.trim().split(' ').pop(); })(worstRiver.name) : '';
+    // 괄호 안이 시군 이름뿐이면('신천 (연천)') 지점명이 없는 것 → 하천 이름을 쓴다(상황실 shortRiver 와 같은 규칙)
+    const _wrPlace = worstRiver ? (function(nm){ var s0=String(nm||''); var m=s0.match(/^\s*([^(]+?)\s*\(([^)]+)\)/); if(!m) return s0.trim().split(' ').pop();
+      var ws=m[2].trim().split(/\s+/); var last=ws[ws.length-1]; var RC=window.REGION_CONF||{}; var units=(RC.order||[]).concat(Object.values(RC.alias||{}));
+      if(ws.length===1 && (units.indexOf(last)>=0 || last===mySg)) return m[1].trim(); return last; })(worstRiver.name) : '';
     const feelsMax = Math.max(0,...(d.stations||[]).map(s=>s.feels||0));
     const wide = w>=1160, mid = w>=760 && w<1160;
     // 리본 칩: PC(2열 배치)는 크게, 모바일은 한 줄 균등분배로 촘촘하게
@@ -1851,7 +1862,7 @@ class Component extends DCLogic {
       chip(groupedWarns.length, '발효특보', groupedWarns.length?'var(--severe)':'var(--ink2)', groupedWarns.length?'var(--severeSoft)':'var(--surface)', groupedWarns.length?'var(--severe)':'var(--border)'),
       chip(prelimCount, '예비특보', prelimCount?'var(--caution)':'var(--ink2)', 'var(--surface)', 'var(--border)'),
       chip((d.messages||[]).length, '재난문자', (d.messages||[]).length?'var(--warn)':'var(--ink2)', 'var(--surface)', 'var(--border)'),
-      {...chip(worstRiver?worstRiver.pctW:'-', (worstRiver&&_wrPlace)?('최고수위('+_wrPlace+')'):'최고수위', worstRiver?worstRiver.color:'var(--ink2)', 'var(--surface)', 'var(--border)'), labelStyle:_chipLabelSm},
+      {...chip(worstRiver?worstRiver.pctW:'-', (worstRiver&&_wrPlace)?(_wrScope+' 최고수위('+_wrPlace+')'):'최고수위', worstRiver?worstRiver.color:'var(--ink2)', 'var(--surface)', 'var(--border)'), labelStyle:_chipLabelSm},
       chip(feelsMax?feelsMax+'°':'-', '최고체감', 'var(--ink2)', 'var(--surface)', 'var(--border)')
     ];
     // layout
