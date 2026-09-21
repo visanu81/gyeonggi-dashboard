@@ -23,6 +23,7 @@
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('service-worker.js').catch(function(){});});}</script>
 <!-- 지역 설정(시군 목록·배치·중점 관서). 남부 배포 시 region-south.js로 교체된다. -->
 <script src="region.js"></script>
+<script src="cctv-links.js"></script>
 <style data-dash-sheet>
   /* 배치 편집기(dash_layout.js) — 섹션·카드 표시/순서. 인라인 style 은 런타임이 다시 쓰므로 시트로 건다. */
   [data-dash-main]{display:flex;flex-direction:column;}
@@ -463,6 +464,15 @@
           <!-- 관측소가 많은 시도(강원 55·경북 72)는 상위 8행만 — 주의 이상·내 관서·홍수예보지점 우선. 나머지는 펼쳐 본다 -->
           <sc-if value="{{riverMore}}" hint-placeholder-val="{{false}}">
             <div onClick="{{toggleRiverExpand}}" style="margin:4px 2px 2px; padding:8px; border-radius:9px; text-align:center; font-size:12px; font-weight:700; color:var(--brand); background:var(--brandSoft); cursor:pointer;">{{riverMoreLabel}}</div>
+          </sc-if>
+          <!-- 외부 공개 하천 CCTV(지자체·KBS·유튜브, cctv-links.js) — 내 관서에 있는 것만. 홍수통제소 영상은 하천 상세 안에 이미 있다 -->
+          <sc-if value="{{hasCctvLinks}}" hint-placeholder-val="{{false}}">
+            <div style="margin:8px 2px 2px; padding:8px 10px; border-radius:9px; background:var(--surface2); border:1px solid var(--border); display:flex; flex-wrap:wrap; align-items:center; gap:6px;">
+              <span style="font-size:11px; font-weight:800; color:var(--ink3);">📺 외부 실시간 CCTV</span>
+              <sc-for list="{{cctvLinks}}" as="c" hint-placeholder-count="2">
+                <a href="{{c.u}}" target="_blank" rel="noopener" style="font-size:11.5px; font-weight:800; color:var(--brand); text-decoration:none; padding:4px 9px; border-radius:7px; border:1px solid var(--border2); background:var(--surface);" style-hover="background:var(--brandSoft)">{{c.n}}</a>
+              </sc-for>
+            </div>
           </sc-if>
         </div>
       </div>
@@ -2001,6 +2011,8 @@ class Component extends DCLogic {
       prelimAway: prelim.filter(function(p){return (p.north||0)===0 && (p.total||0)>0;}).map(function(p){ return p.type.replace(' 예비특보','')+' '+(p.total||0)+'곳'; }).join(', '),
       // 수위
       rivers, riverRows, riverMore, riverMoreLabel, toggleRiverExpand:()=>this.setState({riverExpand:!this.state.riverExpand}),
+      cctvLinks:(window.cctvLinksFor ? window.cctvLinksFor((window.REGION_CONF||{}).key, myStation, mySg) : []),
+      hasCctvLinks:!!(window.cctvLinksFor && window.cctvLinksFor((window.REGION_CONF||{}).key, myStation, mySg).length),
       // detail sections
       stationCards:stationOrder, forecast, hourlyTable:this.hourlyTableBody(myFc), nowSummary:this.nowSummaryBody(d), fcTempLine, fcTempArea, fcRainBars, fcMax:Math.round(tmx), fcMin:Math.round(tmn),
       // 관서 선택 (헤더 드롭다운)

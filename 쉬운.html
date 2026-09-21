@@ -13,6 +13,7 @@
      · 데이터는 다른 화면과 같은 data.js(작업장 빌드가 운영 주소로 바꿔 준다), 60초마다 새로 읽는다.
      · dc-runtime 을 안 쓰는 순수 HTML — 단순함이 목적이라 의존을 안 둔다. -->
 <script src="region.js"></script>
+<script src="cctv-links.js"></script>
 <script src="data.js"></script>
 <style>
   :root{ --bg:#f3f5f9; --card:#ffffff; --ink:#0f172a; --ink2:#334155; --ink3:#64748b; --line:#e2e8f0;
@@ -199,7 +200,12 @@
     cc.forEach(function(x){ var a=document.createElement('a'); a.href='https://n.flood.go.kr/main/cctvView.do?obscd='+encodeURIComponent(x.r.code)+'&fcodvcd=01'; a.target='_blank'; a.rel='noopener';
       a.textContent='📹 '+shortName(x.r.name); a.style.cssText='display:inline-block; padding:10px 14px; border-radius:12px; border:2px solid var(--brand); color:var(--brand); font-weight:800; font-size:15px; text-decoration:none; background:var(--brandSoft);';
       list.appendChild(a); });
-    box.style.display = cc.length ? 'block' : 'none';
+    /* 외부 공개 영상(지자체·KBS·유튜브) — cctv-links.js 표. 새 창으로 */
+    var ext = (window.cctvLinksFor ? window.cctvLinksFor(RC.key, name, sg) : []);
+    ext.forEach(function(x){ var a=document.createElement('a'); a.href=x.u; a.target='_blank'; a.rel='noopener'; a.textContent='📺 '+x.n;
+      a.style.cssText='display:inline-block; padding:10px 14px; border-radius:12px; border:2px solid var(--line); color:var(--ink2); font-weight:800; font-size:14px; text-decoration:none; background:var(--card);';
+      list.appendChild(a); });
+    box.style.display = (cc.length || ext.length) ? 'block' : 'none';
 
     /* 재난문자 */
     var msgs = (D.messages||[]).filter(function(m){ return !m.region || m.region==='경기도' || m.region===sg || m.region===name; });
