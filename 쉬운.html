@@ -90,6 +90,8 @@
   <div id="cctvList" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
   <div id="kbsBox" style="display:none; margin-top:10px; border-radius:14px; overflow:hidden; background:#000; position:relative;">
     <video id="kbsVideo" muted playsinline controls style="display:block; width:100%; max-height:60vh; background:#000;"></video>
+    <iframe id="kbsFrame" src="about:blank" allow="autoplay" style="display:none; width:100%; aspect-ratio:16/9; border:0; background:#000;"></iframe>
+    <div id="kbsPause" style="display:none; position:absolute; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,.45); color:#fff; font-size:16px; font-weight:800; cursor:pointer; text-align:center; padding:12px;">⏸ 90초가 지나 멈췄습니다 — 눌러서 계속 보기</div>
     <div id="kbsCap" style="position:absolute; left:0; right:0; top:0; padding:6px 10px; background:linear-gradient(180deg, rgba(0,0,0,.55), transparent); color:#fff; font-size:13px; font-weight:800;"></div>
     <div id="kbsErr" style="position:absolute; left:10px; bottom:8px; color:#ffd166; font-size:12px; font-weight:700;"></div>
   </div>
@@ -208,12 +210,12 @@
       list.appendChild(a); });
     /* 외부 공개 영상(지자체·KBS·유튜브) — cctv-links.js 표. 새 창으로 */
     var ext = (window.cctvLinksFor ? window.cctvLinksFor(RC.key, name, sg) : []);
-    ext.forEach(function(x){ var a=document.createElement('a'); var cam=(x.kbs && window.kbsCam) ? window.kbsCam(x.kbs) : null;
-      a.href=cam?'javascript:void(0)':x.u; if(!cam){ a.target='_blank'; a.rel='noopener'; } a.textContent=(cam?'▶ ':'📺 ')+x.n;
+    ext.forEach(function(x){ var a=document.createElement('a'); var inline=!!(window.cctvInline && window.cctvInline(x));
+      a.href=inline?'javascript:void(0)':x.u; if(!inline){ a.target='_blank'; a.rel='noopener'; } a.textContent=(inline?'▶ ':'📺 ')+x.n;
       a.style.cssText='display:inline-block; padding:10px 14px; border-radius:12px; border:2px solid var(--line); color:var(--ink2); font-weight:800; font-size:14px; text-decoration:none; background:var(--card);';
-      if(cam) a.onclick=function(){ showKbs(cam); };   /* KBS 는 화면 안에서 재생(정지영상 포스터 + hls.js) */
+      if(inline) a.onclick=function(){ showCctv(x); };   /* KBS·포항은 hls 재생, 춘천은 뷰어 iframe — 화면 안에서 */
       list.appendChild(a); });
-    if(!ext.some(function(x){ return x.kbs && window.kbsCam && window.kbsCam(x.kbs); })){ window.kbsStop && window.kbsStop($('kbsVideo')); $('kbsBox').style.display='none'; }
+    if(!ext.some(function(x){ return window.cctvInline && window.cctvInline(x); })){ hideCctv(); }
     box.style.display = (cc.length || ext.length) ? 'block' : 'none';
 
     /* 재난문자 */
@@ -243,11 +245,17 @@
     document.title = (name||'') + ' ' + $('s1').textContent + ' — 쉬운 화면';
   }
 
-  function showKbs(cam){
-    var v=$('kbsVideo'); window.kbsStop && window.kbsStop(v); v.poster=cam.img||''; $('kbsCap').textContent='📺 KBS 재난감시 CCTV · '+cam.name; $('kbsErr').textContent='';
-    $('kbsBox').style.display='block'; $('kbsBox').scrollIntoView({behavior:'smooth', block:'nearest'});
-    window.kbsPlay(v, cam, function(why){ $('kbsErr').textContent='재생 실패('+why+') — 정지영상만 표시'; });
+  var curItem=null;
+  function hideCctv(){ window.cctvStop && window.cctvStop($('kbsVideo')); $('kbsFrame').src='about:blank'; $('kbsBox').style.display='none'; $('kbsPause').style.display='none'; curItem=null; }
+  function showCctv(x){
+    var v=$('kbsVideo'), f=$('kbsFrame'); curItem=x; $('kbsErr').textContent=''; $('kbsPause').style.display='none';
+    $('kbsCap').textContent='📺 '+x.n; $('kbsBox').style.display='block';
+    if(x.frame){ window.cctvStop && window.cctvStop(v); v.style.display='none'; f.style.display='block'; f.src=x.frame; }
+    else { f.src='about:blank'; f.style.display='none'; v.style.display='block'; v.poster=window.cctvPoster(x)||'';
+      window.cctvPlay(v, x, function(why){ $('kbsErr').textContent='재생 실패('+why+') — 정지영상만 표시'; }, function(){ $('kbsPause').style.display='flex'; }); }
+    $('kbsBox').scrollIntoView({behavior:'smooth', block:'nearest'});
   }
+  $('kbsPause').onclick=function(){ if(curItem) showCctv(curItem); };
 
   /* ── 60초마다 새 자료 (다른 화면과 같은 주소·방식) ── */
   function poll(){

@@ -474,7 +474,7 @@
                 <a href="{{c.u}}" target="{{c.target}}" rel="noopener" onClick="{{c.click}}" style="{{c.style}}" style-hover="background:var(--brandSoft)">{{c.n}}</a>
               </sc-for>
             </div>
-            <!-- KBS 는 눌러서 이 자리에 재생(정지영상 포스터 + hls.js). 새 창 안 열림 -->
+            <!-- 화면 안 재생(KBS·포항 = hls, 춘천 = 뷰어 iframe). 눌러서 펼치고 다시 누르면 접힘. 새 창 안 열림 -->
             <sc-if value="{{kbsOpen}}" hint-placeholder-val="{{false}}">
               <div style="margin:6px 2px 2px; border-radius:12px; overflow:hidden; border:1px solid var(--border); background:#000;">{{kbsPanel}}</div>
             </sc-if>
@@ -2017,25 +2017,36 @@ class Component extends DCLogic {
       // 수위
       rivers, riverRows, riverMore, riverMoreLabel, toggleRiverExpand:()=>this.setState({riverExpand:!this.state.riverExpand}),
       cctvLinks:(window.cctvLinksFor ? window.cctvLinksFor((window.REGION_CONF||{}).key, myStation, mySg) : []).map((c)=>{
-        // KBS 카메라(목록 파일이 있을 때만)는 화면 안 재생, 나머지는 새 창
-        const cam = (c.kbs && window.kbsCam) ? window.kbsCam(c.kbs) : null; const on = cam && st.kbsOpen===String(c.kbs);
+        // 화면 안에서 틀 수 있는 것(KBS·포항 hls·춘천 iframe)은 눌러서 펼침, 나머지는 새 창
+        const inline = !!(window.cctvInline && window.cctvInline(c)); const key = inline ? window.cctvKey(c) : null; const on = inline && st.kbsOpen===key;
         const base='font-size:11.5px; font-weight:800; text-decoration:none; padding:4px 9px; border-radius:7px; border:1px solid var(--border2); cursor:pointer; ';
-        return { n:(cam?'▶ ':'')+c.n, u:(cam?'javascript:void(0)':c.u), target:(cam?'_self':'_blank'),
+        return { n:(inline?'▶ ':'')+c.n, u:(inline?'javascript:void(0)':c.u), target:(inline?'_self':'_blank'),
           style: base+(on?'color:#fff; background:var(--brand); border-color:var(--brand);':'color:var(--brand); background:var(--surface);'),
-          click:()=>{ if(cam) this.setState({kbsOpen: on?null:String(c.kbs)}); } };
+          click:()=>{ if(inline) this.setState({kbsOpen: on?null:key, kbsPaused:false}); } };
       }),
       hasCctvLinks:!!(window.cctvLinksFor && window.cctvLinksFor((window.REGION_CONF||{}).key, myStation, mySg).length),
       kbsOpen: !!st.kbsOpen,
       kbsPanel: (function(self){
         const R=React.createElement;
-        if(!st.kbsOpen || !window.kbsCam) return null;
-        const cam=window.kbsCam(st.kbsOpen); if(!cam) return null;
+        if(!st.kbsOpen || !window.cctvLinksFor) return null;
+        const item=(window.cctvLinksFor((window.REGION_CONF||{}).key, myStation, mySg)).filter(function(x){ return window.cctvKey(x)===st.kbsOpen; })[0];
+        if(!item) return null;
+        const head=R('div',{style:{position:'absolute', left:0, right:0, top:0, display:'flex', justifyContent:'space-between', alignItems:'center', padding:'6px 10px', background:'linear-gradient(180deg, rgba(0,0,0,.55), transparent)', color:'#fff', fontSize:'12px', fontWeight:800, pointerEvents:'none'}},
+          R('span',{}, '📺 '+item.n),
+          R('a',{href:item.u, target:'_blank', rel:'noopener', style:{color:'#ffd166', textDecoration:'none', marginLeft:'8px', pointerEvents:'auto'}}, '원본 사이트 ↗'));
+        if(item.frame){   // 뷰어 페이지 통째로 (춘천 — 자체 플레이어)
+          return R('div',{style:{position:'relative', paddingTop:'56.25%'}},
+            R('iframe',{key:'fr'+item.frame, src:item.frame, allow:'autoplay', style:{position:'absolute', inset:0, width:'100%', height:'100%', border:0, background:'#000'}}), head);
+        }
+        const poster=window.cctvPoster(item);
         return R('div',{style:{position:'relative'}},
-          R('video',{key:'kbs'+cam.id, muted:true, playsInline:true, controls:true, poster:cam.img, style:{display:'block', width:'100%', maxHeight:'420px', background:'#000'},
-            ref:(el)=>{ if(!el){ return; } if(el._camId===cam.id) return; el._camId=cam.id; window.kbsPlay(el, cam, function(why){ const n=el.parentNode&&el.parentNode.querySelector('[data-kbs-err]'); if(n) n.textContent='재생 실패('+why+') — 정지영상만 표시. KBS 재난포털에서 보기'; }); }}),
-          R('div',{style:{position:'absolute', left:0, right:0, top:0, display:'flex', justifyContent:'space-between', alignItems:'center', padding:'6px 10px', background:'linear-gradient(180deg, rgba(0,0,0,.55), transparent)', color:'#fff', fontSize:'12px', fontWeight:800}},
-            R('span',{}, '📺 KBS 재난감시 CCTV · '+cam.name),
-            R('a',{href:'https://d.kbs.co.kr/special/cctvShare?cctvId='+cam.id, target:'_blank', rel:'noopener', style:{color:'#ffd166', textDecoration:'none', marginLeft:'8px'}}, 'KBS에서 보기 ↗')),
+          R('video',{key:'v'+st.kbsOpen, muted:true, playsInline:true, controls:true, poster:poster, style:{display:'block', width:'100%', maxHeight:'420px', background:'#000'},
+            ref:(el)=>{ if(!el) return; if(el._key===st.kbsOpen && !st.kbsResume) return; el._key=st.kbsOpen;
+              const err=function(why){ const n=el.parentNode&&el.parentNode.querySelector('[data-kbs-err]'); if(n) n.textContent='재생 실패('+why+') — 정지영상만 표시. 원본 사이트에서 보기'; };
+              window.cctvPlay(el, item, err, function(){ self.setState({kbsPaused:true, kbsResume:false}); });
+              if(st.kbsResume) self.setState({kbsResume:false}); }}),
+          head,
+          (st.kbsPaused ? R('div',{onClick:()=>self.setState({kbsPaused:false, kbsResume:true}), style:{position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,.45)', color:'#fff', fontSize:'15px', fontWeight:800, cursor:'pointer'}}, '⏸ 90초가 지나 멈췄습니다 — 눌러서 계속 보기') : null),
           R('div',{'data-kbs-err':'1', style:{position:'absolute', left:10, bottom:8, color:'#ffd166', fontSize:'11px', fontWeight:700}}, ''));
       })(this),
       // detail sections
