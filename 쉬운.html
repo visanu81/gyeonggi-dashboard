@@ -14,6 +14,7 @@
      · dc-runtime 을 안 쓰는 순수 HTML — 단순함이 목적이라 의존을 안 둔다. -->
 <script src="region.js"></script>
 <script src="cctv-links.js"></script>
+<script src="cctv-hrfco.js"></script>
 <script src="data-cctv.js"></script>
 <script src="data.js"></script>
 <style>
@@ -205,8 +206,12 @@
     /* 관할 하천 CCTV — 홍수통제소 실시간 화면(다른 화면의 하천 상세와 같은 출처). 있는 곳만, 최대 6곳 */
     var cc = mine.filter(function(x){ return x.r.has_cctv; }).slice(0,6);
     var box=$('cctv'), list=$('cctvList'); list.innerHTML='';
-    cc.forEach(function(x){ var a=document.createElement('a'); a.href='https://n.flood.go.kr/main/cctvView.do?obscd='+encodeURIComponent(x.r.code)+'&fcodvcd=01'; a.target='_blank'; a.rel='noopener';
-      a.textContent='📹 '+shortName(x.r.name); a.style.cssText='display:inline-block; padding:10px 14px; border-radius:12px; border:2px solid var(--brand); color:var(--brand); font-weight:800; font-size:15px; text-decoration:none; background:var(--brandSoft);';
+    cc.forEach(function(x){ var a=document.createElement('a'); var view='https://n.flood.go.kr/main/cctvView.do?obscd='+encodeURIComponent(x.r.code)+'&fcodvcd=01';
+      var item={ n:'홍수통제소 '+shortName(x.r.name), u:view, hrfco:String(x.r.code) };
+      var inline=!!(window.cctvInline && window.cctvInline(item));   /* 장치번호가 있으면 화면 안 재생, 없으면 팝업 페이지 새 창 */
+      a.href=inline?'javascript:void(0)':view; if(!inline){ a.target='_blank'; a.rel='noopener'; }
+      a.textContent=(inline?'▶ ':'📹 ')+shortName(x.r.name); a.style.cssText='display:inline-block; padding:10px 14px; border-radius:12px; border:2px solid var(--brand); color:var(--brand); font-weight:800; font-size:15px; text-decoration:none; background:var(--brandSoft);';
+      if(inline) a.onclick=function(){ showCctv(item); };
       list.appendChild(a); });
     /* 외부 공개 영상(지자체·KBS·유튜브) — cctv-links.js 표. 새 창으로 */
     var ext = (window.cctvLinksFor ? window.cctvLinksFor(RC.key, name, sg) : []);
@@ -215,7 +220,7 @@
       a.style.cssText='display:inline-block; padding:10px 14px; border-radius:12px; border:2px solid var(--line); color:var(--ink2); font-weight:800; font-size:14px; text-decoration:none; background:var(--card);';
       if(inline) a.onclick=function(){ showCctv(x); };   /* KBS·포항은 hls 재생, 춘천은 뷰어 iframe — 화면 안에서 */
       list.appendChild(a); });
-    if(!ext.some(function(x){ return window.cctvInline && window.cctvInline(x); })){ hideCctv(); }
+    if(!ext.some(function(x){ return window.cctvInline && window.cctvInline(x); }) && !cc.some(function(x){ return window.hrfcoCam && window.hrfcoCam(x.r.code); })){ hideCctv(); }
     box.style.display = (cc.length || ext.length) ? 'block' : 'none';
 
     /* 재난문자 */

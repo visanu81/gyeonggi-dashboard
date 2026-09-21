@@ -24,6 +24,7 @@
 <!-- 지역 설정(시군 목록·배치·중점 관서). 남부 배포 시 region-south.js로 교체된다. -->
 <script src="region.js"></script>
 <script src="cctv-links.js"></script>
+<script src="cctv-hrfco.js"></script>
 <script src="data-cctv.js"></script>
 <style data-dash-sheet>
   /* 배치 편집기(dash_layout.js) — 섹션·카드 표시/순서. 인라인 style 은 런타임이 다시 쓰므로 시트로 건다. */
@@ -2613,8 +2614,21 @@ class Component extends DCLogic {
       ):null,
 
       // CCTV
+      // 장치번호(cctv-hrfco.js)가 있으면 통제소 HLS 를 직접 튼다(팝업 UI 없음, 90초 뒤 멈춤·계속 보기). 없으면 종전 팝업 iframe.
       r.cctv? R('div',{style:{marginTop:'18px'}},
-        R('div',{style:{fontSize:'12px', color:'var(--brand)', fontWeight:800, marginBottom:'7px', display:'flex', alignItems:'center', gap:'6px'}}, '📹 실시간 CCTV', R('span',{style:{fontSize:'9px', fontWeight:800, color:'#fff', background:'var(--severe)', padding:'1px 5px', borderRadius:'4px'}}, 'LIVE')),
+        R('div',{style:{fontSize:'12px', color:'var(--brand)', fontWeight:800, marginBottom:'7px', display:'flex', alignItems:'center', gap:'6px'}}, '📹 실시간 CCTV', R('span',{style:{fontSize:'9px', fontWeight:800, color:'#fff', background:'var(--severe)', padding:'1px 5px', borderRadius:'4px'}}, 'LIVE'),
+          R('a',{href:'https://n.flood.go.kr/main/cctvView.do?obscd='+r.code+'&fcodvcd=01', target:'_blank', rel:'noopener', style:{marginLeft:'auto', fontSize:'10.5px', fontWeight:700, color:'var(--ink3)', textDecoration:'none'}}, '홍수통제소에서 보기 ↗')),
+        (window.hrfcoCam && window.hrfcoCam(r.code)) ?
+        R('div',{style:{position:'relative', width:'100%', borderRadius:'12px', overflow:'hidden', background:'#000', border:'1px solid var(--border)'}},
+          R('video',{key:'hr'+r.code, muted:true, playsInline:true, controls:true, style:{display:'block', width:'100%', aspectRatio:'16 / 9', background:'#000'},
+            ref:(el)=>{ if(!el) return; if(el._code===r.code && !this.state.riverCctvResume) return; el._code=r.code;
+              const msg=(s)=>{ const n=el.parentNode&&el.parentNode.querySelector('[data-cctv-msg]'); if(n) n.textContent=s; };
+              msg('연결 중… (통제소 스트림을 켜는 데 몇 초 걸립니다)');
+              window.cctvPlay(el, {hrfco:String(r.code)}, function(why){ msg('재생 실패('+why+') — 홍수통제소에서 보기'); }, function(){ msg('⏸ 90초가 지나 멈췄습니다 — 눌러서 계속 보기'); this.setState({riverCctvPaused:true, riverCctvResume:false}); }.bind(this));
+              el.addEventListener('playing', function(){ msg(''); }, {once:true});
+              if(this.state.riverCctvResume) this.setState({riverCctvResume:false}); }}),
+          R('div',{'data-cctv-msg':'1', onClick:()=>{ if(this.state.riverCctvPaused) this.setState({riverCctvPaused:false, riverCctvResume:true}); }, style:{position:'absolute', left:0, right:0, bottom:0, padding:'6px 10px', color:'#ffd166', fontSize:'11px', fontWeight:700, background:'linear-gradient(0deg, rgba(0,0,0,.55), transparent)', cursor:'pointer'}}, ''))
+        :
         R('div',{style:{position:'relative', width:'100%', aspectRatio:'16 / 10', borderRadius:'12px', overflow:'hidden', background:'#000', border:'1px solid var(--border)'}},
           R('iframe',{src:'https://n.flood.go.kr/main/cctvView.do?obscd='+r.code+'&fcodvcd=01', style:{position:'absolute', top:0, left:0, width:'200%', height:'200%', border:0, transformOrigin:'top left', transform:'scale(1.0) translateY(-7%)'}, loading:'lazy'}))
       ):null

@@ -5,6 +5,7 @@
        {n, kbs:id}          KBS 재난감시 CCTV — 서버가 올리는 data-cctv.js(하루 토큰)에서 재생 주소를 찾아 화면 안 hls 재생
        {n, hls:m3u8, thumb} 직접 HLS(CORS 허용 확인된 곳: 포항시 방재 CCTV) — 화면 안 재생
        {n, frame:url}       뷰어 페이지 iframe(https·X-Frame-Options 없음 확인: 춘천시 하천 CCTV)
+       {n, hrfco:obscd}     홍수통제소 수위관측소 CCTV — 장치번호표(cctv-hrfco.js)로 켜고(getCctvScreen.do no-cors POST) 직접 HLS 재생
        {n, u}               새 창 링크(제주시·서귀포·부산 안전ON·용인 등 — 세션/CSRF·http 전용·SPA 라 삽입 불가)
    · 예의: 지자체 뷰어는 30초 뒤 스스로 멈추게 만들어 두었으므로 우리도 직접 재생은 90초 뒤 멈추고 '계속 보기'를 띄운다.
    · 조사 기록: workflows/운영현황.md '하천 CCTV 출처 조사'. */
@@ -67,13 +68,20 @@
     for (var i = 0; i < L.length; i++) if (String(L[i].id) === String(id)) return L[i];
     return null;
   };
-  /* 화면 안에서 틀 수 있나(KBS 는 목록 파일이 있을 때만) */
-  window.cctvInline = function (x) { return !!(x.hls || x.frame || (x.kbs && window.kbsCam(x.kbs))); };
+  /* 홍수통제소 관측소의 장치번호(cctv-hrfco.js) */
+  window.hrfcoCam = function (obscd) { var T = window.HRFCO_CCTV || {}; var e = T[String(obscd)]; return (e && (e.ld || e.hd)) ? e : null; };
+  /* 화면 안에서 틀 수 있나(KBS 는 목록 파일이, 홍수통제소는 장치번호표가 있을 때만) */
+  window.cctvInline = function (x) { return !!(x.hls || x.frame || (x.kbs && window.kbsCam(x.kbs)) || (x.hrfco && window.hrfcoCam(x.hrfco))); };
   window.cctvPoster = function (x) { if (x.thumb) return x.thumb + (x.thumb.indexOf('?') < 0 ? '?' : '&') + '_t=' + Math.floor(Date.now() / 30000); var c = x.kbs ? window.kbsCam(x.kbs) : null; return c ? c.img : ''; };
 
   /* ── HLS 재생(hls.js 는 처음 필요할 때 한 번만 내려받음, 사파리는 기본 재생) ── */
   function startHls(video, m3u8, onError) {
-    if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = m3u8; video.play().catch(function () {}); return; }
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      /* 브라우저 자체 HLS(사파리·일부 크로미움): 실황 목록은 처음 play() 때 아직 준비가 안 돼 거부되기도 한다 → 준비되면 다시 */
+      var tryPlay = function () { video.play().catch(function () {}); };
+      video.addEventListener('canplay', tryPlay, { once: true }); video.addEventListener('loadedmetadata', tryPlay, { once: true });
+      video.src = m3u8; video.load(); tryPlay(); return;
+    }
     var go = function () {
       if (!window.Hls || !window.Hls.isSupported()) { if (onError) onError('hls'); return; }
       if (video._hls) { try { video._hls.destroy(); } catch (e) {} }
@@ -93,6 +101,21 @@
     window.cctvStop(video);
     var armStop = function () { video._stopT = setTimeout(function () { window.cctvStop(video); if (onStop) onStop(); }, 90000); };
     if (x.hls) { startHls(video, x.hls, onError); armStop(); return; }
+    if (x.hrfco) {
+      /* 통제소 스트림은 누가 보기 시작해야 켜진다 — 켜기 요청(응답은 못 읽어도 됨) 뒤 m3u8 이 200 될 때까지 기다린다 */
+      var e = window.hrfcoCam(x.hrfco); if (!e) { if (onError) onError('device'); return; }
+      var id = e.ld || e.hd, m3u8 = 'https://lw.hrfco.go.kr/live/cctv' + id + '/hls.m3u8';
+      var body = new URLSearchParams({ deviceId: id, fcodvcd: e.fc || '01', type: e.ld ? 'low' : 'high' });
+      try { fetch('https://n.flood.go.kr/getCctvScreen.do', { method: 'POST', mode: 'no-cors', body: body }).catch(function () {}); } catch (err) {}
+      var tries = 0, wait = function () {
+        tries++;
+        fetch(m3u8, { cache: 'no-store' }).then(function (r) {
+          if (r.ok) { startHls(video, m3u8, onError); armStop(); }
+          else if (tries < 8) setTimeout(wait, 1500); else if (onError) onError('start');
+        }).catch(function () { if (tries < 8) setTimeout(wait, 1500); else if (onError) onError('net'); });
+      };
+      setTimeout(wait, 1200); return;
+    }
     var cam = x.kbs ? window.kbsCam(x.kbs) : null;
     if (!cam || !cam.url) { if (onError) onError('token'); return; }
     fetch(cam.url, { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; })
