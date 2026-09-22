@@ -119,9 +119,11 @@
   window.cctvPlay = function (video, x, onError, onStop) {
     if (!video || !x) return;
     window.cctvStop(video); video._live = true;
+    /* 켜는 도중(통제소 켜기 대기·KBS 토큰 요청) 다른 항목을 누르면 먼저 것이 나중에 덮어쓰지 않게 — 순번이 바뀌면 옛 요청은 버린다 */
+    var seq = video._seq = (video._seq || 0) + 1, live = function () { return video._seq === seq; };
     /* x.stopAfter(ms): 0 이면 스스로 멈추지 않는다 — 상황실 벽면처럼 화면이 60초마다 다음 지점으로 넘기는 곳용. 기본 90초. */
     var stopMs = (x.stopAfter != null) ? +x.stopAfter : 90000;
-    var armStop = function () { if (stopMs > 0) video._stopT = setTimeout(function () { window.cctvStop(video); if (onStop) onStop(); }, stopMs); };
+    var armStop = function () { if (video._stopT) clearTimeout(video._stopT); if (stopMs > 0) video._stopT = setTimeout(function () { window.cctvStop(video); if (onStop) onStop(); }, stopMs); };
     if (x.hls) { startHls(video, x.hls, onError); armStop(); return; }
     if (x.hrfco) {
       /* 통제소 스트림은 누가 보기 시작해야 켜진다 — 켜기 요청(응답은 못 읽어도 됨) 뒤 m3u8 이 200 될 때까지 기다린다 */
@@ -130,19 +132,20 @@
       var body = new URLSearchParams({ deviceId: id, fcodvcd: e.fc || '01', type: e.ld ? 'low' : 'high' });
       try { fetch('https://n.flood.go.kr/getCctvScreen.do', { method: 'POST', mode: 'no-cors', body: body }).catch(function () {}); } catch (err) {}
       var tries = 0, wait = function () {
-        tries++;
+        if (!live()) return; tries++;
         fetch(m3u8, { cache: 'no-store' }).then(function (r) {
+          if (!live()) return;
           if (r.ok) { startHls(video, m3u8, onError); armStop(); }
           else if (tries < 8) setTimeout(wait, 1500); else if (onError) onError('start');
-        }).catch(function () { if (tries < 8) setTimeout(wait, 1500); else if (onError) onError('net'); });
+        }).catch(function () { if (!live()) return; if (tries < 8) setTimeout(wait, 1500); else if (onError) onError('net'); });
       };
       setTimeout(wait, 1200); return;
     }
     var cam = x.kbs ? window.kbsCam(x.kbs) : null;
     if (!cam || !cam.url) { if (onError) onError('token'); return; }
     fetch(cam.url, { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; })
-      .then(function (t) { t = String(t || '').trim(); if (/^https?:\/\//.test(t)) { startHls(video, t, onError); armStop(); } else if (onError) onError('token'); })
-      .catch(function () { if (onError) onError('net'); });
+      .then(function (t) { if (!live()) return; t = String(t || '').trim(); if (/^https?:\/\//.test(t)) { startHls(video, t, onError); armStop(); } else if (onError) onError('token'); })
+      .catch(function () { if (!live()) return; if (onError) onError('net'); });
   };
   window.cctvStop = function (video) {
     if (!video) return; video._live = false;

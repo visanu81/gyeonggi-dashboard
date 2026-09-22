@@ -10,7 +10,6 @@ window.REGION_CONF = {
  "countText": "10개 구·군",
  "dataHost": "https://weather.visanu81.workers.dev",
  "wideNames": [
-  "서해5도",
   "인천",
   "인천광역시",
   "인천남부",
@@ -147,6 +146,7 @@ window.REGION_CONF = {
   "연수구": "연수구"
  },
  "alias": {},
+ "riverCodes": {},
  "floodKeywords": [
   "강화",
   "계양구",
@@ -176,7 +176,8 @@ window.REGION_CONF = {
    "alm": 6.1,
    "srs": 6.8,
    "pfh": 7.2,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1019657": {
    "agc": "기후에너지환경부",
@@ -187,7 +188,8 @@ window.REGION_CONF = {
    "alm": 4.1,
    "srs": 5,
    "pfh": 5,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "1201660": {
    "agc": "기후에너지환경부",
@@ -198,7 +200,8 @@ window.REGION_CONF = {
    "alm": 5.2,
    "srs": 5.7,
    "pfh": 6.7,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   }
  }
 };

@@ -2371,6 +2371,7 @@ class Component extends DCLogic {
   /* 지도.html _canonRegion 동일 — 특보구역명 → 관서 정규화 */
   function canon(name){ var n=String(name||'').trim(); if(!n) return null; var UNITS=RC.order||[];
     /* 시도 전역 표기(경기도·강원도·서울…)는 '경기도' 표식으로 — 아래 warnsByStation 이 전 관서 발효로 푼다 */
+    var ZONE={'울릉도.독도':'울릉', '흑산도.홍도':'신안', '서해5도':'옹진', '백령도.대청도':'옹진', '연평도.우도':'옹진'}; if(ZONE[n]) return ZONE[n];   /* 섬 특보구역 → 관서 */
     if(n==='경기북부'||n==='경기남부'||n==='경기도'||n==='수도권'||n==='경기'||(RC.wideNames||[]).indexOf(n)>=0) return '경기도';
     if(UNITS.indexOf(n)>=0) return n;   /* 관서 이름 그대로면 그대로 — 광역시 '중구'를 '중'으로 깎지 않게 */
     n=n.replace(/(동북부|서북부|동남부|서남부|남부|북부|동부|서부|중부|내륙|산지|앞바다|해안)/g,'');

@@ -748,6 +748,10 @@ class Component extends DCLogic {
     this._onResize = ()=>{ this.setState({w:window.innerWidth}); this.fitMap(); };
     window.addEventListener('resize', this._onResize);
     if(!window.DASH || !window.MAPGEO){ let n=0; this._poll=setInterval(()=>{ if((window.DASH && window.MAPGEO) || ++n>25){ clearInterval(this._poll); this.forceUpdate(); } }, 60); }
+    // ?focus=my — 쉬운 화면 타일에서 넘어오면 전체 지도가 아니라 내 관서 상세로 바로(자료·지도가 준비된 뒤 확대까지)
+    const _fp=(function(){ try{ return new URLSearchParams(location.search).get('focus'); }catch(e){ return null; } })();
+    if(_fp==='my' && !this.state.wall){ const go=()=>{ try{ this.focusRegion(this.state.myStation, false); }catch(e){} };
+      let k=0; const tk=setInterval(()=>{ if((window.DASH && window.MAPGEO) || ++k>40){ clearInterval(tk); if(window.DASH && window.MAPGEO) setTimeout(go, 120); } }, 60); }
     this.applyTheme();
     setTimeout(()=>this.fitMap(), 30);
     this.fitMap();
@@ -1377,6 +1381,8 @@ class Component extends DCLogic {
     if(!n) return null;
     var RC=window.REGION_CONF||{}, UNITS=RC.order||[];
     if(n==='경기북부'||n==='경기도'||n==='수도권'||n==='경기') return '경기도';
+    var ZONE={'울릉도.독도':'울릉', '흑산도.홍도':'신안', '서해5도':'옹진', '백령도.대청도':'옹진', '연평도.우도':'옹진'};   // 섬 특보구역 → 관서(시도 전역이 아님)
+    if(ZONE[n]) return ZONE[n];
     if((RC.wideNames||[]).indexOf(n)>=0) return (RC.warnOrder||[])[0]||n;   // 시도 전역 표기('강원도'·'충청북도') → 표시명
     if(UNITS.indexOf(n)>=0) return n;   // 관서 이름 그대로면 그대로 — 광역시 '중구'를 '중'으로, 강원 '양구'를 '양'으로 깎지 않게
     n=n.replace(/(동북부|서북부|동남부|서남부|남부|북부|동부|서부|중부|내륙|산지|앞바다|해안)/g,'');

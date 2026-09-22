@@ -22,8 +22,7 @@ window.REGION_CONF = {
   "전남광주영서",
   "전남광주중부",
   "전남광주통합특별시",
-  "전라남도",
-  "흑산도.홍도"
+  "전라남도"
  ],
  "order": [
   "담양",
@@ -336,6 +335,7 @@ window.REGION_CONF = {
   "완도": "해남·진도·완도"
  },
  "alias": {},
+ "riverCodes": {},
  "floodKeywords": [
   "강진",
   "개천",
@@ -410,7 +410,8 @@ window.REGION_CONF = {
    "alm": 3.4,
    "srs": 3.9,
    "pfh": 3.97,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "4006667": {
    "agc": "기후에너지환경부",
@@ -421,13 +422,15 @@ window.REGION_CONF = {
    "alm": 3.2,
    "srs": 4,
    "pfh": 4.08,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "4007110": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "전라남도 순천시 주암면 대광리",
-   "pfh": 110.5
+   "pfh": 110.5,
+   "cctv": false
   },
   "4007661": {
    "agc": "기후에너지환경부",
@@ -438,7 +441,8 @@ window.REGION_CONF = {
    "alm": 4.9,
    "srs": 5.9,
    "pfh": 5.95,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "4008670": {
    "agc": "기후에너지환경부",
@@ -449,7 +453,8 @@ window.REGION_CONF = {
    "alm": 8.2,
    "srs": 9.9,
    "pfh": 9.95,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4009608": {
    "agc": "기후에너지환경부",
@@ -460,7 +465,8 @@ window.REGION_CONF = {
    "alm": 6,
    "srs": 7.1,
    "pfh": 7.65,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4009610": {
    "agc": "기후에너지환경부",
@@ -471,7 +477,8 @@ window.REGION_CONF = {
    "alm": 8,
    "srs": 11,
    "pfh": 11.06,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4009618": {
    "agc": "기후에너지환경부",
@@ -482,7 +489,8 @@ window.REGION_CONF = {
    "alm": 8.1,
    "srs": 10.5,
    "pfh": 10.5,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "4009630": {
    "agc": "기후에너지환경부",
@@ -493,7 +501,8 @@ window.REGION_CONF = {
    "alm": 18.5,
    "srs": 20.6,
    "pfh": 20.67,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4009640": {
    "agc": "기후에너지환경부",
@@ -504,7 +513,8 @@ window.REGION_CONF = {
    "alm": 11.6,
    "srs": 14.1,
    "pfh": 14.17,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "4104640": {
    "agc": "기후에너지환경부",
@@ -515,7 +525,8 @@ window.REGION_CONF = {
    "alm": 3.6,
    "srs": 4.2,
    "pfh": 6.24,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "4104685": {
    "agc": "기후에너지환경부",
@@ -526,7 +537,8 @@ window.REGION_CONF = {
    "alm": 3.8,
    "srs": 4.3,
    "pfh": 4.37,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4105630": {
    "agc": "기후에너지환경부",
@@ -537,7 +549,8 @@ window.REGION_CONF = {
    "alm": 3.4,
    "srs": 3.9,
    "pfh": 3.99,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "4105640": {
    "agc": "기후에너지환경부",
@@ -548,19 +561,8 @@ window.REGION_CONF = {
    "alm": 3.6,
    "srs": 4.1,
    "pfh": 4.19,
-   "fstn": true
-  },
-  "5001410": {
-   "kind": "dam",
-   "agc": "한국농어촌공사",
-   "addr": "전라남도 담양군 고서면 분향리 광주댐내",
-   "pfh": 79.85
-  },
-  "5001420": {
-   "kind": "dam",
-   "agc": "한국농어촌공사",
-   "addr": "전라남도 담양군 용면 도림리 취수탑 도교",
-   "pfh": 124.36
+   "fstn": true,
+   "cctv": true
   },
   "5001615": {
    "agc": "기후에너지환경부",
@@ -571,7 +573,8 @@ window.REGION_CONF = {
    "alm": 2.8,
    "srs": 3.3,
    "pfh": 3.38,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "5001625": {
    "agc": "기후에너지환경부",
@@ -582,7 +585,8 @@ window.REGION_CONF = {
    "alm": 5.3,
    "srs": 6.2,
    "pfh": 6.28,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5001627": {
    "agc": "기후에너지환경부",
@@ -593,7 +597,8 @@ window.REGION_CONF = {
    "alm": 5,
    "srs": 5.6,
    "pfh": 5.6,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5001640": {
    "agc": "기후에너지환경부",
@@ -604,7 +609,8 @@ window.REGION_CONF = {
    "alm": 5.6,
    "srs": 6.1,
    "pfh": 6.12,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5001650": {
    "agc": "기후에너지환경부",
@@ -615,7 +621,8 @@ window.REGION_CONF = {
    "alm": 5,
    "srs": 5.9,
    "pfh": 5.97,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5001655": {
    "agc": "기후에너지환경부",
@@ -626,7 +633,8 @@ window.REGION_CONF = {
    "alm": 5,
    "srs": 5.4,
    "pfh": 5.48,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5001670": {
    "agc": "기후에너지환경부",
@@ -637,7 +645,8 @@ window.REGION_CONF = {
    "alm": 3.5,
    "srs": 4.3,
    "pfh": 4.32,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "5001673": {
    "agc": "기후에너지환경부",
@@ -648,7 +657,8 @@ window.REGION_CONF = {
    "alm": 3.5,
    "srs": 4.3,
    "pfh": 4.34,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "5001676": {
    "agc": "기후에너지환경부",
@@ -659,7 +669,8 @@ window.REGION_CONF = {
    "alm": 4.1,
    "srs": 4.9,
    "pfh": 4.98,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "5001680": {
    "agc": "기후에너지환경부",
@@ -670,13 +681,8 @@ window.REGION_CONF = {
    "alm": 8.5,
    "srs": 9.8,
    "pfh": 9.86,
-   "fstn": true
-  },
-  "5002410": {
-   "kind": "dam",
-   "agc": "한국농어촌공사",
-   "addr": "전라남도 장성군 장성읍 용강리 취수탑",
-   "pfh": 90.95
+   "fstn": true,
+   "cctv": true
   },
   "5002643": {
    "agc": "기후에너지환경부",
@@ -687,7 +693,8 @@ window.REGION_CONF = {
    "alm": 3.7,
    "srs": 4.2,
    "pfh": 4.24,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5002650": {
    "agc": "기후에너지환경부",
@@ -698,7 +705,8 @@ window.REGION_CONF = {
    "alm": 4.5,
    "srs": 5.1,
    "pfh": 5.13,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5002660": {
    "agc": "기후에너지환경부",
@@ -709,7 +717,8 @@ window.REGION_CONF = {
    "alm": 5,
    "srs": 5.5,
    "pfh": 5.53,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5002677": {
    "agc": "기후에너지환경부",
@@ -720,13 +729,15 @@ window.REGION_CONF = {
    "alm": 5.2,
    "srs": 5.8,
    "pfh": 5.88,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5003410": {
    "kind": "dam",
    "agc": "한국농어촌공사",
    "addr": "전라남도 나주시 다도면 판촌리 취수탑 도교",
-   "pfh": 68.03
+   "pfh": 68.03,
+   "cctv": false
   },
   "5003605": {
    "agc": "기후에너지환경부",
@@ -737,7 +748,8 @@ window.REGION_CONF = {
    "alm": 3.5,
    "srs": 4.3,
    "pfh": 4.38,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "5003615": {
    "agc": "기후에너지환경부",
@@ -748,7 +760,8 @@ window.REGION_CONF = {
    "alm": 3.5,
    "srs": 3.9,
    "pfh": 3.95,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5003650": {
    "agc": "기후에너지환경부",
@@ -759,7 +772,8 @@ window.REGION_CONF = {
    "alm": 3.5,
    "srs": 4.1,
    "pfh": 4.17,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5003680": {
    "agc": "기후에너지환경부",
@@ -770,7 +784,8 @@ window.REGION_CONF = {
    "alm": 6,
    "srs": 7,
    "pfh": 7,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5004650": {
    "agc": "기후에너지환경부",
@@ -781,7 +796,8 @@ window.REGION_CONF = {
    "alm": 12,
    "srs": 14.5,
    "pfh": 14.5,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5005650": {
    "agc": "기후에너지환경부",
@@ -792,7 +808,8 @@ window.REGION_CONF = {
    "alm": 4.4,
    "srs": 5.3,
    "pfh": 5.35,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "5005680": {
    "agc": "기후에너지환경부",
@@ -803,7 +820,8 @@ window.REGION_CONF = {
    "alm": 5.8,
    "srs": 6.2,
    "pfh": 6.24,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5006630": {
    "agc": "기후에너지환경부",
@@ -814,7 +832,8 @@ window.REGION_CONF = {
    "alm": 7.2,
    "srs": 8.3,
    "pfh": 8.31,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5006670": {
    "agc": "기후에너지환경부",
@@ -825,7 +844,8 @@ window.REGION_CONF = {
    "alm": 9.9,
    "srs": 10.7,
    "pfh": 10.71,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "5007640": {
    "agc": "기후에너지환경부",
@@ -836,7 +856,8 @@ window.REGION_CONF = {
    "alm": 5,
    "srs": 5.9,
    "pfh": 5.93,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "5008690": {
    "agc": "기후에너지환경부",
@@ -847,13 +868,15 @@ window.REGION_CONF = {
    "alm": 1,
    "srs": 1.6,
    "pfh": 1.64,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "5101110": {
    "kind": "dam",
    "agc": "한국수자원공사",
    "addr": "전라남도 장흥군 부산면 지천리",
-   "pfh": 82.8
+   "pfh": 82.8,
+   "cctv": false
   },
   "5101650": {
    "agc": "기후에너지환경부",
@@ -864,7 +887,8 @@ window.REGION_CONF = {
    "alm": 4.6,
    "srs": 5.4,
    "pfh": 5.45,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5101670": {
    "agc": "기후에너지환경부",
@@ -875,7 +899,8 @@ window.REGION_CONF = {
    "alm": 4.5,
    "srs": 5,
    "pfh": 5.02,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5101675": {
    "agc": "기후에너지환경부",
@@ -886,7 +911,8 @@ window.REGION_CONF = {
    "alm": 5,
    "srs": 5.5,
    "pfh": 5.56,
-   "fstn": true
+   "fstn": true,
+   "cctv": true
   },
   "5101690": {
    "agc": "기후에너지환경부",
@@ -897,7 +923,8 @@ window.REGION_CONF = {
    "alm": 6.8,
    "srs": 8.2,
    "pfh": 8.29,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   },
   "5202670": {
    "agc": "기후에너지환경부",
@@ -908,7 +935,8 @@ window.REGION_CONF = {
    "alm": 2,
    "srs": 2.5,
    "pfh": 5.02,
-   "fstn": false
+   "fstn": false,
+   "cctv": true
   },
   "5302660": {
    "agc": "기후에너지환경부",
@@ -919,7 +947,8 @@ window.REGION_CONF = {
    "alm": 5.6,
    "srs": 6.5,
    "pfh": 6.85,
-   "fstn": false
+   "fstn": false,
+   "cctv": false
   }
  }
 };

@@ -745,8 +745,10 @@ SIDO = {
     'jngj':      _sido('jngj', '전남광주', '전남광주통합특별시', '12', ['24', '36'], ['L1050000', 'L1130000', 'L1052400'], 156,   # 흑산도.홍도 별도 상위구역
                        ['광주', '전남'], ['전남광주', '전라남도', '전남', '광주광역시'], '서구', wide='전남광주',
                        wrn_areas={"광주서부": ["광산구"],
-                                  "광주동부": ["동구", "서구", "남구", "북구"]}),
+                                  "광주동부": ["동구", "서구", "남구", "북구"],
+                                  "흑산도.홍도": ["신안"]}),          # 별도 상위구역이지만 관할은 신안(시도 전역 아님)
     'gyeongbuk': _sido('gyeongbuk', '경북', '경상북도', '47', '37', ['L1070000', 'L1600000'], 143, '경북', ['경북', '경상북도'], '안동',   # 울릉도.독도는 별도 상위구역
+                       wrn_areas={"울릉도.독도": ["울릉"]},   # 관할은 울릉(시도 전역 아님)
                        map_exclude=['군위군'],            # 2023 대구로 편입
                        splits={'포항': {'포항남부': {'prefixes': ['47111'], 'map': ['포항시남구']},
                                        '포항북부': {'prefixes': ['47113'], 'map': ['포항시북구']}}}),
@@ -937,6 +939,11 @@ def build_reg_map(sd, sigun, wrn_rows, now=None):
         wide = next((r for r in wrn_rows if r['id'] == up), None)
         ko = (wide or {}).get('ko', sd['label'])
         reg_map[up] = f'{ko}(전체)'
+        # 섬 상위구역(울릉도.독도·흑산도.홍도·서해5도)은 권역표(wrn_areas)로 관서에 붙는다 — 시도 전역 이름에 넣으면 전 관서 특보가 된다.
+        # 단 시도 자체 이름('인천'처럼 권역표에도 있는 것)은 전역 이름으로 남긴다.
+        _self = {sd['label'], sd.get('full'), sd.get('wide')} | set(sd.get('sido_words') or [])
+        if ko in (sd.get('wrn_areas') or {}) and ko not in _self:
+            continue
         wide_names.append(ko)
     wide_label = sd.get('wide') or wide_names[0]      # 화면·정렬용 시도 전역 이름(통합시는 명시)
     return reg_map, wide_label, wide_names
