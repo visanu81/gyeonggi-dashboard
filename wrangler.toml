@@ -1,0 +1,6 @@
+# Cloudflare Workers 정적 자산 배포 설정 (Workers Static Assets only mode)
+name = "gyeonggi-dashboard"
+compatibility_date = "2024-10-21"
+
+[assets]
+directory = "."
