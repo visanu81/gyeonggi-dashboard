@@ -84,8 +84,13 @@
     var L = (window.HRFCO_CCTV_LIVE && window.HRFCO_CCTV_LIVE.table) || {}, T = window.HRFCO_CCTV || {}, k = String(obscd);
     var e = L[k] || T[k]; return (e && (e.ld || e.hd)) ? e : null;
   };
-  /* 화면 안에서 틀 수 있나(KBS 는 목록 파일이, 홍수통제소는 장치번호표가 있을 때만) */
-  window.cctvInline = function (x) { return !!(x.hls || x.frame || (x.kbs && window.kbsCam(x.kbs)) || (x.hrfco && window.hrfcoCam(x.hrfco))); };
+  /* ★ KBS 중계서버가 2026-10-08 부터 핫링크를 막았다 — 스트림(kbscctv-cache.loomex.net)이 Referer 가
+     'https://d.kbs.co.kr/' 일 때만 200 이고 우리 출처로는 403. 브라우저는 Referer 를 못 바꾸므로
+     화면 안 재생이 불가능하다(정지영상 cctvImg 는 그대로 열린다). → KBS 는 새 창(KBS 포털) 링크로만.
+     되살아났는지 가끔 확인: 아래 값을 false 로 두고 재생되면 KBS 가 다시 푼 것. */
+  window.KBS_STREAM_BLOCKED = true;
+  /* 화면 안에서 틀 수 있나(홍수통제소는 장치번호표가 있을 때만) */
+  window.cctvInline = function (x) { return !!(x.hls || x.frame || (x.kbs && !window.KBS_STREAM_BLOCKED && window.kbsCam(x.kbs)) || (x.hrfco && window.hrfcoCam(x.hrfco))); };
   window.cctvPoster = function (x) { if (x.thumb) return x.thumb + (x.thumb.indexOf('?') < 0 ? '?' : '&') + '_t=' + Math.floor(Date.now() / 30000); var c = x.kbs ? window.kbsCam(x.kbs) : null; return c ? c.img : ''; };
 
   /* ── HLS 재생(hls.js 는 처음 필요할 때 한 번만 내려받음, 사파리는 기본 재생) ── */
@@ -142,6 +147,7 @@
       setTimeout(wait, 1200); return;
     }
     var cam = x.kbs ? window.kbsCam(x.kbs) : null;
+    if (cam && window.KBS_STREAM_BLOCKED) { if (onError) onError('KBS 차단'); return; }   /* 위 설명 참고 — 헛되이 기다리지 않는다 */
     if (!cam || !cam.url) { if (onError) onError('token'); return; }
     fetch(cam.url, { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; })
       .then(function (t) { if (!live()) return; t = String(t || '').trim(); if (/^https?:\/\//.test(t)) { startHls(video, t, onError); armStop(); } else if (onError) onError('token'); })
