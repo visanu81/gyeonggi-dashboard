@@ -1053,8 +1053,11 @@ def fetch_typhoon():
     base = 'https://apihub.kma.go.kr/api/typ01/url'
     yy = datetime.now().year
 
-    def _get(url):
-        r = shared_get('typhoon_' + url.split('/')[-1].split('?')[0], url, timeout=12, max_age=600)
+    def _get(url, cache_key=None):
+        # ★ 공유 캐시 key 는 '부르는 주소마다' 달라야 한다. 전엔 파일명(typ_data.php)만 썼더니
+        #   태풍이 둘 이상일 때 두 번째 태풍이 첫 번째 태풍의 응답을 그대로 읽었다
+        #   (2026-10-08 실제 발생: 29호 고구마가 28호 놀로의 위치·진로로 표시됨).
+        r = shared_get(cache_key or ('typhoon_' + url.split('/')[-1].split('?')[0]), url, timeout=12, max_age=600)
         r.raise_for_status()
         r.encoding = 'euc-kr'
         if '활용신청' in r.text[:300]:
@@ -1087,7 +1090,8 @@ def fetch_typhoon():
     for a in active:
         try:
             d = _get(f'{base}/typ_data.php?YY={yy}&typ={a["seq"]}&mode=1&disp=0&help=0'
-                     f'&authKey={KMA_APIHUB_KEY}')
+                     f'&authKey={KMA_APIHUB_KEY}',
+                     cache_key=f'typhoon_data_{yy}_{a["seq"]}')
         except Exception as e:
             print(f'    태풍 {a["seq"]}호 진로 실패: {type(e).__name__}')
             continue
