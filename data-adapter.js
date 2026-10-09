@@ -55,7 +55,8 @@
       var histRaw = (r.history||[]).map(function(h){ return { t: String(h.time||''), v: +h.value }; }).filter(function(o){ return !isNaN(o.v); });
       return {
         name: r.name, code: r.code, sigun: r.sigun || '', value: r.value, warning: r.warning, danger: r.danger,
-        level: r.level, delta1: r.delta_1h, delta3: r.delta_3h, cctv: !!r.has_cctv,
+        level: r.level, delta1: r.delta_1h, delta3: r.delta_3h,
+        cctv: !!r.has_cctv || !!(window.hrfcoCam && window.hrfcoCam(r.code)),   /* 프로파일 표시가 없어도 장치번호가 있으면 CCTV 있음 */
         dam: r.dam_info || null,
         history: hist.length>24 ? hist.slice(-24) : hist,
         histRaw: histRaw.length>24 ? histRaw.slice(-24) : histRaw,

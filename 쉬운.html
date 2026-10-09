@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f3f5f9">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b1220">
+<title>쉬운 화면 — 기상·재난 상황</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<!-- 쉬운 화면 (2026-09-21 사장님 "갤럭시 쉬운 모드처럼 — 최대한 단순하게, 내 지역 상황을 아이콘으로")
+     · 한 화면, 큰 글씨, 타일 5개(특보·비·하천·재난문자·기온). 색 하나(🟢🟠🔴)로 지금 상태.
+     · 지도·호우 화면과 같은 기억값(ggMyStation·ggScope·ggSido)을 쓴다 — 여기서 고르면 다른 화면도 따라온다.
+     · 데이터는 다른 화면과 같은 data.js(작업장 빌드가 운영 주소로 바꿔 준다), 60초마다 새로 읽는다.
+     · dc-runtime 을 안 쓰는 순수 HTML — 단순함이 목적이라 의존을 안 둔다. -->
+<script src="region.js"></script>
+<script src="cctv-hrfco.js"></script>
+<script src="cctv-busan.js"></script>
+<script src="cctv-links.js"></script>
+<script src="data-cctv.js"></script>
+<script src="data.js"></script>
+<style>
+  :root{ --bg:#f3f5f9; --card:#ffffff; --ink:#0f172a; --ink2:#334155; --ink3:#64748b; --line:#e2e8f0;
+         --safe:#16a34a; --safeSoft:#dcfce7; --warn:#ea580c; --warnSoft:#ffedd5; --severe:#dc2626; --severeSoft:#fee2e2;
+         --brand:#2563eb; --brandSoft:#dbeafe; --blue:#0284c7; --blueSoft:#e0f2fe; }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0b1220; --card:#141e33; --ink:#f3f6fc; --ink2:#c7d2e5; --ink3:#8fa0bd; --line:#26324a;
+           --safe:#22c55e; --safeSoft:#123524; --warn:#fb923c; --warnSoft:#3a2410; --severe:#f87171; --severeSoft:#3b1414;
+           --brand:#60a5fa; --brandSoft:#172554; --blue:#38bdf8; --blueSoft:#0c2a3d; }
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; background:var(--bg); color:var(--ink); font-family:'Pretendard Variable',Pretendard,'맑은 고딕',system-ui,-apple-system,sans-serif; }
+  body{ padding:14px 14px 28px; max-width:560px; margin:0 auto; }
+  header{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }   /* 좁으면 선택창 줄이 이름 아래로 */
+  header .name{ font-size:26px; font-weight:900; letter-spacing:-.5px; line-height:1.1; }
+  header .sub{ font-size:13px; color:var(--ink3); margin-top:4px; white-space:nowrap; }
+  .pick{ display:flex; flex:1 1 auto; flex-wrap:wrap; gap:6px; justify-content:flex-end; align-items:center; }
+  select{ font-family:inherit; font-size:16px; font-weight:700; line-height:1.2; color:var(--ink); background:var(--card); border:2px solid var(--line); border-radius:12px; padding:11px 12px; max-width:170px; }
+  select.small{ font-size:14px; padding:9px 10px; }
+  .status{ display:flex; align-items:center; gap:16px; padding:18px 20px; border-radius:20px; background:var(--card); border:3px solid var(--line); margin-bottom:12px; }
+  .status .dot{ width:46px; height:46px; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 8px rgba(0,0,0,.05); }
+  .status .t1{ font-size:30px; font-weight:900; line-height:1; }
+  .status .t2{ font-size:15px; color:var(--ink2); margin-top:6px; line-height:1.35; }
+  .status.safe{ border-color:var(--safe); } .status.safe .dot{ background:var(--safe); } .status.safe .t1{ color:var(--safe); }
+  .status.warn{ border-color:var(--warn); } .status.warn .dot{ background:var(--warn); } .status.warn .t1{ color:var(--warn); }
+  .status.severe{ border-color:var(--severe); } .status.severe .dot{ background:var(--severe); animation:pulse 1.4s infinite; } .status.severe .t1{ color:var(--severe); }
+  .status.stale{ border-color:var(--ink3); } .status.stale .dot{ background:var(--ink3); animation:none; } .status.stale .t1{ color:var(--ink3); }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 0 8px rgba(220,38,38,.15);} 50%{ box-shadow:0 0 0 16px rgba(220,38,38,.05);} }
+  @media (prefers-reduced-motion:reduce){ .status.severe .dot{ animation:none; } }
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  a.tile{ display:block; text-decoration:none; color:inherit; background:var(--card); border:2px solid var(--line); border-radius:18px; padding:16px 16px 14px; min-height:132px; position:relative; }
+  a.tile:active{ transform:scale(.98); }
+  a.tile.wide{ grid-column:1 / -1; min-height:auto; }
+  .tile .ic{ font-size:30px; line-height:1; }
+  .tile .lb{ font-size:13px; font-weight:800; color:var(--ink2); margin-top:8px; }
+  .tile .v{ font-size:30px; font-weight:900; letter-spacing:-.5px; margin-top:2px; line-height:1.1; }
+  .tile .v small{ font-size:15px; font-weight:800; color:var(--ink3); margin-left:3px; }
+  .tile .v.long{ font-size:22px; }   /* '호우주의보' 같은 다섯 글자가 좁은 폰에서 두 줄이 되지 않게 */
+  .tile .d{ font-size:15px; color:var(--ink2); margin-top:6px; line-height:1.35; }
+  .tile.safe{ border-color:var(--safe); background:var(--safeSoft); } .tile.safe .v{ color:var(--safe); }
+  .tile.warn{ border-color:var(--warn); background:var(--warnSoft); } .tile.warn .v{ color:var(--warn); }
+  .tile.severe{ border-color:var(--severe); background:var(--severeSoft); } .tile.severe .v{ color:var(--severe); }
+  .tile.info{ border-color:var(--blue); background:var(--blueSoft); } .tile.info .v{ color:var(--blue); }
+  .tile .badge{ position:absolute; top:12px; right:12px; font-size:12px; font-weight:800; color:var(--ink3); }
+  footer{ margin-top:16px; display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; justify-content:space-between; font-size:12px; color:var(--ink3); }
+  footer a{ color:var(--brand); font-weight:800; text-decoration:none; font-size:14px; padding:10px 14px; border:2px solid var(--brand); border-radius:12px; }
+  .stale{ display:none; margin:0 0 10px; padding:10px 14px; border-radius:12px; background:var(--warnSoft); color:var(--ink); font-weight:800; font-size:14px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="name" id="stName">—</div>
+    <div class="sub" id="stSub">불러오는 중…</div>
+  </div>
+  <div class="pick">
+    <select id="selStation" aria-label="관서 선택"></select>
+    <select id="selScope" class="small" aria-label="권역 선택" style="display:none;"></select>
+    <select id="selSido" class="small" aria-label="시도 선택" style="display:none;"></select>
+  </div>
+</header>
+<div class="stale" id="stale">⚠ 자료가 오래됐습니다 — 새로고침 해 보세요</div>
+<div class="status safe" id="status">
+  <div class="dot"></div>
+  <div><div class="t1" id="s1">정상</div><div class="t2" id="s2">특보 없음 · 하천 안전</div></div>
+</div>
+<div class="grid">
+  <a class="tile" id="tWarn" href="지도.html?focus=my"><div class="ic">⚠️</div><div class="lb">기상특보</div><div class="v">없음</div><div class="d">—</div></a>
+  <a class="tile" id="tRain" href="호우.html"><div class="ic">🌧️</div><div class="lb">비 (1시간)</div><div class="v">0<small>mm</small></div><div class="d">—</div></a>
+  <a class="tile" id="tRiver" href="지도.html?focus=my"><div class="ic">🌊</div><div class="lb">하천</div><div class="v">—</div><div class="d">—</div></a>
+  <a class="tile" id="tMsg" href="지도.html?focus=my"><div class="ic">📱</div><div class="lb">재난문자</div><div class="v">0<small>건</small></div><div class="d">—</div></a>
+  <a class="tile wide" id="tTemp" href="지도.html?focus=my"><div style="display:flex; align-items:center; gap:16px;"><div class="ic">🌡️</div><div><div class="lb" id="tempL">기온 · 체감 · 바람</div><div class="v" id="tempV">—</div><div class="d" id="tempD">—</div></div></div></a>
+</div>
+<div id="cctv" style="display:none; margin-top:10px; background:var(--card); border:2px solid var(--line); border-radius:18px; padding:14px 16px;">
+  <div class="lb" style="font-size:13px; font-weight:800; color:var(--ink3);">📹 관할 하천 실시간 CCTV</div>
+  <div id="cctvList" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
+  <div id="kbsBox" style="display:none; margin-top:10px; border-radius:14px; overflow:hidden; background:#000; position:relative;">
+    <video id="kbsVideo" muted playsinline controls style="display:block; width:100%; max-height:60vh; background:#000;"></video>
+    <iframe id="kbsFrame" src="about:blank" allow="autoplay" style="display:none; width:100%; aspect-ratio:16/9; border:0; background:#000;"></iframe>
+    <div id="kbsPause" style="display:none; position:absolute; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,.45); color:#fff; font-size:16px; font-weight:800; cursor:pointer; text-align:center; padding:12px;">⏸ 90초가 지나 멈췄습니다 — 눌러서 계속 보기</div>
+    <div id="kbsCap" style="position:absolute; left:0; right:0; top:0; padding:6px 10px; background:linear-gradient(180deg, rgba(0,0,0,.55), transparent); color:#fff; font-size:13px; font-weight:800;"></div>
+    <div id="kbsErr" style="position:absolute; left:10px; bottom:8px; color:#ffd166; font-size:12px; font-weight:700;"></div>
+  </div>
+</div>
+<footer>
+  <span id="upd">—</span>
+  <a href="지도.html">자세히 보기 →</a>
+</footer>
+
+<script>
+(function(){
+  var RC = window.REGION_CONF || {};
+  var ALIAS = RC.alias || {}, ORDER = RC.order || [], SCOPES = RC.scopes || null, SIDOS = RC.sidoList || [];
+  var $ = function(id){ return document.getElementById(id); };
+  var storeGet = function(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } };
+  var storeSet = function(k,v){ try{ localStorage.setItem(k,v); }catch(e){} };
+  var memStation=null, memScope=null;   /* 이 화면에서 고른 값(저장이 막힌 브라우저 대비) */
+
+  /* ── 권역·관서 (지도.html 과 같은 규칙·같은 저장값) ── */
+  function scopeNow(){
+    if(!SCOPES) return '전체';
+    var v = memScope || storeGet('ggScope'); if(v && (v==='전체' || SCOPES[v])) return v;
+    try{ var hs=(RC.hostScope||{})[location.hostname.split('.')[0]]; if(hs && SCOPES[hs]) return hs; }catch(e){}
+    return '전체';
+  }
+  function stationList(){ var sc=scopeNow(); return (SCOPES && sc!=='전체' && SCOPES[sc]) ? SCOPES[sc] : ORDER; }
+  function stationNow(){
+    var list=stationList(); var v=memStation || storeGet('ggMyStation');
+    if(v && list.indexOf(v)>=0) return v;
+    if(RC.home && list.indexOf(RC.home)>=0) return RC.home;
+    return list[0] || RC.home || '';
+  }
+  function fillSelects(){
+    var list=stationList(), cur=stationNow(), s=$('selStation'); s.innerHTML='';
+    list.forEach(function(n){ var o=document.createElement('option'); o.value=n; o.textContent=n; if(n===cur) o.selected=true; s.appendChild(o); });
+    s.onchange=function(){ memStation=s.value; storeSet('ggMyStation', s.value); hideCctv(); render(); };
+    if(SCOPES){ var sc=$('selScope'); sc.style.display=''; sc.innerHTML='';
+      ['전체'].concat(Object.keys(SCOPES)).forEach(function(k){ var o=document.createElement('option'); o.value=k; o.textContent=(k==='전체'?'경기 전체':k); if(k===scopeNow()) o.selected=true; sc.appendChild(o); });
+      sc.onchange=function(){ memScope=sc.value; storeSet('ggScope', sc.value); var l=stationList(), cur=memStation||storeGet('ggMyStation'); if(l.indexOf(cur)<0){ memStation=l[0]||''; storeSet('ggMyStation', memStation); } fillSelects(); hideCctv(); render(); };
+    }
+    if(SIDOS.length){ var sd=$('selSido'); sd.style.display=''; sd.innerHTML='';
+      SIDOS.forEach(function(x){ var o=document.createElement('option'); o.value=x.base; o.textContent=x.label; if(x.label===RC.sidoCurrent) o.selected=true; sd.appendChild(o); });
+      sd.onchange=function(){ storeSet('ggSido', sd.value); location.href = sd.value + '쉬운.html'; };
+    }
+  }
+
+  /* ── 특보 지역 판정 (지도.html _areaHits 와 같은 낱말 규칙) ── */
+  var WIDE = (RC.warnOrder||[])[0] || '경기도';
+  var ZONE = {'울릉도.독도':'울릉', '흑산도.홍도':'신안', '서해5도':'옹진', '백령도.대청도':'옹진', '연평도.우도':'옹진'};
+  var SEA = /(앞바다|먼바다|전해상|해상|연안바다|평수구역)/;
+  function canon(n){
+    n=String(n||'').trim(); if(!n) return null;
+    if(n==='경기북부'||n==='경기도'||n==='수도권'||n==='경기') return WIDE;
+    if(ZONE[n]) return ZONE[n];   /* 섬 특보구역 → 관서(서버 프로파일에도 같은 표가 있지만 옛 자료·중간 구간 대비) */
+    if((RC.wideNames||[]).indexOf(n)>=0) return WIDE;
+    if(ORDER.indexOf(n)>=0) return n;
+    n=n.replace(/(동북부|서북부|동남부|서남부|남부|북부|동부|서부|중부|내륙|산지|앞바다|해안)/g,'');
+    n=n.replace(/(특별자치시|특별자치도|특별시|광역시|자치시|자치도)/g,'');
+    if(ORDER.indexOf(n)>=0) return n;
+    return n.replace(/(시|군|구|도)$/,'').trim()||null;
+  }
+  function areaHits(area, name){
+    var me=canon(name);
+    return String(area||'').split(/[,·\/()]/).some(function(p){
+      p=p.trim(); if(!p) return false; if(p.indexOf('전역')>=0) return true;
+      if(SCOPES && SCOPES[p]) return SCOPES[p].some(function(n){ return n===name || (ALIAS[n]||n)===name; });
+      var c=canon(p); return c===WIDE || c===me;
+    });
+  }
+  function isDam(r){ return r.api==='dam' || !!r.dam_info; }
+  function riversOf(rivers, sigun, office){
+    var rc=RC.riverCodes||{};
+    /* 댐 제외 — 댐 기준(계획홍수위·제한수위)은 평상시에도 90%대라 '위험수위의 %'·주의 판정이 무의미(지도·벽면과 같은 규칙) */
+    var all=(rivers||[]).filter(function(r){ return !isDam(r); });
+    if(office && rc[office]) return all.filter(function(r){ return rc[office].indexOf(String(r.code))>=0; });
+    return all.filter(function(r){ return r.sigun ? r.sigun===sigun : String(r.name||'').indexOf(sigun)>=0; });
+  }
+  function riverLv(r){ if(r.danger!=null && r.value>=r.danger) return 'danger'; if(r.warning!=null && r.value>=r.warning) return 'warning'; return 'safe'; }
+  function shortName(nm){ var s=String(nm||''); var m=s.match(/^\s*([^(]+?)\s*\(([^)]+)\)/); if(!m) return s.trim().split(' ').pop();
+    var ws=m[2].trim().split(/\s+/), last=ws[ws.length-1]; if(ws.length===1 && (ORDER.indexOf(last)>=0)) return m[1].trim(); return last; }
+  function num(v,d){ return (v==null||isNaN(+v)) ? '—' : (+v).toFixed(d==null?0:d); }
+
+  /* ── 그리기 ── */
+  function render(){
+    var D = window.DASHBOARD_DATA || {};
+    var name = stationNow(), sg = ALIAS[name] || name;
+    var reg = (D.regions||[]).filter(function(r){ return r.name===sg; })[0] || {};
+    var aws = (D.aws||{})[name] || (D.aws||{})[sg] || {};
+    var det = reg.detail || {}, hourly = det.hourly || [];
+
+    $('stName').textContent = name || '—';
+    var scLabel = (SCOPES && scopeNow()!=='전체') ? scopeNow() : (RC.label || '');
+    $('stSub').textContent = (scLabel ? scLabel + ' · ' : '') + '내 관서 기준';
+    if(!D.updated){   /* 자료를 못 읽음(첫 로드 실패·오프라인) — 초록 '정상'으로 그리지 않는다 */
+      var stb=$('stale'); stb.textContent='⚠ 자료를 못 읽었습니다 — 통신 확인 후 새로고침'; stb.style.display='block';
+      $('status').className='status stale'; $('s1').textContent='확인 중'; $('s2').textContent='자료를 아직 못 받았습니다';
+      ['tWarn','tRain','tRiver','tMsg','tTemp'].forEach(function(id){ var el=$(id); el.className=el.className.replace(/\b(safe|warn|severe|info)\b/g,'').replace(/\s+/g,' ').trim(); var v=el.querySelector('.v'); if(v) v.textContent='—'; });
+      $('upd').textContent=''; document.title=(name||'')+' 확인 중 — 쉬운 화면'; return;
+    }
+
+    /* 특보 */
+    var warns = (D.warnings||[]).filter(function(w){ return areaHits(w.area, sg); });   /* 본체 시군으로(일산→고양) — 지도.html 과 같음 */
+    var CH=/폭염|한파|건조|황사|오존/;                                                      /* 만성 특보 — 최고 '주의'까지(벽면과 같은 경보 위계) */
+    var isBo=function(w){ return w.level==='severe' || String(w.type||'').indexOf('경보')>=0; };
+    var sev = warns.some(function(w){ return isBo(w) && !CH.test(String(w.type||'')); });
+    var types = []; warns.slice().sort(function(a,b){ return (isBo(b)?1:0)-(isBo(a)?1:0); }).forEach(function(w){ if(types.indexOf(w.type)<0) types.push(w.type); });
+    /* 예비특보 — 발효 특보가 없을 때만 파랑 '예비'. 괄호 안(대상 구역)만 보고 바다 구역은 뺀다 */
+    var pre=[]; (D.prelim_warnings||[]).forEach(function(g){ (g.items||[]).forEach(function(it){
+      var a=String(it.area||''), m=a.match(/\(([^)]*)\)/), body=(m?m[1]:a).split(',').filter(function(p){ return p.trim() && !SEA.test(p); }).join(',');
+      if(body && areaHits(body, sg)){ var s=String(g.type||'').replace(' 예비특보','').replace('예비특보','').trim(); if(s && pre.indexOf(s)<0) pre.push(s); } }); });
+    var tW=$('tWarn'); tW.className='tile ' + (warns.length ? (sev?'severe':'warn') : (pre.length ? 'info' : 'safe'));
+    tW.querySelector('.v').className = 'v' + ((warns.length && types[0].length>4) ? ' long' : '');
+    tW.querySelector('.v').innerHTML = warns.length ? (types[0] + (types.length>1 ? '<small>+' + (types.length-1) + '</small>' : '')) : (pre.length ? '예비' : '없음');
+    tW.querySelector('.d').textContent = warns.length ? types.join(' · ') : (pre.length ? '예비특보: ' + pre.join(' · ') : '발효 중인 특보 없음');
+
+    /* 비: 실측(AWS 1시간) + 6시간 예보 최대 */
+    var rn = (aws.rn60!=null) ? +aws.rn60 : (reg.rain!=null ? +reg.rain : 0);
+    /* 6시간 안 최대 — 초단기예보(호우 화면과 같은 출처), 없으면 단기예보의 '다음 시각부터 6칸' */
+    var f6 = 0, f6at=''; var uf=((D.ultra_fcst||{})[sg]||[]);
+    var src = uf.length ? uf.slice(0,6).map(function(u){ return {v:+u.rain_mm||0, at:String(u.time||'').slice(0,2)+'시'}; })
+                        : hourly.slice(1,7).map(function(h){ return {v:+h.rain_mm||0, at:h.hour||''}; });
+    src.forEach(function(x){ if(x.v>f6){ f6=x.v; f6at=x.at; } });
+    /* 문턱은 지도 침수판단(10/30)과 같게 — 5mm 에 '주의'가 켜지면 비 오는 날은 늘 주의라 진짜 특보가 안 보인다 */
+    var rainWord = rn>=30 ? '매우 강한 비' : rn>=10 ? '강한 비' : '';
+    var tR=$('tRain'); tR.className='tile ' + (rn>=30?'severe': rn>=10?'warn': (rn>0||f6>=5)?'info':'safe');
+    tR.querySelector('.lb').textContent = '비 (1시간)' + (rainWord ? ' · ' + rainWord : '');
+    tR.querySelector('.v').innerHTML = num(rn,1) + '<small>mm</small>';
+    var rainD = (rn>0 && aws.rnday!=null) ? ('오늘 누적 ' + num(aws.rnday,1) + 'mm' + (aws.rn12h!=null ? ' · 12시간 ' + num(aws.rn12h,1) + 'mm' : ''))
+              : f6>0 ? ('6시간 안 최대 ' + num(f6,1) + 'mm' + (f6at?(' ('+f6at+')'):''))
+              : (aws.rnday!=null && +aws.rnday>0) ? ('오늘 누적 ' + num(aws.rnday,1) + 'mm') : '비 예보 없음';
+    tR.querySelector('.d').textContent = rainD + (aws.alt ? ' · ' + aws.alt + ' 관측소 대체' : '');
+
+    /* 하천 */
+    var mine = riversOf(D.rivers||[], sg, name).map(function(r){ return {r:r, lv:riverLv(r), pct: r.danger ? Math.min(1, r.value/r.danger) : 0}; });
+    mine.sort(function(a,b){ return b.pct-a.pct; });
+    var top = mine[0]; var rLv = mine.some(function(x){ return x.lv==='danger'; }) ? 'danger' : mine.some(function(x){ return x.lv==='warning'; }) ? 'warning' : 'safe';
+    var tRv=$('tRiver'); tRv.className='tile ' + (!mine.length ? '' : rLv==='danger'?'severe': rLv==='warning'?'warn':'safe');
+    tRv.querySelector('.v').textContent = top ? (rLv==='danger'?'위험': rLv==='warning'?'주의':'안전') : '없음';
+    tRv.querySelector('.d').textContent = top ? (shortName(top.r.name) + ' ' + num(top.r.value,2) + 'm · 위험수위의 ' + Math.round(top.pct*100) + '%') : '관할 하천 관측소 없음';
+
+    /* 관할 하천 CCTV — 홍수통제소 실시간 화면(다른 화면의 하천 상세와 같은 출처). 있는 곳만, 최대 6곳 */
+    var cc = mine.filter(function(x){ return x.r.has_cctv || (window.hrfcoCam && window.hrfcoCam(x.r.code)); }).slice(0,6);
+    var box=$('cctv'), list=$('cctvList'); list.innerHTML='';
+    cc.forEach(function(x){ var a=document.createElement('a'); var view='https://n.flood.go.kr/main/cctvView.do?obscd='+encodeURIComponent(x.r.code)+'&fcodvcd=01';
+      var item={ n:'홍수통제소 '+shortName(x.r.name), u:view, hrfco:String(x.r.code) };
+      var inline=!!(window.cctvInline && window.cctvInline(item));   /* 장치번호가 있으면 화면 안 재생, 없으면 팝업 페이지 새 창 */
+      a.href=inline?'javascript:void(0)':view; if(!inline){ a.target='_blank'; a.rel='noopener'; }
+      a.textContent=(inline?'▶ ':'📹 ')+shortName(x.r.name); a.style.cssText='display:inline-block; padding:10px 14px; border-radius:12px; border:2px solid var(--brand); color:var(--brand); font-weight:800; font-size:15px; text-decoration:none; background:var(--brandSoft);';
+      if(inline) a.onclick=function(){ showCctv(item); };
+      list.appendChild(a); });
+    /* 외부 공개 영상(지자체·KBS·유튜브) — cctv-links.js 표. 새 창으로 */
+    var ext = (window.cctvLinksFor ? window.cctvLinksFor(RC.key, name, sg) : []);
+    ext.forEach(function(x){ var a=document.createElement('a'); var inline=!!(window.cctvInline && window.cctvInline(x));
+      a.href=inline?'javascript:void(0)':x.u; if(!inline){ a.target='_blank'; a.rel='noopener'; } a.textContent=(inline?'▶ ':'📺 ')+x.n;
+      a.style.cssText='display:inline-block; padding:10px 14px; border-radius:12px; border:2px solid var(--line); color:var(--ink2); font-weight:800; font-size:14px; text-decoration:none; background:var(--card);';
+      if(inline) a.onclick=function(){ showCctv(x); };   /* KBS·포항은 hls 재생, 춘천은 뷰어 iframe — 화면 안에서 */
+      list.appendChild(a); });
+    if(!ext.some(function(x){ return window.cctvInline && window.cctvInline(x); }) && !cc.some(function(x){ return window.hrfcoCam && window.hrfcoCam(x.r.code); })){ hideCctv(); }
+    box.style.display = (cc.length || ext.length) ? 'block' : 'none';
+
+    /* 재난문자 */
+    var _t=new Date(), _y=new Date(_t.getTime()-864e5), _ymd=function(d){ return d.getFullYear()+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+('0'+d.getDate()).slice(-2); }, TODAY=_ymd(_t), YDAY=_ymd(_y);
+    var msgs = (D.messages||[]).filter(function(m){ return (!m.date || m.date===TODAY || m.date===YDAY) && (!m.region || m.region==='경기도' || m.region===sg || m.region===name); });
+    var tM=$('tMsg'); tM.className='tile ' + (msgs.length ? 'info' : 'safe');
+    tM.querySelector('.v').innerHTML = msgs.length + '<small>건</small>';
+    tM.querySelector('.d').textContent = msgs.length ? (((msgs[0].date && msgs[0].date!==TODAY) ? msgs[0].date.slice(5) + ' ' : '') + (msgs[0].time||'') + ' ' + String(msgs[0].text||'').slice(0,34) + (String(msgs[0].text||'').length>34?'…':'')) : '최근 재난문자 없음';
+
+    /* 기온·체감·바람 */
+    var ta = reg.temp!=null ? reg.temp : ((aws.obs && aws.obs.ta!=null) ? aws.obs.ta : null);   /* 시군 대표값 — 체감·습도와 같은 지점(지도와 같음) */
+    var feels = det.feels_like!=null ? det.feels_like : (hourly[0] ? hourly[0].feels_like : null);
+    var gust = (aws.wind && aws.wind.wss!=null) ? aws.wind.wss : (aws.wss!=null ? aws.wss : null);   /* 관할 최강 순간풍속(사다리차 기준과 같은 값) */
+    var hot = (feels!=null && feels>=33);
+    $('tempL').textContent = '기온 · 체감 · ' + (gust!=null ? '순간풍속' : '바람') + (hot ? ' · 더위 주의' : '');
+    $('tempV').innerHTML = num(ta,1) + '<small>°</small>' + (feels!=null ? ' <span style="font-size:18px;color:var(--ink3);font-weight:800;">체감 ' + num(feels,1) + '°</span>' : '');
+    $('tempD').textContent = (reg.weather||'') + (gust!=null ? ' · 순간풍속 ' + num(gust,1) + 'm/s' : (reg.wind!=null ? ' · 바람 ' + num(reg.wind,1) + 'm/s' : '')) + (reg.humid!=null ? ' · 습도 ' + num(reg.humid,0) + '%' : '') + (reg.tmax!=null ? ' · 최고 ' + num(reg.tmax,0) + '° 최저 ' + num(reg.tmin,0) + '°' : '');
+    $('tTemp').className = 'tile wide ' + (hot ? 'warn' : '');
+
+    /* 한 줄 상태 */
+    var lv = (sev || rLv==='danger' || rn>=30) ? 'severe' : (warns.length || rLv==='warning' || rn>=10) ? 'warn' : 'safe';
+    var s=$('status'); s.className='status ' + lv;
+    $('s1').textContent = lv==='severe' ? '경보' : lv==='warn' ? '주의' : '정상';
+    var parts=[]; if(warns.length) parts.push(types.join('·')); if(rLv!=='safe') parts.push('하천 ' + (rLv==='danger'?'위험':'주의')); if(rn>=10) parts.push('시간당 ' + num(rn,1) + 'mm (' + rainWord + ')');
+    $('s2').textContent = parts.length ? parts.join(' · ') : ('특보 없음' + (mine.length ? ' · 하천 안전' : '') + (pre.length ? ' · 예비특보 ' + pre.length + '건' : '') + (msgs.length ? ' · 재난문자 ' + msgs.length + '건' : ''));
+
+    /* 하천이 주의·위험이면 CCTV 상자를 상태 카드 바로 아래로(스크롤 없이 보이게), 안전이면 원래 자리. 제자리면 손대지 않는다(재생 유지) */
+    var cbox=$('cctv'), anchor=(rLv!=='safe') ? $('status') : document.querySelector('.grid');
+    if(cbox.previousElementSibling!==anchor){ anchor.insertAdjacentElement('afterend', cbox); cbox.style.margin = (rLv!=='safe') ? '0 0 12px' : '10px 0 0'; }
+
+    /* 갱신 시각 · 오래된 자료(50분, 지도와 같음)면 상태 카드를 회색 '자료 오래됨'으로 덮는다 — 옛 초록이 '지금 정상'으로 읽히지 않게 */
+    var up = String(D.updated||''); $('upd').textContent = up ? (up.slice(5,16) + ' 자료') : '';
+    var age=null; try{ var t=new Date(up.replace(' ','T')); if(up && !isNaN(t)) age=Math.round((Date.now()-t.getTime())/60000); }catch(e){}
+    var stale = (age!=null && age>50) || failN>=3;
+    var stb=$('stale'); stb.style.display = stale ? 'block' : 'none';
+    if(stale){ stb.textContent = failN>=3 ? '⚠ 새 자료를 못 받고 있습니다 — 통신 확인 후 새로고침' : '⚠ 자료가 ' + age + '분 전 것입니다 — 새로고침 해 보세요';
+      s.className='status stale'; $('s1').textContent='자료 오래됨'; $('s2').textContent=(age!=null ? age + '분 전 자료 · ' : '') + '아래 내용은 그때 상황'; }
+    document.title = (name||'') + ' ' + $('s1').textContent + ' — 쉬운 화면';
+  }
+
+  var curItem=null;
+  function hideCctv(){ window.cctvStop && window.cctvStop($('kbsVideo')); $('kbsFrame').src='about:blank'; $('kbsBox').style.display='none'; $('kbsPause').style.display='none'; curItem=null; }
+  function showCctv(x){
+    var v=$('kbsVideo'), f=$('kbsFrame'); curItem=x; $('kbsErr').textContent=''; $('kbsPause').style.display='none';
+    $('kbsCap').textContent='📺 '+x.n; $('kbsBox').style.display='block';
+    if(x.frame){ window.cctvStop && window.cctvStop(v); v.style.display='none'; f.style.display='block'; f.src=x.frame; }
+    else { f.src='about:blank'; f.style.display='none'; v.style.display='block'; v.poster=window.cctvPoster(x)||'';
+      window.cctvPlay(v, x, function(why){ $('kbsErr').textContent='재생 실패('+why+') — 정지영상만 표시'; }, function(){ $('kbsPause').style.display='flex'; }); }
+    $('kbsBox').scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+  $('kbsPause').onclick=function(){ if(curItem) showCctv(curItem); };
+
+  /* ── 60초마다 새 자료 (다른 화면과 같은 주소·방식) ── */
+  var failN=0;   /* 연속 실패 횟수 — 3회면 '못 받고 있음' */
+  function poll(){
+    try{
+      fetch('data.js?_t=' + Date.now(), {cache:'no-store'}).then(function(r){ return r.ok ? r.text() : null; }).then(function(t){
+        if(!t){ failN++; render(); return; } var i=t.indexOf('{'), j=t.lastIndexOf('}'); if(i<0||j<0){ failN++; render(); return; }
+        try{ window.DASHBOARD_DATA = JSON.parse(t.slice(i,j+1)); failN=0; render(); }catch(e){ failN++; render(); }
+      }).catch(function(){ failN++; render(); });
+    }catch(e){}
+  }
+  fillSelects(); render(); setInterval(poll, 60000);
+  /* 화면 복귀(잠금 해제·탭 복귀)·뒤로가기 때 바로 새 자료 */
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) poll(); });
+  window.addEventListener('pageshow', function(ev){ if(ev.persisted) poll(); });
+  window.EASY = { render: render, poll: poll };   /* 점검용 — 모의 자료를 넣고 다시 그릴 때 */
+  /* 이 시도를 '고른 시도'로 기억 — 대문(/)이 다음에 여기로 */
+  try{ if(RC.sidoList && RC.sidoCurrent){ var me=RC.sidoList.filter(function(x){ return x.label===RC.sidoCurrent; })[0]; if(me) localStorage.setItem('ggSido', me.base); } }catch(e){}
+})();
+</script>
+</body>
+</html>

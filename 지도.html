@@ -23,6 +23,23 @@
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('service-worker.js').catch(function(){});});}</script>
 <!-- 지역 설정(시군 목록·배치·중점 관서). 남부 배포 시 region-south.js로 교체된다. -->
 <script src="region.js"></script>
+<script src="cctv-hrfco.js"></script>
+<script src="cctv-busan.js"></script>
+<script src="cctv-links.js"></script>
+<script src="data-cctv.js"></script>
+<style data-dash-sheet>
+  /* 배치 편집기(dash_layout.js) — 섹션·카드 표시/순서. 인라인 style 은 런타임이 다시 쓰므로 시트로 건다. */
+  [data-dash-main]{display:flex;flex-direction:column;}
+  section[data-dash="ribbon"]{display:var(--ds-ribbon-d,block)!important;order:var(--ds-ribbon-o,1);}
+  section[data-dash="hero"]{display:var(--ds-hero-d,grid)!important;order:var(--ds-hero-o,2);}
+  section[data-dash="stations"]{display:var(--ds-stations-d,block)!important;order:var(--ds-stations-o,3);}
+  section[data-dash="trio"]{display:var(--ds-trio-d,grid)!important;order:var(--ds-trio-o,4);}
+  section[data-dash="imgs"]{display:var(--ds-imgs-d,block)!important;order:var(--ds-imgs-o,5);}
+  [data-dash="warn"]{display:var(--ds-warn-d,flex)!important;} [data-dash="msg"]{display:var(--ds-msg-d,flex)!important;}
+  [data-dash="river"]{display:var(--ds-river-d,flex)!important;} [data-dash="hourly"]{display:var(--ds-hourly-d,block)!important;}
+  [data-dash="fire"]{display:var(--ds-fire-d,block)!important;} [data-dash="pm"]{display:var(--ds-pm-d,flex)!important;}
+</style>
+<script src="dash_layout.js"></script>
 <!-- 테스트2는 운영의 실시간 data.js를 직접 참조 (document.write는 dc-runtime 파싱과 충돌하므로 정적 로드) -->
 <script src="https://gyeonggi-dashboard.visanu81.workers.dev/data.js"></script>
 <script src="data-adapter.js"></script>
@@ -33,7 +50,7 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   :root{
     --bg:#eef1f7; --bg2:#e6ebf4; --surface:#ffffff; --surface2:#f3f7fc; --surface3:#eaf0f8;
-    --border:#e4e9f2; --border2:#d3dbe9; --ink:#0f1b2d; --ink2:#4b5a74; --ink3:#8593aa;
+    --border:#e4e9f2; --border2:#d3dbe9; --ink:#0f1b2d; --ink2:#4b5a74; --ink3:#71809a;
     --brand:#2563eb; --brand2:#1d4ed8; --brandSoft:#e9f0ff; --cyan:#0e7490;
     --safe:#0ea371; --safeSoft:#e5f7f0; --caution:#e0930a; --cautionSoft:#fdf2df;
     --warn:#ef6c1a; --warnSoft:#ffece0; --danger:#e5484d; --dangerSoft:#fdebec; --severe:#d42a2f; --severeSoft:#fbe3e3;
@@ -43,7 +60,7 @@
   }
   [data-theme="dark"]{
     --bg:#080d18; --bg2:#0b1222; --surface:#111a2c; --surface2:#18233b; --surface3:#1e2a45;
-    --border:#26314c; --border2:#354364; --ink:#e9eef9; --ink2:#9fb0cf; --ink3:#6b7a99;
+    --border:#26314c; --border2:#354364; --ink:#e9eef9; --ink2:#9fb0cf; --ink3:#8090ad;
     --brand:#4b8bf5; --brand2:#3b82f6; --brandSoft:rgba(75,139,245,.15); --cyan:#22d3ee;
     --safe:#34d399; --safeSoft:rgba(52,211,153,.13); --caution:#fbbf24; --cautionSoft:rgba(251,191,36,.13);
     --warn:#fb923c; --warnSoft:rgba(251,146,60,.14); --danger:#f87171; --dangerSoft:rgba(248,113,113,.13); --severe:#ef4444; --severeSoft:rgba(239,68,68,.16);
@@ -122,7 +139,15 @@
         <button onClick="{{toggleStationPicker}}" style="display:inline-flex; align-items:center; gap:8px; height:38px; padding:0 16px; border-radius:11px; border:1px solid var(--brand2); background:var(--brandSoft); color:var(--brand); font-size:13.5px; font-weight:800; font-family:inherit; cursor:pointer; white-space:nowrap; box-shadow:var(--sh1);" style-hover="filter:brightness(.97)">📍 {{myStation}} <span style="font-size:9px; opacity:.8;">▼</span></button>
         <sc-if value="{{stationPickerOpen}}" hint-placeholder-val="{{false}}">
           <div onClick="{{toggleStationPicker}}" style="position:fixed; inset:0; z-index:59;"></div>
-          <div style="position:absolute; top:calc(100% + 7px); left:0; z-index:61; background:var(--surface); border:1px solid var(--border); border-radius:13px; box-shadow:var(--sh3); padding:7px; min-width:158px; max-height:70vh; overflow:auto;">
+          <div style="position:absolute; top:calc(100% + 7px); left:0; z-index:61; background:var(--surface); border:1px solid var(--border); border-radius:13px; box-shadow:var(--sh3); padding:7px; min-width:{{pickerMinW}}; max-height:70vh; overflow:auto;">
+            <sc-if value="{{hasSido}}" hint-placeholder-val="{{false}}">
+              <div style="font-size:10px; color:var(--ink3); font-weight:800; padding:5px 10px 6px;">시도</div>
+              <div style="display:flex; flex-wrap:wrap; gap:4px; padding:0 6px 8px; border-bottom:1px solid var(--border); margin-bottom:6px; max-width:330px;">
+                <sc-for list="{{sidoList}}" as="sd" hint-placeholder-count="16">
+                  <div onClick="{{sd.pick}}" style="padding:6px 9px; border-radius:8px; cursor:pointer; font-size:11.5px; font-weight:800; white-space:nowrap; background:{{sd.bg}}; color:{{sd.fg}}; border:1px solid {{sd.bd}};">{{sd.label}}</div>
+                </sc-for>
+              </div>
+            </sc-if>
             <sc-if value="{{hasScopes}}" hint-placeholder-val="{{false}}">
               <div style="font-size:10px; color:var(--ink3); font-weight:800; padding:5px 10px 6px;">권역</div>
               <div style="display:flex; gap:5px; padding:0 6px 8px; border-bottom:1px solid var(--border); margin-bottom:6px;">
@@ -132,12 +157,14 @@
               </div>
             </sc-if>
             <div style="font-size:10px; color:var(--ink3); font-weight:800; padding:5px 10px 7px;">내 관서 선택</div>
+            <div style="display:grid; grid-template-columns:repeat({{stationCols}}, minmax(0,1fr)); gap:0 4px;">
             <sc-for list="{{stationList}}" as="s" hint-placeholder-count="11">
               <div onClick="{{s.pick}}" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:9px 11px; border-radius:9px; cursor:pointer; background:{{s.selBg}};" style-hover="background:var(--surface2)">
                 <span style="font-size:13px; font-weight:{{s.selW}}; color:{{s.selColor}};">{{s.name}}</span>
                 <sc-if value="{{s.isSel}}" hint-placeholder-val="{{false}}"><span style="font-size:12px; color:var(--brand); font-weight:800;">✓</span></sc-if>
               </div>
             </sc-for>
+            </div>
           </div>
         </sc-if>
       </div>
@@ -153,16 +180,24 @@
              배경을 채우면(brandSoft) 혼자 세 번째 스타일이 되어 과하게 튄다. -->
         <a href="호우.html" class="{{hoBtnCls}}" title="호우 전용 화면 — 관서별 실측 강수(기상청 AWS)·6시간/24시간 강수예보·강풍·하천수위·레이더" style="height:36px; padding:0 13px; border-radius:10px; border:1px solid var(--brand); background:var(--surface); color:var(--brand); font-size:12.5px; font-weight:800; font-family:inherit; text-decoration:none; display:flex; align-items:center; gap:6px; white-space:nowrap;">🌧 호우</a>
         <a href="상황실.html" title="상황실(벽면) 모드 — 관할 전 관서를 15초마다 순차 표출. 대형 화면에 띄우고 F11 전체화면으로 사용" style="height:36px; padding:0 13px; border-radius:10px; border:1px solid var(--brand); background:var(--surface); color:var(--brand); font-size:12.5px; font-weight:800; font-family:inherit; text-decoration:none; display:flex; align-items:center; gap:6px; white-space:nowrap;" style-hover="background:var(--surface2)">🖥 상황실</a>
-        <a href="도움말.html" title="사용설명서 — 화면 보는 법과 색·기호, 자동 판단 기준" style="height:36px; padding:0 13px; border-radius:10px; border:1px solid var(--border2); background:var(--surface); color:var(--ink2); font-size:12.5px; font-weight:800; font-family:inherit; text-decoration:none; display:flex; align-items:center; gap:6px; white-space:nowrap;" style-hover="background:var(--surface2)">❓ 설명서</a>
         <a href="https://t.me/gg_bukbu_weather_bot" target="_blank" rel="noopener" title="텔레그램 급변 알림 구독 — 봇 채팅에서 /start 한 번이면 끝. 특보·하천 위험·재난문자를 실시간으로 알려드립니다" style="height:36px; padding:0 13px; border-radius:10px; border:1px solid #229ED9; background:var(--surface); color:#229ED9; font-size:12.5px; font-weight:800; font-family:inherit; text-decoration:none; display:flex; align-items:center; gap:6px; white-space:nowrap;" style-hover="background:var(--surface2)">📲 알림받기</a>
-        <button onClick="{{toggleDemo}}" style="{{demoBtnStyle}}" style-hover="filter:brightness(1.06)">{{demoBtnLabel}}</button>
-        <button onClick="{{toggleMute}}" title="경보음" style="height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--border2); background:var(--surface); color:var(--ink2); font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer; display:flex; align-items:center; gap:6px;" style-hover="background:var(--surface2)">{{muteLabel}}</button>
-        <button onClick="{{toggleTheme}}" title="라이트/다크" style="height:36px; padding:0 12px; border-radius:10px; border:1px solid var(--border2); background:var(--surface); color:var(--ink2); font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer; display:flex; align-items:center; gap:6px;" style-hover="background:var(--surface2)">{{themeLabel}}</button>
+        <!-- 유틸 4개(설명서·시연·경보음·테마)는 아이콘만, 오른쪽 끝 한 묶음 — 이동 링크(호우·상황실·알림받기)와 구분
+             (2026-09-21 사장님 "아이콘으로만 해서 한쪽으로"). 뜻은 title(마우스 올리면)로. -->
+        <span style="display:inline-flex; align-items:center; gap:5px;">
+        <span style="width:1px; height:22px; background:var(--border2); margin:0 4px;"></span>
+        <a href="쉬운.html" title="쉬운 화면 — 내 관서 상황만 큰 글씨·아이콘으로(휴대폰용)" aria-label="쉬운 화면" style="{{utilBtnStyle}}" style-hover="color:var(--ink);border-color:var(--border2)">📱</a>
+        <a href="도움말.html" title="사용설명서 — 화면 보는 법과 색·기호, 자동 판단 기준" aria-label="설명서" style="{{utilBtnStyle}}" style-hover="color:var(--ink);border-color:var(--border2)">❓</a>
+        <button onClick="{{toggleDemo}}" title="{{demoTitle}}" aria-label="시연" style="{{demoBtnStyle}}" style-hover="filter:brightness(1.06)">{{demoBtnLabel}}</button>
+        <button onClick="{{toggleMute}}" title="{{muteTitle}}" aria-label="경보음" style="{{utilBtnStyle}}" style-hover="color:var(--ink);border-color:var(--border2)">{{muteLabel}}</button>
+        <button onClick="{{toggleTheme}}" title="{{themeTitle}}" aria-label="화면 색" style="{{utilBtnStyle}}" style-hover="color:var(--ink);border-color:var(--border2)">{{themeLabel}}</button>
+        </span>
       </div>
   </header>
 
+  <!-- 배치 편집(dash_layout.js): 섹션 순서(order)·표시(display)를 CSS 변수로 받는 컨테이너 -->
+  <div data-dash-main style="display:flex; flex-direction:column;">
   <!-- ============ ALERT RIBBON ============ -->
-  <section style="padding:16px 22px 0;">
+  <section data-dash="ribbon" style="padding:16px 22px 0;">
     <div onClick="{{openWarnAll}}" style="position:relative; overflow:hidden; display:flex; align-items:center; gap:18px; flex-wrap:wrap; padding:16px 20px; border-radius:16px; cursor:pointer; background:{{ribbonBg}}; border:1px solid {{ribbonBorder}}; box-shadow:var(--sh2);">
       <div style="position:absolute; left:0; top:0; bottom:0; width:6px; background:{{ribbonAccent}};"></div>
       <sc-if value="{{ribbonPulse}}" hint-placeholder-val="{{false}}">
@@ -191,11 +226,18 @@
         </sc-for>
       </div>
     </div>
+    <!-- 내 관서 한 줄 (2026-09-19 디자인 손질): 스크롤 없이 내 관할만 바로 판단. 누르면 그 관서 상세로 -->
+    <div onClick="{{mineOpen}}" style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:8px; padding:9px 16px; border-radius:12px; background:var(--surface); border:1px solid {{mineBorder}}; box-shadow:var(--sh1); cursor:pointer;" style-hover="border-color:var(--brand2)">
+      <span style="font-size:13px; font-weight:800; color:var(--brand); white-space:nowrap;">📍 {{myStation}}</span>
+      <sc-for list="{{mineItems}}" as="mi" hint-placeholder-count="5">
+        <span style="display:inline-flex; align-items:baseline; gap:5px; white-space:nowrap;"><span style="font-size:12px; color:var(--ink3);">{{mi.k}}</span><span style="font-size:13.5px; font-weight:800; color:{{mi.c}};">{{mi.v}}</span></span>
+      </sc-for>
+      <span style="margin-left:auto; font-size:12px; color:var(--ink3);">상세 ›</span>
+    </div>
   </section>
-  </div>
 
   <!-- ============ HERO : MAP + 특보 + 수위 ============ -->
-  <section style="padding:16px 22px 0; display:grid; grid-template-columns:{{heroCols}}; gap:16px; align-items:stretch;">
+  <section data-dash="hero" style="padding:16px 22px 0; display:grid; grid-template-columns:{{heroCols}}; gap:16px; align-items:stretch;">
 
     <!-- MAP CARD -->
     <div style="{{mapCardStyle}}">
@@ -228,6 +270,11 @@
           <div style="position:absolute; inset:0;">
             <svg viewBox="{{mapViewBox}}" preserveAspectRatio="xMidYMid meet" style="width:100%; height:100%; display:block; overflow:visible;">
               <g>
+                <!-- 먼 섬 상자(백령도·울릉도·흑산도…) — map-geo 의 insets. 종이 지도의 '울릉도·독도' 상자처럼 구석에 따로 -->
+                <sc-for list="{{mapInsets}}" as="ib" hint-placeholder-count="0">
+                  <rect x="{{ib.x}}" y="{{ib.y}}" width="{{ib.w}}" height="{{ib.h}}" rx="10" fill="var(--surface2)" fill-opacity=".55" stroke="var(--border2)" stroke-width="1.5" stroke-dasharray="6 5"></rect>
+                  <text x="{{ib.tx}}" y="{{ib.ty}}" font-size="22" font-weight="700" fill="var(--ink3)">{{ib.label}}</text>
+                </sc-for>
                 <sc-for list="{{mapRegions}}" as="r" hint-placeholder-count="11">
                   <path d="{{r.d}}" fill="{{r.fill}}" stroke="{{r.stroke}}" stroke-width="{{r.strokeW}}" stroke-linejoin="round" opacity="{{r.pathOpacity}}" onClick="{{r.open}}" style="cursor:pointer; transition:fill .3s ease, opacity .3s ease, filter .15s ease;" style-hover="filter:brightness(0.93)"></path>
                 </sc-for>
@@ -297,7 +344,7 @@
 
       <!-- 특보 CARD -->
       <sc-if value="{{noFocus}}" hint-placeholder-val="{{true}}">
-      <div style="background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--sh2); display:flex; flex-direction:column; overflow:hidden;">
+      <div data-dash="warn" style="background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--sh2); display:flex; flex-direction:column; overflow:hidden;">
         <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px 11px; border-bottom:1px solid var(--border);">
           <div style="display:flex; align-items:center; gap:8px;"><span style="width:9px; height:9px; border-radius:3px; background:{{warnDot}};"></span><span style="font-size:14px; font-weight:800; color:var(--ink);">기상특보</span></div>
           <span style="font-size:11px; font-weight:700; color:var(--ink2); background:var(--surface2); border:1px solid var(--border); padding:3px 9px; border-radius:999px;">발효 {{warnCount}} · 예비 {{prelimCount}}</span>
@@ -316,10 +363,11 @@
             </sc-for>
           </sc-if>
           <sc-if value="{{noWarn}}" hint-placeholder-val="{{true}}">
-            <div style="display:flex; flex-direction:column; align-items:center; gap:7px; padding:22px 12px; text-align:center;">
-              <div style="width:38px; height:38px; border-radius:50%; background:var(--safeSoft); display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="var(--safe)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
-              <div style="font-size:13px; font-weight:700; color:var(--ink);">발효 중인 기상특보 없음</div>
-              <div style="font-size:11.5px; color:var(--ink3); line-height:1.5;">{{prelimLine}}</div>
+            <!-- 없을 땐 한 줄로(2026-09-19 디자인 손질): 상황이 없을 때 큰 카드가 노른자 자리를 차지하던 것 -->
+            <div style="display:flex; align-items:center; gap:9px; padding:6px 8px;">
+              <div style="width:22px; height:22px; border-radius:50%; background:var(--safeSoft); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="var(--safe)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+              <div style="font-size:12.5px; font-weight:700; color:var(--ink);">발효 중인 기상특보 없음</div>
+              <div style="font-size:12px; color:var(--ink3); margin-left:auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{prelimLine}}</div>
             </div>
           </sc-if>
           <sc-if value="{{hasPrelim}}" hint-placeholder-val="{{false}}">
@@ -346,7 +394,7 @@
 
       <!-- 재난문자 CARD -->
       <sc-if value="{{noFocus}}" hint-placeholder-val="{{true}}">
-      <div style="background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--sh2); display:flex; flex-direction:column; overflow:hidden; flex:0 0 auto;">
+      <div data-dash="msg" style="background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--sh2); display:flex; flex-direction:column; overflow:hidden; flex:0 0 auto;">
         <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px 11px; border-bottom:1px solid var(--border);">
           <div style="display:flex; align-items:center; gap:8px;"><span style="width:9px; height:9px; border-radius:3px; background:{{warnDot}};"></span><span style="font-size:14px; font-weight:800; color:var(--ink);">재난문자</span></div>
           <span style="font-size:11px; font-weight:700; color:var(--ink2); background:var(--surface2); border:1px solid var(--border); padding:3px 9px; border-radius:999px;">{{msgCount}}건</span>
@@ -364,10 +412,10 @@
             </sc-for>
           </sc-if>
           <sc-if value="{{noMsg}}" hint-placeholder-val="{{true}}">
-            <div style="display:flex; flex-direction:column; align-items:center; gap:8px; padding:22px 12px; text-align:center;">
-              <div style="width:38px; height:38px; border-radius:50%; background:var(--safeSoft); display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="var(--safe)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
-              <div style="font-size:13px; font-weight:700; color:var(--ink);">발령된 재난문자 없음</div>
-              <div style="font-size:11.5px; color:var(--ink3);">경기북부 지역 재난문자를 실시간 감시 중</div>
+            <div style="display:flex; align-items:center; gap:9px; padding:2px 4px;">
+              <div style="width:22px; height:22px; border-radius:50%; background:var(--safeSoft); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="var(--safe)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+              <div style="font-size:12.5px; font-weight:700; color:var(--ink);">발령된 재난문자 없음</div>
+              <div style="font-size:12px; color:var(--ink3); margin-left:auto;">경기북부 실시간 감시 중</div>
             </div>
           </sc-if>
         </div>
@@ -376,10 +424,10 @@
 
       <!-- 수위 CARD -->
       <sc-if value="{{noFocus}}" hint-placeholder-val="{{true}}">
-      <div style="{{riverCardStyle}}">
+      <div data-dash="river" style="{{riverCardStyle}}">
         <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px 11px; border-bottom:1px solid var(--border);">
           <div style="display:flex; align-items:center; gap:8px;"><span style="width:9px; height:9px; border-radius:3px; background:var(--cyan);"></span><span style="font-size:14px; font-weight:800; color:var(--ink);">하천 수위 · 홍수 위험</span></div>
-          <span style="font-size:11px; font-weight:700; color:var(--ink3);">위험 근접순</span>
+          <span style="font-size:11px; font-weight:700; color:var(--ink3);">주의 이상 · 내 관할 · 위험 근접순</span>
         </div>
         <div style="{{riverBodyStyle}}">
           <sc-if value="{{hasFlood}}" hint-placeholder-val="{{false}}">
@@ -392,7 +440,7 @@
               <span style="font-size:17px; color:var(--severe); flex-shrink:0;">›</span>
             </div>
           </sc-if>
-          <sc-for list="{{rivers}}" as="r" hint-placeholder-count="5">
+          <sc-for list="{{riverRows}}" as="r" hint-placeholder-count="5">
             <div onClick="{{r.open}}" style="display:flex; align-items:center; gap:12px; padding:9px 10px; border-radius:11px; cursor:pointer;" style-hover="background:var(--surface2)">
               <div style="width:64px; height:30px; flex-shrink:0;">
                 <svg viewBox="0 0 100 30" preserveAspectRatio="none" width="64" height="30" style="display:block; overflow:visible;">
@@ -416,6 +464,23 @@
               <div style="flex-shrink:0; font-size:9.5px; font-weight:800; color:#fff; background:{{r.color}}; padding:3px 7px; border-radius:6px; min-width:34px; text-align:center;">{{r.statusTxt}}</div>
             </div>
           </sc-for>
+          <!-- 관측소가 많은 시도(강원 55·경북 72)는 상위 8행만 — 주의 이상·내 관서·홍수예보지점 우선. 나머지는 펼쳐 본다 -->
+          <sc-if value="{{riverMore}}" hint-placeholder-val="{{false}}">
+            <div onClick="{{toggleRiverExpand}}" style="margin:4px 2px 2px; padding:8px; border-radius:9px; text-align:center; font-size:12px; font-weight:700; color:var(--brand); background:var(--brandSoft); cursor:pointer;">{{riverMoreLabel}}</div>
+          </sc-if>
+          <!-- 외부 공개 하천 CCTV(지자체·KBS·유튜브, cctv-links.js) — 내 관서에 있는 것만. 홍수통제소 영상은 하천 상세 안에 이미 있다 -->
+          <sc-if value="{{hasCctvLinks}}" hint-placeholder-val="{{false}}">
+            <div style="margin:8px 2px 2px; padding:8px 10px; border-radius:9px; background:var(--surface2); border:1px solid var(--border); display:flex; flex-wrap:wrap; align-items:center; gap:6px;">
+              <span style="font-size:11px; font-weight:800; color:var(--ink3);">📺 외부 실시간 CCTV</span>
+              <sc-for list="{{cctvLinks}}" as="c" hint-placeholder-count="2">
+                <a href="{{c.u}}" target="{{c.target}}" rel="noopener" onClick="{{c.click}}" style="{{c.style}}" style-hover="background:var(--brandSoft)">{{c.n}}</a>
+              </sc-for>
+            </div>
+            <!-- 화면 안 재생(KBS·포항 = hls, 춘천 = 뷰어 iframe). 눌러서 펼치고 다시 누르면 접힘. 새 창 안 열림 -->
+            <sc-if value="{{kbsOpen}}" hint-placeholder-val="{{false}}">
+              <div style="margin:6px 2px 2px; border-radius:12px; overflow:hidden; border:1px solid var(--border); background:#000;">{{kbsPanel}}</div>
+            </sc-if>
+          </sc-if>
         </div>
       </div>
       </sc-if>
@@ -424,7 +489,7 @@
   </section>
 
   <!-- ============ 관서별 상세 ============ -->
-  <section style="padding:22px 22px 0;">
+  <section data-dash="stations" style="padding:22px 22px 0;">
     <div style="display:flex; align-items:center; gap:9px; margin-bottom:13px;">
       <div style="width:4px; height:18px; border-radius:2px; background:var(--brand);"></div>
       <h2 style="font-size:15.5px; font-weight:800; color:var(--ink); letter-spacing:-.3px;">관서별 현재 기상</h2>
@@ -456,8 +521,8 @@
        align-items는 stretch(기본)로 둔다 — start면 오른쪽 열이 '내용 높이'만 차지해
        왼쪽 날씨 카드보다 짧아지고 아래가 빈다. stretch면 두 열이 같은 높이가 되고,
        남는 높이는 미세먼지 카드(flex:1)가 흡수한다. -->
-  <section style="padding:22px 22px 0; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr)); gap:16px;">
-    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); overflow:hidden;">
+  <section data-dash="trio" style="padding:22px 22px 0; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr)); gap:16px;">
+    <div data-dash="hourly" style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); overflow:hidden;">
       <div style="display:flex; align-items:center; justify-content:space-between; padding:15px 18px 8px; flex-wrap:wrap; gap:8px;">
         <div style="display:flex; align-items:center; gap:9px;">
           <div style="width:4px; height:18px; border-radius:2px; background:var(--brand);"></div>
@@ -477,7 +542,7 @@
     <!-- 오른쪽 절반: 산불 위험도 + 미세먼지 (위아래) -->
     <div style="display:flex; flex-direction:column; gap:16px;">
 
-    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); overflow:hidden;">
+    <div data-dash="fire" style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); overflow:hidden;">
       <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px 11px; border-bottom:1px solid var(--border);">
         <div style="display:flex; align-items:center; gap:8px;"><span style="width:9px; height:9px; border-radius:3px; background:var(--warn);"></span><span style="font-size:14px; font-weight:800; color:var(--ink);">산불 위험도</span></div>
         <span style="font-size:11px; color:var(--ink3); font-weight:600;">국립산림과학원</span>
@@ -498,7 +563,7 @@
     <!-- 미세먼지 카드가 남는 높이를 흡수한다(flex:1) → 오른쪽 열이 왼쪽 날씨 카드와 같은 높이가 된다.
          min-height:0 이 있어야 이 카드가 내용보다 작게 줄어들 수 있고(=목록이 안쪽에서 스크롤),
          없으면 반대로 이 카드가 행 높이를 밀어올려 왼쪽이 늘어난다. -->
-    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); overflow:hidden; display:flex; flex-direction:column; flex:1 1 0; min-height:0;">
+    <div data-dash="pm" style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--sh2); overflow:hidden; display:flex; flex-direction:column; flex:1 1 0; min-height:0;">
       <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px 11px; border-bottom:1px solid var(--border); flex-shrink:0;">
         <div style="display:flex; align-items:center; gap:8px;"><span style="width:9px; height:9px; border-radius:3px; background:var(--cyan);"></span><span style="font-size:14px; font-weight:800; color:var(--ink);">미세먼지 PM10</span></div>
         <span style="font-size:11px; color:var(--ink3); font-weight:600;">에어코리아</span>
@@ -518,7 +583,7 @@
   </section>
 
   <!-- ============ 기상영상 ============ -->
-  <section style="padding:22px 22px 0;">
+  <section data-dash="imgs" style="padding:22px 22px 0;">
     <div style="display:flex; align-items:center; gap:9px; margin-bottom:13px;">
       <div style="width:4px; height:18px; border-radius:2px; background:var(--brand);"></div>
       <h2 style="font-size:15.5px; font-weight:800; color:var(--ink); letter-spacing:-.3px;">기상영상</h2>
@@ -544,6 +609,7 @@
     </div>
     {{weatherText}}
   </section>
+  </div>
 
   <!-- ============ FOOTER ============ -->
   <footer style="margin:26px 22px 0; padding-top:16px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;">
@@ -645,7 +711,9 @@ class Component extends DCLogic {
       openRiskTypes: {},
       myStation: (function(){ var RC=(window.REGION_CONF||{}); var h=null;
         try{ h=(RC.hostHome||{})[location.hostname.split('.')[0]]; }catch(e){}
-        h=h||RC.home||'동두천'; try{ return (typeof localStorage!=='undefined' && localStorage.getItem('ggMyStation')) || h; }catch(e){ return h; } })(),
+        h=h||RC.home||'동두천'; try{ var sv=(typeof localStorage!=='undefined' && localStorage.getItem('ggMyStation')) || h;
+          /* 전국판: 다른 시도에서 고른 관서 이름이 남아 있으면 이 시도 기본 관서로 (2026-09-19) */
+          if(RC.order && RC.order.length && RC.order.indexOf(sv)<0) sv=h; return sv; }catch(e){ return h; } })(),
       /* 마지막에 고른 권역을 기억한다. 저장된 값이 지금 지역에 없는 권역이면(예: 북부
          전용 사이트에서 옛 값이 남아 있으면) 전체로 되돌린다. */
       scope: (function(){ var RC=(window.REGION_CONF||{}), g=RC.scopes||null; if(!g) return '전체';
@@ -654,8 +722,12 @@ class Component extends DCLogic {
         /* 저장된 선택이 없으면 접속 주소의 권역이 기본 — 북부 주소는 북부부터(hostScope) */
         try{ var hs=(RC.hostScope||{})[location.hostname.split('.')[0]]; if(hs && g[hs]) return hs; }catch(e){}
         return '전체'; })(),
-      stationPickerOpen: false
+      stationPickerOpen: (function(){ try{ if(sessionStorage.getItem('ggPickerOpen')==='1'){ sessionStorage.removeItem('ggPickerOpen'); return true; } }catch(e){} return false; })()
     };
+    /* 권역이 정해져 있는데 보던/기본 관서가 그 권역에 없으면 권역 첫 관서로 — 전체판은 기본 관서가 수원인데 저장된 권역이
+       북부면 버튼엔 '수원', 자료는 고양이 되던 어긋남(2026-09-21) */
+    (function(self){ var RC=(window.REGION_CONF||{}), g=RC.scopes||{}, sc=self.state.scope;
+      if(sc && sc!=='전체' && g[sc] && g[sc].indexOf(self.state.myStation)<0) self.state.myStation=g[sc][0]; })(this);
   }
   setMyStation(name){ try{ if(typeof localStorage!=='undefined') localStorage.setItem('ggMyStation', name); }catch(e){} this.setState({myStation:name, stationPickerOpen:false}); }
   /* 권역 전환. 지금 보고 있는 관서가 새 권역에 없으면 그 권역 첫 관서로 옮긴다
@@ -676,6 +748,10 @@ class Component extends DCLogic {
     this._onResize = ()=>{ this.setState({w:window.innerWidth}); this.fitMap(); };
     window.addEventListener('resize', this._onResize);
     if(!window.DASH || !window.MAPGEO){ let n=0; this._poll=setInterval(()=>{ if((window.DASH && window.MAPGEO) || ++n>25){ clearInterval(this._poll); this.forceUpdate(); } }, 60); }
+    // ?focus=my — 쉬운 화면 타일에서 넘어오면 전체 지도가 아니라 내 관서 상세로 바로(자료·지도가 준비된 뒤 확대까지)
+    const _fp=(function(){ try{ return new URLSearchParams(location.search).get('focus'); }catch(e){ return null; } })();
+    if(_fp==='my' && !this.state.wall){ const go=()=>{ try{ this.focusRegion(this.state.myStation, false); }catch(e){} };
+      let k=0; const tk=setInterval(()=>{ if((window.DASH && window.MAPGEO) || ++k>40){ clearInterval(tk); if(window.DASH && window.MAPGEO) setTimeout(go, 120); } }, 60); }
     this.applyTheme();
     setTimeout(()=>this.fitMap(), 30);
     this.fitMap();
@@ -749,7 +825,10 @@ class Component extends DCLogic {
   _setRiskBasemap(bm){ this._applyRiskBasemap(bm); }
   _destroyRiskMap(){ if(this._riskMap){ try{this._riskMap.remove();}catch(e){} } this._riskMap=null; this._riskLayers=null; this._lastRiskBm=null; }
   _fbtn(active){ return 'padding:6px 11px;border-radius:8px;border:1px solid '+(active?'var(--brand)':'var(--border2)')+';background:'+(active?'var(--brand)':'var(--surface)')+';color:'+(active?'#fff':'var(--ink2)')+';font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:var(--sh1);'; }
-  _svgToLatLng(x,y){ const g=window.MAPGEO, p=g&&g.proj; if(!p) return [37.9,127.05]; return [p.maxLat-(y-p.pad)/p.scale, p.minLon+(x-p.pad)/(p.scale*p.kx)]; }
+  _svgToLatLng(x,y){ const g=window.MAPGEO, p=g&&g.proj; if(!p) return [37.9,127.05];
+    const ib=(g.insets||[]).find(b=>x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h);
+    if(ib&&ib.proj){ const q=ib.proj; return [q.maxLat-(y-ib.y-q.pad)/q.scale, q.minLon+(x-ib.x-q.pad)/(q.scale*q.kx)]; }
+    const py=(p.padY!=null?p.padY:p.pad); return [p.maxLat-(y-py)/p.scale, p.minLon+(x-p.pad)/(p.scale*p.kx)]; }
   _regionBounds(name){ const g=window.MAPGEO; if(!g||!window.L) return null; const r=(g.regions||[]).find(rr=>rr.name===name); if(!r) return null; return window.L.latLngBounds([this._svgToLatLng(r.bx,r.by), this._svgToLatLng(r.bx+r.bw, r.by+r.bh)]); }
   _applyFocusBasemap(bm){ if(!this._focusMap) return; if(this._focusLayers){ this._focusLayers.forEach(l=>{try{this._focusMap.removeLayer(l);}catch(e){}}); } this._focusLayers=[]; const K=window.VWORLD_KEY||'', mk=u=>window.L.tileLayer(u,{maxZoom:19,minZoom:6}); if(bm==='Hybrid'){ this._focusLayers.push(mk('https://api.vworld.kr/req/wmts/1.0.0/'+K+'/Satellite/{z}/{y}/{x}.jpeg')); this._focusLayers.push(mk('https://api.vworld.kr/req/wmts/1.0.0/'+K+'/Hybrid/{z}/{y}/{x}.png')); } else { this._focusLayers.push(mk('https://api.vworld.kr/req/wmts/1.0.0/'+K+'/Base/{z}/{y}/{x}.png')); } this._focusLayers.forEach(l=>l.addTo(this._focusMap)); this._lastFocusBm=bm; }
   _regionRing(name){ const g=window.MAPGEO; if(!g) return null; const r=(g.regions||[]).find(rr=>rr.name===name); if(!r||!r.d) return null; const m=r.d.match(/(-?\d+\.?\d*),(-?\d+\.?\d*)/g); if(!m) return null; return m.map(pr=>{ const a=pr.split(','); return this._svgToLatLng(parseFloat(a[0]),parseFloat(a[1])); }); }
@@ -1224,7 +1303,7 @@ class Component extends DCLogic {
       return { type:t, count:items.length, color: mx>=4?'var(--severe)':mx>=3?'var(--warn)':mx>=2?'var(--caution)':'var(--safe)', items:items };
     }).sort(function(a,b){ return b.count-a.count; });
     const near=this.riversOf(d.rivers, s.sigun||f, s.name||f).map(r=>{const lv=this.riverLevel(r);return{name:r.name, val:this.fmtNum(r.value,2), color:this.cvar(lv), statusTxt:lv==='danger'?'위험':lv==='warning'?'주의':'안전'};});
-    const fw=(d.warnings||[]).filter(w=>{const a=w.area||'';return a.includes(s.sigun||f)||(((window.REGION_CONF||{}).wideNames)||['경기북부']).some(function(_w){return a.includes(_w);})||a.includes('전역');}).map(w=>this.warnBadge(w));
+    const fw=(d.warnings||[]).filter(w=>this._areaHits(w.area, s.sigun||f)).map(w=>this.warnBadge(w));
     const lv=s.level||'normal';
     const status={label:lv==='danger'?'경보':lv==='warning'?'주의보':'정상', color:this.cvar(lv==='danger'?'danger':lv==='warning'?'warning':'safe')};
     const stats=[{label:'기온', val:this.fmtNum(s.temp,1), unit:'°'},{label:'체감', val:(s.feels!=null?s.feels:'-'), unit:'°'},{label:'강수', val:(s.rain!=null?s.rain:'-'), unit:'mm'},{label:'풍속', val:(s.wind!=null?s.wind:'-'), unit:'m/s'},{label:'습도', val:(s.humid!=null?s.humid:'-'), unit:'%'},{label:'강수확률', val:(s.pop!=null?s.pop:'-'), unit:'%'}];
@@ -1233,7 +1312,7 @@ class Component extends DCLogic {
     const sg=s.sigun||f;
     const nearRB=this.riversOf(d.rivers, sg, (s&&s.name)||sg).map(r=>({name:r.name, value:r.value, danger:r.danger, lv:this.riverLevel(r)}));
     const msgs=(d.messages||[]).filter(m=>m.region===sg || m.region===f || m.region==='경기도');
-    const warnsRB=(d.warnings||[]).filter(w=>{const a=w.area||'';return a.includes(sg)||a.includes('전역')||(((window.REGION_CONF||{}).wideNames)||['경기북부']).some(function(_w){return a.includes(_w);});});
+    const warnsRB=(d.warnings||[]).filter(w=>this._areaHits(w.area, sg));
     const pm=(d.pm||[]).find(p=>p.region===sg);
     const fire=(d.fire||[]).find(z=>(z.region||'').includes(sg));
     let detail=this.regionBody(s, nearRB, msgs, warnsRB, pm, fire);
@@ -1285,12 +1364,30 @@ class Component extends DCLogic {
       border: sev?'var(--severe)':'var(--warn)',
       open:()=>this.setState({modal:{kind:'warn'}}) };
   }
+  _areaHits(area, name){
+    // 특보 지역 문자열에 이 관서가 들어 있나 — 낱말(쉼표 조각) 단위 + _canonRegion 으로 판정.
+    // 글자 포함(includes)은 '양주'가 '남양주'에, 인천 '동구'가 '남동구'에, 부산 '서구'가 '강서구'에 걸렸다(2026-09-20).
+    var RC=window.REGION_CONF||{}, wide=(RC.warnOrder||[])[0]||'경기도', g=RC.scopes||{}, alias=RC.alias||{};
+    var me=this._canonRegion(name), self=this;
+    return String(area||'').split(/[,·\/()]/).some(function(p){
+      p=p.trim(); if(!p) return false; if(p.indexOf('전역')>=0) return true;
+      // 전체판(권역이 있는 화면)에서 '경기북부' 같은 권역 표기는 그 권역 관서에만 — 남부 카드에 북부 특보가 뜨지 않게
+      if(g[p]) return g[p].some(function(n){ return n===name || (alias[n]||n)===name; });
+      var c=self._canonRegion(p); return c===wide || c===me;
+    });
+  }
   _canonRegion(name){
     var n=String(name||'').trim();
     if(!n) return null;
+    var RC=window.REGION_CONF||{}, UNITS=RC.order||[];
     if(n==='경기북부'||n==='경기도'||n==='수도권'||n==='경기') return '경기도';
+    var ZONE={'울릉도.독도':'울릉', '흑산도.홍도':'신안', '서해5도':'옹진', '백령도.대청도':'옹진', '연평도.우도':'옹진'};   // 섬 특보구역 → 관서(시도 전역이 아님)
+    if(ZONE[n]) return ZONE[n];
+    if((RC.wideNames||[]).indexOf(n)>=0) return (RC.warnOrder||[])[0]||n;   // 시도 전역 표기('강원도'·'충청북도') → 표시명
+    if(UNITS.indexOf(n)>=0) return n;   // 관서 이름 그대로면 그대로 — 광역시 '중구'를 '중'으로, 강원 '양구'를 '양'으로 깎지 않게
     n=n.replace(/(동북부|서북부|동남부|서남부|남부|북부|동부|서부|중부|내륙|산지|앞바다|해안)/g,'');
     n=n.replace(/(특별자치시|특별자치도|특별시|광역시|자치시|자치도)/g,'');
+    if(UNITS.indexOf(n)>=0) return n;
     n=n.replace(/(시|군|구|도)$/,'');
     return n.trim()||null;
   }
@@ -1336,7 +1433,8 @@ class Component extends DCLogic {
     const msgs=(d.messages||[]);
     const rivers=(d.rivers||[]).map(r=>{ const lv=this.riverLevel(r); const pct=r.danger?Math.min(1,r.value/r.danger):0; return Object.assign({},r,{lv,pct}); }).sort((a,b)=>(b.pct||0)-(a.pct||0));
     const riskRivers=rivers.filter(r=>r.lv==='warning'||r.lv==='danger');
-    const worstRiver=rivers[0];
+    const _RMw=this.RIVER_META||{};
+    const worstRiver=rivers.find(r=>!(r.dam || ((_RMw[r.code]||{}).kind==='dam'))) || rivers[0];   // 리본 KPI 와 같은 기준(댐 제외)
     const pm=(d.pm||[]).slice().sort((a,b)=>(b.pm10||0)-(a.pm10||0));
     const fire=(d.fire||[]).slice().sort((a,b)=>(b.level||0)-(a.level||0));
     const typ=(d.typhoon||[])[0];
@@ -1689,8 +1787,29 @@ class Component extends DCLogic {
     }).sort((a,b)=> (parseFloat(b.pctW)||0)-(parseFloat(a.pctW)||0));
     // 하천 카드: 선택 관서 인근(하천명에 시군 포함) 먼저 + 그 안에서 위험 근접순(stable)
     const rivers = riversByRisk.slice().sort((a,b)=> (a.near?0:1)-(b.near?0:1));
+    // 카드에 실제로 보이는 행 — 기본 8행. 우선순위: 주의 이상 → 내 관할(riversOf: sigun·riverCodes 기준,
+    // 이름 포함 매칭은 '양주'가 '남양주'에 걸려 못 쓴다) → 상단바 감시 지점(topRivers) → 위험 근접순.
+    // 같은 관측소가 여러 관서에 복제된 행(남부 충훈1교×4)은 코드 기준으로 한 번만.
+    // (2026-09-19 디자인 손질: 시도판은 관측소가 55~72곳이라 전부 나열하면 페이지 절반이 하천 목록이었다)
+    const _RM = this.RIVER_META || {};
+    const _mineSet = new Set(this.riversOf(d.rivers||[], mySg, myStation).map(r=>String(r.code)+'|'+String(r.sigun||'')));
+    const _isMine = r => _mineSet.has(String(r.raw&&r.raw.code)+'|'+String((r.raw&&r.raw.sigun)||''));
+    const _top = new Set((((window.REGION_CONF||{}).topRivers)||[]).map(String));
+    const _rank = r => (r.lv==='danger'?0 : r.lv==='warning'?1 : _isMine(r)?2 : _top.has(String(r.raw&&r.raw.code))?3 : 4);
+    const _seenCode = new Set();
+    const riverAll = riversByRisk.slice().sort((a,b)=> _rank(a)-_rank(b) || (parseFloat(b.pctW)||0)-(parseFloat(a.pctW)||0))
+      .filter(r=>{ const c=String(r.raw&&r.raw.code); if(_seenCode.has(c)) return false; _seenCode.add(c); return true; });
+    const RIVER_SHOW = 8;
+    const riverMore = riverAll.length > RIVER_SHOW;
+    const riverRows = (st.riverExpand || !riverMore) ? riverAll : riverAll.slice(0, RIVER_SHOW);
+    const riverMoreLabel = st.riverExpand ? ('접기 ▴ (상위 '+RIVER_SHOW+'곳만)') : ('전체 '+riverAll.length+'곳 보기 ▾');
+    // 내 관할 하천 중 주의 이상 — 코드 기준 중복 제거(복제 행이 '4곳 주의'로 부풀리지 않게)
+    const _myRisk = []; const _myRiskSeen = new Set();
+    riverAll.forEach(function(r){ if(_isMine(r) && (r.lv==='danger'||r.lv==='warning')){ const c=String(r.raw&&r.raw.code); if(!_myRiskSeen.has(c)){ _myRiskSeen.add(c); _myRisk.push(r); } } });
     // warnings
     const rawWarns=(d.warnings||[]);
+    // 내 관할 특보 — mineItems 와 mineBorder 가 같은 판정을 쓴다
+    const _myWarns = rawWarns.filter(w=>this._areaHits(w.area, mySg));
     const groupedWarns = this.groupWarns(rawWarns);   // 같은 특보끼리 지역 묶기
     const warns = groupedWarns.map(x=>this.warnBadge(x));
     const prelim = d.prelim||[];
@@ -1741,15 +1860,24 @@ class Component extends DCLogic {
       open:()=>this.setState({modal:{kind:'msg', msg:m}}) }));
     const images=[{src:'assets/kma_warn.png',title:'전국 특보 발효도',sub:'기상청'},{src:'assets/kma_radar.png',title:'레이더 합성',sub:'강수 분포'},{src:'assets/kma_satellite.png',title:'천리안 위성 (적외)',sub:'GK2A'},{src:'assets/kma_qpf.png',title:'초단기 강수예측',sub:'기상청'}].map(im=>({ ...im, open:()=>this.setState({modal:{kind:'image', key:im.src, title:im.title}}) }));
     // kpi/ribbon chips
-    const worstRiver = riversByRisk[0];
-    // 최고수위 하천의 지점 축약명 (예: "임진강 (군남댐)" → "군남댐", "임진강 (연천 필승교)" → "필승교")
-    const _wrPlace = worstRiver ? (function(nm){ var m=String(nm||'').match(/\(([^)]+)\)/); return m ? m[1].split(' ').pop() : String(nm||'').split(' ')[0]; })(worstRiver.name) : '';
+    // 댐은 뺀다 — 댐의 기준(계획홍수위)은 평상시에도 90%대라 KPI 가 늘 '100%'로 보였다(강원 광동댐, 2026-09-19).
+    const _isDamRow = r => !!(r.raw && (r.raw.dam || (((this.RIVER_META||{})[r.raw.code]||{}).kind==='dam')));
+    // 리본 KPI 최고수위는 '내 관할' 하천 중 가장 높은 곳 — 관서를 바꿔도 전역 최고(마전3교)만 뜨던 것(2026-09-21 사장님).
+    // 관할 하천이 없으면 전역 최고로 되돌아가고 이름표에 '전역'을 붙인다. (riversByRisk 는 위험 근접순 정렬)
+    const _mineRivers = riversByRisk.filter(r => _isMine(r) && !_isDamRow(r));
+    const worstRiver = _mineRivers[0] || riversByRisk.find(r => !_isDamRow(r)) || riversByRisk[0];
+    const _wrScope = _mineRivers.length ? '관할' : '전역';
+    // 최고수위 하천의 지점 축약명 (예: "임진강 (군남댐)" → "군남댐", "임진강 (연천 필승교)" → "필승교", "양주 마전3교" → "마전3교")
+    // 괄호 안이 시군 이름뿐이면('신천 (연천)') 지점명이 없는 것 → 하천 이름을 쓴다(상황실 shortRiver 와 같은 규칙)
+    const _wrPlace = worstRiver ? (function(nm){ var s0=String(nm||''); var m=s0.match(/^\s*([^(]+?)\s*\(([^)]+)\)/); if(!m) return s0.trim().split(' ').pop();
+      var ws=m[2].trim().split(/\s+/); var last=ws[ws.length-1]; var RC=window.REGION_CONF||{}; var units=(RC.order||[]).concat(Object.values(RC.alias||{}));
+      if(ws.length===1 && (units.indexOf(last)>=0 || last===mySg)) return m[1].trim(); return last; })(worstRiver.name) : '';
     const feelsMax = Math.max(0,...(d.stations||[]).map(s=>s.feels||0));
     const wide = w>=1160, mid = w>=760 && w<1160;
     // 리본 칩: PC(2열 배치)는 크게, 모바일은 한 줄 균등분배로 촘촘하게
     const _chipLayout = wide ? 'display:flex; flex-direction:column; align-items:center; min-width:74px; padding:8px 14px; border-radius:12px;' : 'display:flex; flex-direction:column; align-items:center; flex:1 1 0; min-width:0; padding:7px 3px; border-radius:10px;';
     const _chipVal = wide ? 'font-size:22px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums;' : 'font-size:15px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums;';
-    const _chipLabel = wide ? 'font-size:11px; font-weight:600; color:var(--ink2); margin-top:4px;' : 'font-size:8.5px; font-weight:600; color:var(--ink2); margin-top:2px; white-space:nowrap;';
+    const _chipLabel = wide ? 'font-size:12px; font-weight:600; color:var(--ink2); margin-top:4px;' : 'font-size:8.5px; font-weight:600; color:var(--ink2); margin-top:2px; white-space:nowrap;';
     // 긴 라벨(예: 최고수위(군남댐))용 — 작은 글씨 + 자간 압축으로 한 줄 유지, 다른 칩과 높이·폭 비슷하게
     const _chipLabelSm = wide ? 'font-size:9px; font-weight:600; color:var(--ink2); margin-top:4px; white-space:nowrap; letter-spacing:-.4px;' : 'font-size:6.3px; font-weight:600; color:var(--ink2); margin-top:2px; white-space:nowrap; letter-spacing:-.3px;';
     const chipsWrapStyle = wide ? 'display:flex; align-items:center; gap:9px; margin-left:auto; flex-wrap:wrap; position:relative;' : 'display:flex; align-items:stretch; gap:6px; width:100%; margin-left:0; margin-top:8px; flex-wrap:nowrap; position:relative;';
@@ -1758,15 +1886,16 @@ class Component extends DCLogic {
       chip(groupedWarns.length, '발효특보', groupedWarns.length?'var(--severe)':'var(--ink2)', groupedWarns.length?'var(--severeSoft)':'var(--surface)', groupedWarns.length?'var(--severe)':'var(--border)'),
       chip(prelimCount, '예비특보', prelimCount?'var(--caution)':'var(--ink2)', 'var(--surface)', 'var(--border)'),
       chip((d.messages||[]).length, '재난문자', (d.messages||[]).length?'var(--warn)':'var(--ink2)', 'var(--surface)', 'var(--border)'),
-      {...chip(worstRiver?worstRiver.pctW:'-', (worstRiver&&_wrPlace)?('최고수위('+_wrPlace+')'):'최고수위', worstRiver?worstRiver.color:'var(--ink2)', 'var(--surface)', 'var(--border)'), labelStyle:_chipLabelSm},
+      {...chip(worstRiver?worstRiver.pctW:'-', (worstRiver&&_wrPlace)?(_wrScope+' 최고수위('+_wrPlace+')'):'최고수위', worstRiver?worstRiver.color:'var(--ink2)', 'var(--surface)', 'var(--border)'), labelStyle:_chipLabelSm},
       chip(feelsMax?feelsMax+'°':'-', '최고체감', 'var(--ink2)', 'var(--surface)', 'var(--border)')
     ];
     // layout
-    const heroCols = wide ? 'minmax(0,1.6fr) minmax(330px,1fr)' : 'minmax(0,1fr)';   // 모바일: 컬럼이 화면폭에 맞게 줄어들도록(min 0). '1fr'은 내용에 밀려 화면 넘침
+    /* 지도 열 비율 = 배치 편집기의 '지도 크기'(--ds-map: 1/1.35/1.8) × 1.6. 변수가 없으면 예전과 같은 1.6fr */
+    const heroCols = wide ? 'var(--ds-hero-cols, minmax(0,1.6fr) minmax(330px,1fr))' : 'minmax(0,1fr)';   // 모바일: 컬럼이 화면폭에 맞게 줄어들도록(min 0). '1fr'은 내용에 밀려 화면 넘침
     const rightDisplay = 'flex';
     const rightCols = 'none';
     // 수위 카드: 데스크톱(2열)에서만 flex-채움. 모바일(단일 열)은 자연 높이(flex:1 붕괴로 사라지던 버그 방지)
-    const riverCardStyle = 'background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--sh2); display:flex; flex-direction:column; overflow:hidden;' + (wide ? ' flex:1 1 0; min-height:0;' : '');
+    const riverCardStyle = 'background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--sh2); display:flex; flex-direction:column; overflow:hidden;' + (wide ? ' flex:1 1 0; min-height:0;' : '') + '';
     const riverBodyStyle = 'padding:6px 8px; display:flex; flex-direction:column;' + (wide ? ' flex:1 1 0; min-height:0; overflow:auto;' : '');
     // map scale
     const mapScale = st.mapScale;
@@ -1785,6 +1914,9 @@ class Component extends DCLogic {
     const _sb = this.scopeBox();
     const _mapAR = _sb ? (_sb.w.toFixed(1) + ' / ' + _sb.h.toFixed(1))
                        : (_mg && _mg.W && _mg.H ? (_mg.W + ' / ' + _mg.H) : '1000 / 1030');
+    // 한 열(좁은 화면)일 때 지도 높이 상한 — 세로로 긴 시도(강원·인천)는 지도 하나가 한 화면을 다 먹었다(2026-09-19)
+    const _arNum = _sb ? (_sb.w/_sb.h) : (_mg && _mg.W && _mg.H ? _mg.W/_mg.H : 1000/1030);
+    const _mapCap = (w>=1160) ? '' : (' max-height:62vh; max-width:min(960px, calc(62vh * ' + _arNum.toFixed(3) + '));');
     return {
       rootRef:this.rootRef, mapRef:this.mapRef, theme:st.theme, demo:st.demo,
       // 상황실(벽면) 모드 — 위험 시 wallAlarm 클래스로 경보색 전환(애니는 스타일시트)
@@ -1805,19 +1937,46 @@ class Component extends DCLogic {
       dataStale:(function(){ try{ var m=String(d.updated||'').match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/); if(!m) return false; var t=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]); return (n-t)>50*60*1000; }catch(e){ return false; } })(),
       staleTxt:(function(){ try{ var m=String(d.updated||'').match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/); if(!m) return ''; var t=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]); return '⚠ '+Math.round((n-t)/60000)+'분째 갱신 없음'; }catch(e){ return ''; } })(),
       heroCols, rightDisplay, rightCols, riverCardStyle, riverBodyStyle, chipsWrapStyle,
-      themeLabel: st.theme==='dark'?'☀ 라이트':'☾ 다크',
-      muteLabel: st.muted?'🔕 음소거':'🔔 경보음',
-      demoBtnLabel: st.demo?'■ 시연 종료':'▶ 시연 모드',
-      demoBtnStyle: 'height:36px; padding:0 13px; border-radius:10px; border:1px solid '+(st.demo?'var(--severe)':'var(--border2)')+'; background:'+(st.demo?'var(--severe)':'var(--surface)')+'; color:'+(st.demo?'#fff':'var(--ink2)')+'; font-size:12.5px; font-weight:800; font-family:inherit; cursor:pointer;',
+      // 헤더 유틸은 아이콘만(2026-09-21) — 뜻은 title 로
+      utilBtnStyle: 'width:34px; height:34px; padding:0; border-radius:10px; border:1px solid var(--border); background:var(--surface2); color:var(--ink2); font-size:15px; line-height:1; font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-decoration:none;',
+      themeLabel: st.theme==='dark'?'☀':'☾',
+      themeTitle: st.theme==='dark'?'라이트 화면으로 바꾸기':'다크 화면으로 바꾸기',
+      muteLabel: st.muted?'🔕':'🔔',
+      muteTitle: st.muted?'경보음 꺼짐 — 누르면 켜짐':'경보음 켜짐 — 누르면 꺼짐',
+      demoBtnLabel: st.demo?'■':'▶',
+      demoTitle: st.demo?'시연 종료':'시연 모드 — 가상 호우 상황으로 화면 동작 보기',
+      demoBtnStyle: 'width:34px; height:34px; padding:0; border-radius:10px; border:1px solid '+(st.demo?'var(--severe)':'var(--border)')+'; background:'+(st.demo?'var(--severe)':'var(--surface2)')+'; color:'+(st.demo?'#fff':'var(--ink2)')+'; font-size:13px; line-height:1; font-family:inherit; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;',
       hoBtnCls,
       // ribbon
       statusLabel:status.label, statusHead:status.head,
       statusSub: this.statusSub(status, groupedWarns, rivers, prelimNorth),
+      // 내 관서 한 줄 — 기온·하늘 / 1시간 강수(AWS) / 6시간 최대 예측 / 관할 특보 / 관할 하천
+      mineItems:(function(self){
+        // 시연 모드는 관서 카드의 rain 만 바꾸고 AWS·6시간 예측은 원값이라, 한 줄이 '비 안 옴'으로 남는 모순이 있었다
+        const a=myS.aws||{}; const rn=st.demo ? (myS.rain!=null?myS.rain:null) : ((a.rn60!=null)?a.rn60:(myS.rain!=null?myS.rain:null));
+        const f6=(myS.fcst6||[]); let fmax=0, fat='';
+        f6.forEach(function(x){ const v=+x.rain_mm||0; if(v>fmax){ fmax=v; fat=(x.time||''); } });
+        if(st.demo && (myS.rain||0)>fmax){ fmax=myS.rain; fat=''; }
+        const myW=_myWarns;
+        const myR=_myRisk;
+        const items=[
+          { k:'현재', v:(myS.temp!=null?myS.temp+'°':'-')+(myS.weather?' '+myS.weather:''), c:'var(--ink)' },
+          { k:'1시간 강수', v:(rn!=null?rn+'mm':'-'), c:(rn>0?'var(--brand)':'var(--ink)') },
+          { k:'6시간 최대', v:(f6.length?(fmax+'mm'+(fmax>0&&fat?(' ('+fat+')'):'')):'-'), c:(fmax>=10?'var(--warn)':fmax>0?'var(--brand)':'var(--ink)') },
+          { k:'특보', v:(myW.length?(self.groupWarns(myW).map(function(g){return g.type;}).join('·')):'없음'), c:(myW.length?'var(--severe)':'var(--safe)') },
+          { k:'하천', v:(myR.length?(myR.length+'곳 '+(myR.some(function(r){return r.lv==='danger';})?'위험':'주의')):'안전'), c:(myR.length?'var(--warn)':'var(--safe)') },
+        ];
+        return items;
+      })(this),
+      mineBorder: (_myWarns.length||_myRisk.length)?'var(--warn)':'var(--border)',
+      mineOpen:()=>this.focusRegion(myStation, true),
       ribbonBg:status.bg, ribbonBorder:status.border, ribbonAccent:status.accent, ribbonPulse:status.pulse,
       ribbonChips,
       // map
       stations,
       mapRegions:this.mapRegions(stations),
+      mapInsets:(((typeof window!=='undefined'&&window.MAPGEO)||{}).insets||[]).map(function(ib){
+        return { x:ib.x, y:ib.y, w:ib.w, h:ib.h, tx:ib.x+10, ty:ib.y+26, label:'먼 섬 · '+(ib.areas||[]).join('·')+' (축척 다름)' }; }),
       mapViewBox:(function(self){
         const b=self.scopeBox();
         if(b) return b.x.toFixed(1)+' '+b.y.toFixed(1)+' '+b.w.toFixed(1)+' '+b.h.toFixed(1);
@@ -1832,7 +1991,7 @@ class Component extends DCLogic {
       mapAR: _mapAR,
       mapCardStyle: 'background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--sh2); overflow:hidden;' + (st.focus?' display:flex; flex-direction:column;':''),
       mapWrapStyle: 'position:relative; background:var(--mapBg); border-radius:14px; margin:0 6px 2px; padding:12px 10px;' + (st.focus?' flex:1 1 auto; min-height:0;':''),
-      mapAreaStyle: st.focus ? 'position:relative; width:100%; height:100%; min-height:360px;' : ('position:relative; width:100%; max-width:960px; margin:0 auto; aspect-ratio:' + _mapAR + ';'),
+      mapAreaStyle: st.focus ? 'position:relative; width:100%; height:100%; min-height:360px;' : ('position:relative; width:100%; max-width:960px; margin:0 auto; aspect-ratio:' + _mapAR + ';' + _mapCap),
       zoomRef:this.zoomRef,
       riskPins:rpins,
       focusName: fdata?fdata.name:'', focusStatusColor: fdata?fdata.status.color:'var(--safe)',
@@ -1864,7 +2023,40 @@ class Component extends DCLogic {
       showAway: (!prelim.some(function(p){return p.north>0;})) && prelim.some(function(p){return (p.total||0)>0;}),
       prelimAway: prelim.filter(function(p){return (p.north||0)===0 && (p.total||0)>0;}).map(function(p){ return p.type.replace(' 예비특보','')+' '+(p.total||0)+'곳'; }).join(', '),
       // 수위
-      rivers,
+      rivers, riverRows, riverMore, riverMoreLabel, toggleRiverExpand:()=>this.setState({riverExpand:!this.state.riverExpand}),
+      cctvLinks:(window.cctvLinksFor ? window.cctvLinksFor((window.REGION_CONF||{}).key, myStation, mySg) : []).map((c)=>{
+        // 화면 안에서 틀 수 있는 것(KBS·포항 hls·춘천 iframe)은 눌러서 펼침, 나머지는 새 창
+        const inline = !!(window.cctvInline && window.cctvInline(c)); const key = inline ? window.cctvKey(c) : null; const on = inline && st.kbsOpen===key;
+        const base='font-size:11.5px; font-weight:800; text-decoration:none; padding:4px 9px; border-radius:7px; border:1px solid var(--border2); cursor:pointer; ';
+        return { n:(inline?'▶ ':'')+c.n, u:(inline?'javascript:void(0)':c.u), target:(inline?'_self':'_blank'),
+          style: base+(on?'color:#fff; background:var(--brand); border-color:var(--brand);':'color:var(--brand); background:var(--surface);'),
+          click:()=>{ if(inline) this.setState({kbsOpen: on?null:key, kbsPaused:false}); } };
+      }),
+      hasCctvLinks:!!(window.cctvLinksFor && window.cctvLinksFor((window.REGION_CONF||{}).key, myStation, mySg).length),
+      kbsOpen: !!st.kbsOpen,
+      kbsPanel: (function(self){
+        const R=React.createElement;
+        if(!st.kbsOpen || !window.cctvLinksFor) return null;
+        const item=(window.cctvLinksFor((window.REGION_CONF||{}).key, myStation, mySg)).filter(function(x){ return window.cctvKey(x)===st.kbsOpen; })[0];
+        if(!item) return null;
+        const head=R('div',{style:{position:'absolute', left:0, right:0, top:0, display:'flex', justifyContent:'space-between', alignItems:'center', padding:'6px 10px', background:'linear-gradient(180deg, rgba(0,0,0,.55), transparent)', color:'#fff', fontSize:'12px', fontWeight:800, pointerEvents:'none'}},
+          R('span',{}, '📺 '+item.n),
+          R('a',{href:item.u, target:'_blank', rel:'noopener', style:{color:'#ffd166', textDecoration:'none', marginLeft:'8px', pointerEvents:'auto'}}, '원본 사이트 ↗'));
+        if(item.frame){   // 뷰어 페이지 통째로 (춘천 — 자체 플레이어)
+          return R('div',{style:{position:'relative', paddingTop:'56.25%'}},
+            R('iframe',{key:'fr'+item.frame, src:item.frame, allow:'autoplay', style:{position:'absolute', inset:0, width:'100%', height:'100%', border:0, background:'#000'}}), head);
+        }
+        const poster=window.cctvPoster(item);
+        return R('div',{style:{position:'relative'}},
+          R('video',{key:'v'+st.kbsOpen, muted:true, playsInline:true, controls:true, poster:poster, style:{display:'block', width:'100%', maxHeight:'420px', background:'#000'},
+            ref:(el)=>{ if(!el) return; if(el._key===st.kbsOpen && !st.kbsResume) return; el._key=st.kbsOpen;
+              const err=function(why){ const n=el.parentNode&&el.parentNode.querySelector('[data-kbs-err]'); if(n) n.textContent='재생 실패('+why+') — 정지영상만 표시. 원본 사이트에서 보기'; };
+              window.cctvPlay(el, item, err, function(){ self.setState({kbsPaused:true, kbsResume:false}); });
+              if(st.kbsResume) self.setState({kbsResume:false}); }}),
+          head,
+          (st.kbsPaused ? R('div',{onClick:()=>self.setState({kbsPaused:false, kbsResume:true}), style:{position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,.45)', color:'#fff', fontSize:'15px', fontWeight:800, cursor:'pointer'}}, '⏸ 90초가 지나 멈췄습니다 — 눌러서 계속 보기') : null),
+          R('div',{'data-kbs-err':'1', style:{position:'absolute', left:10, bottom:8, color:'#ffd166', fontSize:'11px', fontWeight:700}}, ''));
+      })(this),
       // detail sections
       stationCards:stationOrder, forecast, hourlyTable:this.hourlyTableBody(myFc), nowSummary:this.nowSummaryBody(d), fcTempLine, fcTempArea, fcRainBars, fcMax:Math.round(tmx), fcMin:Math.round(tmn),
       // 관서 선택 (헤더 드롭다운)
@@ -1882,6 +2074,22 @@ class Component extends DCLogic {
         });
       })(this),
       hasScopes:!!((window.REGION_CONF||{}).scopes),
+      /* 시도 선택 — 전국판에서만(region.js 에 sidoList 가 주입됨). 시도를 고르면 그 시도 폴더의
+         같은 화면으로 이동한다(시도마다 데이터·지도·설정 파일이 달라 한 페이지 안에서는 못 바꾼다). */
+      hasSido:!!(((window.REGION_CONF||{}).sidoList||[]).length),
+      /* 시도 줄이 있으면 창을 넓히고(칩 4열), 관서가 많으면 2열로 — 서울 25개 구가 한 줄로 늘어지지 않게 */
+      pickerMinW:(((window.REGION_CONF||{}).sidoList||[]).length ? '352px' : '158px'),
+      stationCols:((((window.REGION_CONF||{}).sidoList||[]).length && (d.stations||[]).length > 12) ? 2 : 1),
+      sidoList:(((window.REGION_CONF||{}).sidoList)||[]).map(function(sd){
+        const on=(sd.label===(window.REGION_CONF||{}).sidoCurrent);
+        return { label:sd.label, bg:(on?'var(--brand)':'var(--surface2)'), fg:(on?'#fff':'var(--ink2)'),
+          bd:(on?'var(--brand)':'var(--border2)'),
+          pick:function(){ if(on) return;
+            /* 시도가 바뀌면 그 시도 파일을 새로 읽어야 해서 화면이 다시 열린다. 다시 열린 화면에서
+               창을 자동으로 펼쳐 이어서 관서를 고르게 한다(2026-09-19 사장님: "계속 선택 가능하면") */
+            try{ localStorage.setItem('ggSido', sd.base); sessionStorage.setItem('ggPickerOpen', '1'); }catch(e){}
+            location.href = sd.base + location.pathname.split('/').pop(); } };
+      }),
       /* 머리말·지도 부제의 '○○ · N개' 문구. 권역을 고르면 그 권역·개수로 바뀐다.
          권역 필터가 없는 지역에서는 region.js 의 office·countText 그대로라
          경기북부·남부 사이트 문구는 지금과 똑같다. */
@@ -1945,7 +2153,7 @@ class Component extends DCLogic {
       const sg=s.sigun||modal.key;
       const near=this.riversOf(d.rivers, sg, (s&&s.name)||sg).map(r=>({name:r.name, value:r.value, danger:r.danger, lv:this.riverLevel(r)}));
       const msgs=(d.messages||[]).filter(m=>m.region===sg || m.region===modal.key || m.region==='경기도');
-      const warns=(d.warnings||[]).filter(w=>{ const a=w.area||''; return a.includes(sg)||a.includes('전역')||(((window.REGION_CONF||{}).wideNames)||['경기북부']).some(function(_w){return a.includes(_w);}); });
+      const warns=(d.warnings||[]).filter(w=>this._areaHits(w.area, sg));
       const pm=(d.pm||[]).find(p=>p.region===sg);
       const fire=(d.fire||[]).find(f=>(f.region||'').includes(sg));
       return {modalTitle:modal.key+' 관서 상세', modalAccent:this.cvar(s.level==='danger'?'danger':s.level==='warning'?'warning':'safe'), modalMax:'620px',
@@ -2315,7 +2523,22 @@ class Component extends DCLogic {
     if(thresholds.length){
       const allV=thresholds.map(t=>t.v).concat([r.value]);
       const dmax=(Math.max.apply(null,allV)||1)*1.04;
-      const pct=(v)=>Math.max(0,Math.min(100, v/dmax*100));
+      // 칸마다 최소 너비 — 기준이 붙어 있어도(관심 0.7m·주의 1.0m) 이름·수치가 안 겹치게. 구간 너비 = max(실제 비율, 12%)
+      // 를 다시 100% 로 맞춘 눈금. 현재 수위 표식은 자기 구간 안에서 비례 위치(2026-09-21 사장님 "칸 간격 조정").
+      const _ts=thresholds.slice().sort((a,b)=>(+a.v||0)-(+b.v||0));
+      const _bnd=[0].concat(_ts.map(t=>Math.max(0,+t.v||0)), [dmax]);
+      // 칸 최소 너비 = 이웃한 두 이름표가 반씩 들어가고 6px 남는 폭. 고정 12% 는 좁은 화면(게이지 290px)에서
+      // '계획홍수위'(41px)를 못 담아 여전히 겹쳤다. 이름표 폭은 글자 수로, 게이지 폭은 창 너비로 어림한다.
+      const _gw=Math.max(200, Math.min(560, ((typeof window!=='undefined'&&window.innerWidth)||800)-90));
+      const _lw=_ts.map(t=>Math.max(String(t.name||'').length*9.5, (num(t.v,1)+'m').length*5.6)+4);
+      const _w=[]; let _sum=0;
+      for(let i=0;i<_bnd.length-1;i++){
+        const need=((i>0?_lw[i-1]/2:0)+(i<_lw.length?_lw[i]/2:0)+6)/_gw;      // 앞 이름표 반 + 뒤 이름표 반 + 여유
+        const w=Math.max((_bnd[i+1]-_bnd[i])/dmax, 0.08, need); _w.push(w); _sum+=w; }
+      const _cum=[0]; _w.forEach((w,i)=>_cum.push(_cum[i]+w/_sum));
+      const pct=(v)=>{ v=Math.max(0,Math.min(dmax,+v||0));
+        for(let i=0;i<_bnd.length-1;i++){ if(v<=_bnd[i+1]){ const span=_bnd[i+1]-_bnd[i]; const f=span>0?(v-_bnd[i])/span:1; return Math.max(0,Math.min(100,(_cum[i]+f*(_cum[i+1]-_cum[i]))*100)); } }
+        return 100; };
       let grad;
       if(!isDam && meta){
         grad='linear-gradient(90deg, var(--safe) 0 '+pct(+meta.att)+'%, var(--brand) '+pct(+meta.att)+'% '+pct(+meta.wrn)+'%, var(--caution) '+pct(+meta.wrn)+'% '+pct(+meta.alm)+'%, var(--warn) '+pct(+meta.alm)+'% '+pct(+meta.srs)+'%, var(--severe) '+pct(+meta.srs)+'% 100%)';
@@ -2328,10 +2551,11 @@ class Component extends DCLogic {
         R('div',{style:{position:'relative', height:'12px', borderRadius:'6px', background:grad, border:'1px solid var(--border)'}},
           R('div',{style:{position:'absolute', left:cpct+'%', top:'-15px', transform:'translateX(-50%)', fontSize:'11px', fontWeight:900, color:'var(--ink)', lineHeight:1, whiteSpace:'nowrap'}}, '▼'),
           R('div',{style:{position:'absolute', left:cpct+'%', top:'-2px', bottom:'-2px', width:'2px', transform:'translateX(-1px)', background:'var(--ink)'}})),
-        R('div',{style:{position:'relative', height:'24px', marginTop:'3px'}}, thresholds.map((t,i)=>
-          R('div',{key:i, style:{position:'absolute', left:pct(t.v)+'%', transform: pct(t.v)>82?'translateX(-92%)':(pct(t.v)<8?'translateX(0)':'translateX(-50%)'), textAlign:'center', whiteSpace:'nowrap'}},
+        // 이름표는 값이 아니라 칸 경계 순번에 — 값이 같은 기준(댐 위험 52.0m = 계획홍수위 52.0m)도 겹치지 않게
+        R('div',{style:{position:'relative', height:'24px', marginTop:'3px'}}, _ts.map((t,i)=>{ const lp=_cum[i+1]*100; return (
+          R('div',{key:i, style:{position:'absolute', left:lp+'%', transform:'translateX(-50%)', textAlign:'center', whiteSpace:'nowrap'}},
             R('div',{style:{fontSize:'9.5px', fontWeight:800, color:t.col, lineHeight:1.15}}, t.name),
-            R('div',{style:{fontSize:'9px', color:'var(--ink3)', lineHeight:1.15}}, num(t.v,1)+'m'))))
+            R('div',{style:{fontSize:'9px', color:'var(--ink3)', lineHeight:1.15}}, num(t.v,1)+'m'))); }))
       );
     }
 
@@ -2397,8 +2621,21 @@ class Component extends DCLogic {
       ):null,
 
       // CCTV
+      // 장치번호(cctv-hrfco.js)가 있으면 통제소 HLS 를 직접 튼다(팝업 UI 없음, 90초 뒤 멈춤·계속 보기). 없으면 종전 팝업 iframe.
       r.cctv? R('div',{style:{marginTop:'18px'}},
-        R('div',{style:{fontSize:'12px', color:'var(--brand)', fontWeight:800, marginBottom:'7px', display:'flex', alignItems:'center', gap:'6px'}}, '📹 실시간 CCTV', R('span',{style:{fontSize:'9px', fontWeight:800, color:'#fff', background:'var(--severe)', padding:'1px 5px', borderRadius:'4px'}}, 'LIVE')),
+        R('div',{style:{fontSize:'12px', color:'var(--brand)', fontWeight:800, marginBottom:'7px', display:'flex', alignItems:'center', gap:'6px'}}, '📹 실시간 CCTV', R('span',{style:{fontSize:'9px', fontWeight:800, color:'#fff', background:'var(--severe)', padding:'1px 5px', borderRadius:'4px'}}, 'LIVE'),
+          R('a',{href:'https://n.flood.go.kr/main/cctvView.do?obscd='+r.code+'&fcodvcd=01', target:'_blank', rel:'noopener', style:{marginLeft:'auto', fontSize:'10.5px', fontWeight:700, color:'var(--ink3)', textDecoration:'none'}}, '홍수통제소에서 보기 ↗')),
+        (window.hrfcoCam && window.hrfcoCam(r.code)) ?
+        R('div',{style:{position:'relative', width:'100%', borderRadius:'12px', overflow:'hidden', background:'#000', border:'1px solid var(--border)'}},
+          R('video',{key:'hr'+r.code, muted:true, playsInline:true, controls:true, style:{display:'block', width:'100%', aspectRatio:'16 / 9', background:'#000'},
+            ref:(el)=>{ if(!el) return; if(el._code===r.code && !this.state.riverCctvResume) return; el._code=r.code;
+              const msg=(s)=>{ const n=el.parentNode&&el.parentNode.querySelector('[data-cctv-msg]'); if(n) n.textContent=s; };
+              msg('연결 중… (통제소 스트림을 켜는 데 몇 초 걸립니다)');
+              window.cctvPlay(el, {hrfco:String(r.code)}, function(why){ msg('재생 실패('+why+') — 홍수통제소에서 보기'); }, function(){ msg('⏸ 90초가 지나 멈췄습니다 — 눌러서 계속 보기'); this.setState({riverCctvPaused:true, riverCctvResume:false}); }.bind(this));
+              el.addEventListener('playing', function(){ msg(''); }, {once:true});
+              if(this.state.riverCctvResume) this.setState({riverCctvResume:false}); }}),
+          R('div',{'data-cctv-msg':'1', onClick:()=>{ if(this.state.riverCctvPaused) this.setState({riverCctvPaused:false, riverCctvResume:true}); }, style:{position:'absolute', left:0, right:0, bottom:0, padding:'6px 10px', color:'#ffd166', fontSize:'11px', fontWeight:700, background:'linear-gradient(0deg, rgba(0,0,0,.55), transparent)', cursor:'pointer'}}, ''))
+        :
         R('div',{style:{position:'relative', width:'100%', aspectRatio:'16 / 10', borderRadius:'12px', overflow:'hidden', background:'#000', border:'1px solid var(--border)'}},
           R('iframe',{src:'https://n.flood.go.kr/main/cctvView.do?obscd='+r.code+'&fcodvcd=01', style:{position:'absolute', top:0, left:0, width:'200%', height:'200%', border:0, transformOrigin:'top left', transform:'scale(1.0) translateY(-7%)'}, loading:'lazy'}))
       ):null
