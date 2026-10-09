@@ -1,0 +1,25 @@
+# 출동 메모 저장소 — 클라우드 쪽 (https://dispatch.visanu81.workers.dev)
+#
+# 왜 상황판(ggweather)과 따로 두나
+#   상황판은 '정적 자산 전용'이라 글을 저장할 수 없다. 거기에 저장 기능을 붙이려면
+#   배포 방식을 통째로 바꿔야 해서, 잘못되면 상황판이 같이 죽는다.
+#   그래서 수색현황판처럼 **저장소만 따로** 두고 화면이 불러다 쓴다. 이쪽이 멈춰도 상황판은 멀쩡하다.
+#
+# ★ 무료 플랜에서 Durable Object 를 쓰려면 반드시 new_sqlite_classes 여야 한다
+#   (new_classes 는 유료 전용 — 수색현황판에서 확인된 사실).
+#
+# 배포:  cd dispatch && npx wrangler deploy
+# 열쇠:  npx wrangler secret put ADMIN   (최초 열쇠를 정할 때만. 안 넣어도 첫 등록자가 정할 수 있다)
+
+name = "dispatch"
+main = "worker/index.js"
+compatibility_date = "2026-09-01"
+
+# 지역 하나 = 방 하나(경기=all, 강원=gangwon …). 그 지역 출동 메모가 여기 쌓인다.
+[[durable_objects.bindings]]
+name = "LOG"
+class_name = "Log"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Log"]
