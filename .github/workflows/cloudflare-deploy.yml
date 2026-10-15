@@ -1,0 +1,41 @@
+name: Deploy to Cloudflare Workers
+
+# GitHub Actions 무료시간(월 2000분) 절약 — 적응형 배포.
+# 서버(update_data.py의 maybe_deploy)가 상황을 보고 필요할 때만 'deploy-trigger' 브랜치에
+# push해서 배포를 띄운다: 이슈(특보/예비특보/하천위험 변화) 즉시 · 특보 발효중 20분 · 평소 40분.
+# 매 push마다 배포하던 옛 방식(≈288회/일) 대비 대폭 절감. 긴급 알림은 서버의 1분 텔레그램(별개).
+# schedule은 서버 트리거가 죽어도 최소 갱신을 보장하는 안전망(3시간).
+
+on:
+  push:
+    branches: [deploy-trigger]   # 서버가 배포 필요 시 이 브랜치에 push → 배포
+  schedule:
+    - cron: '19 */3 * * *'        # 3시간 안전망 (서버 트리거 장애 대비)
+  workflow_dispatch:              # 수동 즉시 배포
+
+concurrency:
+  group: cloudflare-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Cloudflare Workers
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Wrangler
+        run: npm install -g wrangler@latest
+
+      - name: Deploy to Cloudflare Workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler deploy 2>&1
