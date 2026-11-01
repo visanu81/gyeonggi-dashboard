@@ -2899,12 +2899,14 @@ def fetch_messages():
 
 def save_data(data):
     """data.js 저장 — 공백·들여쓰기 제거하여 약 50% 압축."""
-    with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
-        f.write('// 자동 생성. ')
-        f.write(f'마지막 갱신: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}\n')
-        f.write('window.DASHBOARD_DATA = ')
-        json.dump(data, f, ensure_ascii=False, separators=(',', ':'))
-        f.write(';\n')
+    text = (
+        '// 자동 생성. '
+        f'마지막 갱신: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}\n'
+        'window.DASHBOARD_DATA = '
+        + json.dumps(data, ensure_ascii=False, separators=(',', ':'))
+        + ';\n'
+    )
+    _atomic_write_text(OUTPUT_PATH, text)
 
 
 def git_push_data():
