@@ -1,0 +1,63 @@
+name: 워치독 (데이터 멈춤 감시)
+
+# 서버(네이버) 바깥에서 30분마다 운영 사이트의 data.js 를 받아 '멈췄는지' 본다.
+# 서버가 디스크 부족으로 멈추면 서버 안의 알림도 같이 죽기 때문에(07-06·10-26·11-01 세 번),
+# 감시는 서버와 무관한 여기서 한다. 판정·알림 규칙은 tools/watchdog.py 맨 위 설명 참고.
+#
+# 알림: 멈춤을 처음 봤을 때·6시간마다·복구됐을 때만.
+#   - 멈춤 알림 회차는 이 작업이 '실패'로 끝난다 → GitHub 가 실패 메일을 보낸다(키 없어도 됨)
+#   - 저장소 Secrets 에 TELEGRAM_BOT_TOKEN·TELEGRAM_CHAT_ID 가 있으면 텔레그램도 보낸다
+# 알림 상태는 Actions 캐시(.watchdog/state.json)에 이어 쓴다 — 저장소에 커밋하지 않는다.
+
+on:
+  schedule:
+    - cron: '7,37 * * * *'     # 30분마다 (정각을 피해 GitHub 혼잡 시간 회피)
+  workflow_dispatch:
+
+concurrency:
+  group: watchdog
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write               # 캐시 저장
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: tools/watchdog.py
+          sparse-checkout-cone-mode: false
+
+      - name: 이전 알림 상태 불러오기
+        uses: actions/cache/restore@v4
+        with:
+          path: .watchdog
+          key: watchdog-${{ github.run_id }}
+          restore-keys: watchdog-
+
+      - name: 사이트 데이터 확인
+        id: check
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set +e
+          python3 tools/watchdog.py
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: 알림 상태 저장
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .watchdog
+          key: watchdog-${{ github.run_id }}
+
+      - name: 멈춤 알림 (실패 메일)
+        if: steps.check.outputs.code == '1'
+        run: |
+          echo "::error::상황판 데이터가 멈췄습니다 — 네이버 서버 디스크(df -h /)부터 확인. 위 '사이트 데이터 확인' 단계에 상세."
+          exit 1
