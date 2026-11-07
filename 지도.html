@@ -1347,9 +1347,12 @@ class Component extends DCLogic {
         })) : null);
     }));
   }
+  // 댐 — 기준이 상시만수위 근처라 평소에도 '주의'가 되므로 상황 판정(맨 위 상태·벽면 경보색)에서 뺀다. 수위 목록에는 그대로 보인다.
+  riverIsDam(r){ const x=(r&&r.raw)||r||{}; return !!(x.dam || x.api==='dam' || ((this.RIVER_META||{})[x.code]||{}).kind==='dam'); }
   overall(rivers, warns, prelimNorth){
-    const anyD = rivers.some(r=>r.lv==='danger') || warns.some(w=>w.level==='severe');
-    const anyW = rivers.some(r=>r.lv==='warning') || warns.some(w=>w.level==='warning');
+    const rv = rivers.filter(r=>!this.riverIsDam(r));
+    const anyD = rv.some(r=>r.lv==='danger') || warns.some(w=>w.level==='severe');
+    const anyW = rv.some(r=>r.lv==='warning') || warns.some(w=>w.level==='warning');
     if(anyD) return {label:'경계', accent:'var(--severe)', bg:'var(--severeSoft)', border:'var(--severe)', pulse:true, head:'즉시 대응 필요'};
     if(anyW) return {label:'주의', accent:'var(--warn)', bg:'var(--warnSoft)', border:'var(--warn)', pulse:true, head:'상황 예의주시'};
     if(warns.length || prelimNorth) return {label:'관찰', accent:'var(--caution)', bg:'var(--cautionSoft)', border:'var(--caution)', pulse:false, head:'예비 단계'};
@@ -1432,7 +1435,7 @@ class Component extends DCLogic {
     const sevWarns=grouped.filter(g=>g.level==='severe'||String(g.type||'').includes('경보'));
     const msgs=(d.messages||[]);
     const rivers=(d.rivers||[]).map(r=>{ const lv=this.riverLevel(r); const pct=r.danger?Math.min(1,r.value/r.danger):0; return Object.assign({},r,{lv,pct}); }).sort((a,b)=>(b.pct||0)-(a.pct||0));
-    const riskRivers=rivers.filter(r=>r.lv==='warning'||r.lv==='danger');
+    const riskRivers=rivers.filter(r=>(r.lv==='warning'||r.lv==='danger') && !this.riverIsDam(r));
     const _RMw=this.RIVER_META||{};
     const worstRiver=rivers.find(r=>!(r.dam || ((_RMw[r.code]||{}).kind==='dam'))) || rivers[0];   // 리본 KPI 와 같은 기준(댐 제외)
     const pm=(d.pm||[]).slice().sort((a,b)=>(b.pm10||0)-(a.pm10||0));
@@ -1805,7 +1808,8 @@ class Component extends DCLogic {
     const riverMoreLabel = st.riverExpand ? ('접기 ▴ (상위 '+RIVER_SHOW+'곳만)') : ('전체 '+riverAll.length+'곳 보기 ▾');
     // 내 관할 하천 중 주의 이상 — 코드 기준 중복 제거(복제 행이 '4곳 주의'로 부풀리지 않게)
     const _myRisk = []; const _myRiskSeen = new Set();
-    riverAll.forEach(function(r){ if(_isMine(r) && (r.lv==='danger'||r.lv==='warning')){ const c=String(r.raw&&r.raw.code); if(!_myRiskSeen.has(c)){ _myRiskSeen.add(c); _myRisk.push(r); } } });
+    const _rDam=r=>this.riverIsDam(r);
+    riverAll.forEach(function(r){ if(_isMine(r) && !_rDam(r) && (r.lv==='danger'||r.lv==='warning')){ const c=String(r.raw&&r.raw.code); if(!_myRiskSeen.has(c)){ _myRiskSeen.add(c); _myRisk.push(r); } } });
     // warnings
     const rawWarns=(d.warnings||[]);
     // 내 관할 특보 — mineItems 와 mineBorder 가 같은 판정을 쓴다
@@ -1922,8 +1926,8 @@ class Component extends DCLogic {
       // 상황실(벽면) 모드 — 위험 시 wallAlarm 클래스로 경보색 전환(애니는 스타일시트)
       wall:st.wall, notWall:!st.wall,
       wallCls:(function(){ var A=/호우|홍수|태풍|강풍|풍랑|해일|대설/;
-        var sev = riversByRisk.some(function(r){return r.lv==='danger';}) || rawWarns.some(function(w){return A.test(String(w.type||''))&&(w.level==='severe'||String(w.type||'').indexOf('경보')>=0);}) || (flood||[]).some(function(f){return f.north;});
-        var wrn = riversByRisk.some(function(r){return r.lv==='warning';}) || rawWarns.some(function(w){return A.test(String(w.type||''));});
+        var sev = riversByRisk.some(function(r){return r.lv==='danger' && !_isDamRow(r);}) || rawWarns.some(function(w){return A.test(String(w.type||''))&&(w.level==='severe'||String(w.type||'').indexOf('경보')>=0);}) || (flood||[]).some(function(f){return f.north;});
+        var wrn = riversByRisk.some(function(r){return r.lv==='warning' && !_isDamRow(r);}) || rawWarns.some(function(w){return A.test(String(w.type||''));});
         return 'wallRoot'+(sev?' wallAlarm-severe':(wrn?' wallAlarm-warn':'')); })(),
       wallBody: st.wall ? this.wallBody(d) : null,
       MAPW:this.MAPW, MAPH:this.MAPH, HW:this.HW, HH:this.HH,
@@ -2130,7 +2134,8 @@ class Component extends DCLogic {
   statusSub(status, warns, rivers, prelimNorth){
     const parts=[];
     if(warns.length){ parts.push('발효 특보 '+warns.length+'건'); } else { parts.push('발효 특보 없음'); }
-    const dR=rivers.filter(r=>r.lv==='danger').length, wR=rivers.filter(r=>r.lv==='warning').length;
+    const rv=rivers.filter(r=>!this.riverIsDam(r));
+    const dR=rv.filter(r=>r.lv==='danger').length, wR=rv.filter(r=>r.lv==='warning').length;
     if(dR) parts.push('하천 '+dR+'곳 위험 수위'); else if(wR) parts.push('하천 '+wR+'곳 주의 수위'); else parts.push('하천 전 지점 안전');
     if(prelimNorth) parts.push('북부 예비특보 '+prelimNorth+'건');
     return parts.join(' · ');

@@ -353,6 +353,7 @@
      저장 기능을 붙이려다 상황판이 죽는 일이 없게 분리했다. 지역키는 화면 설정(REGION_CONF.key)을 그대로 쓴다.
      ★ 개인정보는 칸 자체를 안 만든다 — 서버도 전화번호·동호수 꼴이면 거부한다. */
   var DSP = 'https://dispatch.visanu81.workers.dev';
+  var DROOM = /^(north|south)$/.test(RC.key||'') ? 'all' : (RC.key||'all');   /* 경기는 주소가 달라도 메모는 한곳에 */
   var DTYPES = ['침수','도로장애','인명구조','배수지원','안전조치','기타'];
   var CUR = null, dType = null, dGps = null;
   var dKey = function(){ return storeGet('ggDspKey') || ''; };
@@ -365,11 +366,11 @@
   }
   function dSend(path, body){
     return fetch(DSP+path, {method:'POST', headers:{'content-type':'application/json'},
-      body:JSON.stringify(Object.assign({key:(RC.key||'all'), code:dKey()}, body))}).then(function(r){ return r.json(); });
+      body:JSON.stringify(Object.assign({key:DROOM, code:dKey()}, body))}).then(function(r){ return r.json(); });
   }
   function dLoad(){
     if(!dKey()) { $('dspList').innerHTML=''; $('dspCnt').textContent=''; return; }
-    fetch(DSP+'/api/notes?key='+encodeURIComponent(RC.key||'all')+'&days=7&code='+encodeURIComponent(dKey())
+    fetch(DSP+'/api/notes?key='+encodeURIComponent(DROOM)+'&days=7&code='+encodeURIComponent(dKey())
           +'&station='+encodeURIComponent(stationNow()))
       .then(function(r){ return r.json(); }).then(function(o){
         if(!o.ok){ $('dspList').innerHTML=''; return; }
