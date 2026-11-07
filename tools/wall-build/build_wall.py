@@ -900,7 +900,7 @@ INJECT = r'''
       var isDam=(rv.api==='dam')||!!rv.dam_info, di=rv.dam_info||{};
       /* ⚠ 반드시 이 entry(화면용 배열)를 넣을 것 — 원시 rv를 넣으면 이름 없는 '0.00m' 행이 된다.
          2026-08-25 평택·송탄에서 실제 발생(코드 지정 관서만 원시 rv가 들어가고 있었다). */
-      var entry=[shortRiver(rv.name), nv(rv.value), nv(rv.danger), (isDam?'dam':''), (rv.level||'safe'),
+      var entry=[shortRiver(rv.name)+(rv.suspect?' ⚠자료이상':''), nv(rv.value), nv(rv.danger), (isDam?'dam':''), (rv.level||'safe'),
         nv(rv.delta_1h), nv(rv.warning), nv(di.storage_rate), nv(di.inflow),
         nv(di.total_outflow!=null?di.total_outflow:di.outflow)];
       /* 코드로 지정된 관서에 먼저 넣는다. 지정 관서가 하나라도 있으면 시군 배분은 건너뛴다. */
@@ -936,7 +936,7 @@ INJECT = r'''
     var keyRivers = _want.map(function(cd){
       var rv = _byCode[String(cd)]; if(!rv) return null;
       var di = rv.dam_info || {}, isDam = (rv.api==='dam') || !!rv.dam_info;
-      return { name:keyName(rv.name), isDam:isDam, level:(rv.level||'safe'),
+      return { name:keyName(rv.name)+(rv.suspect?' ⚠자료이상':''), isDam:isDam, level:(rv.level||'safe'),
         value:nv(rv.value), d1:nv(rv.delta_1h), warn:nv(rv.warning), dang:nv(rv.danger),
         rate:nv(di.storage_rate), inflow:nv(di.inflow),
         outflow:nv(di.total_outflow!=null ? di.total_outflow : di.outflow) };

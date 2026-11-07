@@ -2384,6 +2384,60 @@ def river_level(value, warning, danger):
     return 'safe'
 
 
+# ── 수위 이상값 걸러내기 (2026-11-07 포천 용담교 0.82m → 89.92m 오경보) ──────────────
+# 홍수통제소 원본에 가끔 말이 안 되는 값이 온다. 그대로 쓰면 화면이 '위험'이 되고 구독자에게 알림이 나간다.
+# 진짜 홍수를 숨기면 안 되므로 두 조건을 '모두' 만족할 때만 버린다:
+#   ① 직전 정상값에서 시간당 RIVER_SPIKE_RISE_M 이상 상승  ② 위험수위의 RIVER_SPIKE_DANGER_X 배 초과
+# 한번 버리기 시작하면 값이 ②의 선 아래로 돌아올 때까지 계속 버린다(센서가 틀린 값에 멈춘 경우).
+# 다만 이력(RIVER_HIST_KEEP)이 틀린 값으로만 채워져 비교할 정상값이 없어지면 다시 그대로 보여 준다
+# — 알 수 없을 때는 경보 쪽으로 기운다. 댐은 값이 표고라 대상이 아니다.
+# 15m 근거: 2020·2022·2023·2025 큰비 때 전국 431개 관측소 1시간 자료의 최대 상승이 9.51m(서천 길산천).
+RIVER_SPIKE_RISE_M = 15.0
+RIVER_SPIKE_DANGER_X = 1.5
+
+
+def _river_hours_between(a, b):
+    try:
+        ta = datetime.strptime(str(a)[:10], '%Y%m%d%H')
+        tb = datetime.strptime(str(b)[:10], '%Y%m%d%H')
+        return max(1.0, (tb - ta).total_seconds() / 3600)
+    except ValueError:
+        return 1.0
+
+
+def _river_clean_series(series, st):
+    """시간순 점 목록 → (믿을 점들, 버린 점들). 저장된 이력은 원본 그대로 두고 쓸 때마다 거른다."""
+    danger = st.get('danger')
+    if st.get('api', 'waterlevel') == 'dam' or not danger:
+        return list(series), []
+    limit = danger * RIVER_SPIKE_DANGER_X
+    good, bad, in_spike = [], [], False
+    for p in series:
+        v = p['value']
+        if good:
+            if in_spike:
+                if v > limit:
+                    bad.append(p)
+                    continue
+                in_spike = False
+            elif v > limit and v - good[-1]['value'] >= (
+                    RIVER_SPIKE_RISE_M * _river_hours_between(good[-1]['time'], p['time'])):
+                in_spike = True
+                bad.append(p)
+                continue
+        good.append(p)
+    return good, bad
+
+
+def _river_mark_suspect(item, series, good, bad):
+    """마지막 값을 버렸으면 화면이 '⚠ 자료 이상'을 띄우도록 표시한다(정상으로 오해하지 않게)."""
+    if bad and bad[-1] is series[-1]:
+        item['suspect'] = True
+        item['suspect_value'] = bad[-1]['value']
+        item['suspect_time'] = str(bad[-1]['time'])
+        print(f"    ⚠ 하천 이상값 제외: {item.get('name')} {bad[-1]['value']}m → 마지막 정상값 {good[-1]['value']}m")
+
+
 def fetch_rivers_by_station():
     """[폴백] 관측소별 24시간 수위 시계열 수집 — 일괄 수신(fetch_rivers)이 실패했을 때만.
     한강홍수통제소(api.hrfco.go.kr)가 외국 IP(GitHub Actions 미국 서버 등)에서
@@ -2476,6 +2530,8 @@ def fetch_rivers_by_station():
                 if not history:
                     break
                 history.sort(key=lambda h: h['time'])
+                raw_history = history
+                history, spikes = _river_clean_series(raw_history, st)
                 latest = history[-1]['value']
                 level = river_level(latest, st.get('warning'), st.get('danger'))
 
@@ -2499,6 +2555,7 @@ def fetch_rivers_by_station():
                 }
                 if api == 'dam' and dam_info_latest:
                     item['dam_info'] = dam_info_latest
+                _river_mark_suspect(item, raw_history, history, spikes)
                 fetched[cache_key] = item
                 result.append(item)
                 break
@@ -2629,6 +2686,8 @@ def _assemble_river(st, latest, hist):
         series.append({'time': latest['time'], 'value': latest['value']})
     if not series:
         return None
+    raw_series = series
+    series, spikes = _river_clean_series(raw_series, st)
     value = series[-1]['value']
 
     def delta(n):
@@ -2645,6 +2704,7 @@ def _assemble_river(st, latest, hist):
         row = latest['row']
         item['dam_info'] = {'storage_rate': _fnum(row.get('ecpc')), 'inflow': _fnum(row.get('inf')),
                             'outflow': _fnum(row.get('sfw')), 'total_outflow': _fnum(row.get('tototf'))}
+    _river_mark_suspect(item, raw_series, series, spikes)
     return item
 
 
@@ -2705,15 +2765,19 @@ def fetch_rivers_light():
             latest[kind] = fetch_hrfco_bulk(kind, '10M', sess)
         except Exception:
             latest[kind] = {}      # 그 종류 전부 제외 → 이전 상태 보존
+    hist = _river_hist_load()      # 이상값 비교용 — 알리미도 수집과 같은 값으로 판단해야 오경보가 안 나간다
     out = []
     for st in RIVER_STATIONS:
         api = st.get('api', 'waterlevel')
         row = latest.get(api, {}).get(st['code'])
         if not row:
             continue
-        out.append({'name': st['name'], 'code': st['code'], 'value': round(row['value'], 3),
+        good, _ = _river_clean_series(
+            list(hist.get(f"{st['code']}|{api}", [])) + [{'time': row['time'], 'value': row['value']}], st)
+        value = good[-1]['value']
+        out.append({'name': st['name'], 'code': st['code'], 'value': round(value, 3),
                     'warning': st.get('warning'), 'danger': st.get('danger'),
-                    'level': river_level(row['value'], st.get('warning'), st.get('danger')),
+                    'level': river_level(value, st.get('warning'), st.get('danger')),
                     'api': api})
     return out
 
