@@ -3603,6 +3603,11 @@ def _save_river_state(state):
         pass
 
 
+# 수위 단계 알림에서 뺄 관측소. 청평댐 — 수위가 주의 기준(50m) 바로 위아래를 평소에도 오가 최근 1년 5번 모두 50.0x m 진입이었고,
+#   큰비 때(2020·2022·2023·2025)는 오히려 50m 밑이었다. 군남댐은 실제 큰비 때 주의·위험에 들어가므로 빼지 않는다(2020-08, 2026-07).
+RIVER_ALERT_SKIP = {'1015310'}
+
+
 def notify_rivers(rivers):
     """하천 수위 주의/위험 단계 '진입' 알림 — 누적상태(.tmp/notified_rivers.json) 기반.
     check_warnings.py(1분, 주 담당)와 update_data.py(5분, 백업)가 상태를 공유해 중복 발송이 없다.
@@ -3622,7 +3627,7 @@ def notify_rivers(rivers):
     msgs = []
     for r in (rivers or []):
         code = r.get('code')
-        if not code:
+        if not code or str(code) in RIVER_ALERT_SKIP:
             continue
         cur = rank_map.get(r.get('level'), 0)
         prev_rank = int(state.get(code, 0) or 0)
