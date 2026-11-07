@@ -65,6 +65,22 @@
   footer{ margin-top:16px; display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; justify-content:space-between; font-size:12px; color:var(--ink3); }
   footer a{ color:var(--brand); font-weight:800; text-decoration:none; font-size:14px; padding:10px 14px; border:2px solid var(--brand); border-radius:12px; }
   .stale{ display:none; margin:0 0 10px; padding:10px 14px; border-radius:12px; background:var(--warnSoft); color:var(--ink); font-weight:800; font-size:14px; }
+  /* 출동 메모 — 비 오는 날 나간 출동을 한 줄로. 개인정보 칸은 없다(설계) */
+  #dsp{ margin-top:12px; background:var(--card); border:2px solid var(--line); border-radius:18px; padding:14px 16px; }
+  #dsp .hd{ display:flex; align-items:center; gap:8px; font-size:14px; font-weight:800; color:var(--ink2); }
+  #dsp .hd button{ margin-left:auto; font:800 13px inherit; color:var(--brand); background:var(--brandSoft); border:2px solid var(--brand); border-radius:10px; padding:7px 12px; cursor:pointer; }
+  #dspBody{ display:none; margin-top:10px; }
+  #dspTypes{ display:flex; flex-wrap:wrap; gap:7px; }
+  #dspTypes button{ flex:1 1 30%; min-height:46px; font:800 15px inherit; color:var(--ink); background:var(--bg); border:2px solid var(--line); border-radius:12px; cursor:pointer; }
+  #dspTypes button.on{ color:#fff; background:var(--brand); border-color:var(--brand); }
+  #dsp input{ width:100%; margin-top:8px; font:700 16px inherit; color:var(--ink); background:var(--bg); border:2px solid var(--line); border-radius:12px; padding:11px 12px; }
+  #dsp .row{ display:flex; gap:8px; margin-top:9px; }
+  #dsp .row button{ flex:1; min-height:48px; font:900 16px inherit; border-radius:12px; cursor:pointer; border:2px solid var(--brand); color:#fff; background:var(--brand); }
+  #dsp .row button.ghost{ flex:0 0 52px; color:var(--ink2); background:var(--card); border-color:var(--line); font-size:18px; }
+  #dspMsg{ margin-top:8px; font-size:13px; font-weight:700; color:var(--ink3); min-height:18px; }
+  #dspList{ margin-top:10px; font-size:13px; color:var(--ink2); line-height:1.6; }
+  #dspList div{ display:flex; gap:7px; align-items:baseline; }
+  #dspList b{ color:var(--brand); font-weight:800; }
 </style>
 </head>
 <body>
@@ -100,6 +116,22 @@
     <div id="kbsPause" style="display:none; position:absolute; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,.45); color:#fff; font-size:16px; font-weight:800; cursor:pointer; text-align:center; padding:12px;">⏸ 90초가 지나 멈췄습니다 — 눌러서 계속 보기</div>
     <div id="kbsCap" style="position:absolute; left:0; right:0; top:0; padding:6px 10px; background:linear-gradient(180deg, rgba(0,0,0,.55), transparent); color:#fff; font-size:13px; font-weight:800;"></div>
     <div id="kbsErr" style="position:absolute; left:10px; bottom:8px; color:#ffd166; font-size:12px; font-weight:700;"></div>
+  </div>
+</div>
+<div id="dsp">
+  <div class="hd">🚒 출동 메모 <span id="dspCnt" style="font-weight:700;color:var(--ink3);"></span>
+    <button id="dspOpen" type="button">기록하기</button></div>
+  <div id="dspBody">
+    <div id="dspTypes"></div>
+    <input id="dspPlace" type="text" maxlength="40" placeholder="어디 (예: 송내동 지하차도)" autocomplete="off">
+    <input id="dspMemo" type="text" maxlength="60" placeholder="한 줄 메모 (선택)" autocomplete="off">
+    <div class="row">
+      <button type="button" class="ghost" id="dspGps" title="지금 내 위치 함께 남기기">📍</button>
+      <button type="button" id="dspSave">기록</button>
+      <button type="button" class="ghost" id="dspKey" title="열쇠 정하기·바꾸기">🔑</button>
+    </div>
+    <div id="dspMsg">이름·연락처·동호수는 적지 않습니다 (공식 보고는 소방활동보고에)</div>
+    <div id="dspList"></div>
   </div>
 </div>
 <footer>
@@ -288,6 +320,11 @@
     var cbox=$('cctv'), anchor=(rLv!=='safe') ? $('status') : document.querySelector('.grid');
     if(cbox.previousElementSibling!==anchor){ anchor.insertAdjacentElement('afterend', cbox); cbox.style.margin = (rLv!=='safe') ? '0 0 12px' : '10px 0 0'; }
 
+    /* 출동 메모에 함께 남길 '지금 값' — 나중에 '그때 비가 얼마나 왔나'를 보려고 */
+    CUR = { station:name, sigun:sg, wx:{ rn60:(rn!=null?+(+rn).toFixed(1):null), rnday:(aws.rnday!=null?+(+aws.rnday).toFixed(1):null),
+      river:(top? shortName(top.r.name)+' '+num(top.r.value,2)+'m('+Math.round(top.pct*100)+'%)' : null),
+      warn:(types.length? types.join('·') : null), gust:(gust!=null?+(+gust).toFixed(1):null), updated:String(D.updated||'') } };
+
     /* 갱신 시각 · 오래된 자료(50분, 지도와 같음)면 상태 카드를 회색 '자료 오래됨'으로 덮는다 — 옛 초록이 '지금 정상'으로 읽히지 않게 */
     var up = String(D.updated||''); $('upd').textContent = up ? (up.slice(5,16) + ' 자료') : '';
     var age=null; try{ var t=new Date(up.replace(' ','T')); if(up && !isNaN(t)) age=Math.round((Date.now()-t.getTime())/60000); }catch(e){}
@@ -311,6 +348,87 @@
   $('kbsPause').onclick=function(){ if(curItem) showCctv(curItem); };
 
   /* ── 60초마다 새 자료 (다른 화면과 같은 주소·방식) ── */
+  /* ───────── 출동 메모 ─────────
+     저장은 상황판과 따로 사는 작은 저장소(dispatch.visanu81.workers.dev). 상황판이 정적 파일이라 글을 못 담고,
+     저장 기능을 붙이려다 상황판이 죽는 일이 없게 분리했다. 지역키는 화면 설정(REGION_CONF.key)을 그대로 쓴다.
+     ★ 개인정보는 칸 자체를 안 만든다 — 서버도 전화번호·동호수 꼴이면 거부한다. */
+  var DSP = 'https://dispatch.visanu81.workers.dev';
+  var DROOM = /^(north|south)$/.test(RC.key||'') ? 'all' : (RC.key||'all');   /* 경기는 주소가 달라도 메모는 한곳에 */
+  var DTYPES = ['침수','도로장애','인명구조','배수지원','안전조치','기타'];
+  var CUR = null, dType = null, dGps = null;
+  var dKey = function(){ return storeGet('ggDspKey') || ''; };
+  var dMsg = function(s){ $('dspMsg').textContent = s; };
+
+  function dAsk(why){
+    var k = prompt((why? why+'\n\n':'') + '출동 메모 열쇠를 넣으세요 (관서에서 함께 쓰는 암호)');
+    if(k){ storeSet('ggDspKey', k); return k; }
+    return '';
+  }
+  function dSend(path, body){
+    return fetch(DSP+path, {method:'POST', headers:{'content-type':'application/json'},
+      body:JSON.stringify(Object.assign({key:DROOM, code:dKey()}, body))}).then(function(r){ return r.json(); });
+  }
+  function dLoad(){
+    if(!dKey()) { $('dspList').innerHTML=''; $('dspCnt').textContent=''; return; }
+    fetch(DSP+'/api/notes?key='+encodeURIComponent(DROOM)+'&days=7&code='+encodeURIComponent(dKey())
+          +'&station='+encodeURIComponent(stationNow()))
+      .then(function(r){ return r.json(); }).then(function(o){
+        if(!o.ok){ $('dspList').innerHTML=''; return; }
+        var ns=o.notes||[]; $('dspCnt').textContent = ns.length ? ('· 최근 7일 '+ns.length+'건') : '· 최근 7일 없음';
+        $('dspList').innerHTML = ns.slice(0,5).map(function(n){
+          var d=new Date(n.ts), hh=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+          var dd=(d.getMonth()+1)+'/'+d.getDate();
+          return '<div><span style="color:var(--ink3)">'+dd+' '+hh+'</span> <b>'+n.type+'</b> <span>'+(n.place||'')+'</span></div>';
+        }).join('');
+      }).catch(function(){});
+  }
+  function dInit(){
+    $('dspTypes').innerHTML = DTYPES.map(function(x){ return '<button type="button" data-t="'+x+'">'+x+'</button>'; }).join('');
+    Array.prototype.forEach.call($('dspTypes').children, function(b){
+      b.onclick=function(){ dType=b.dataset.t; Array.prototype.forEach.call($('dspTypes').children,function(o){ o.className = o===b?'on':''; }); };
+    });
+    $('dspOpen').onclick=function(){
+      var open = $('dspBody').style.display==='block';
+      $('dspBody').style.display = open?'none':'block';
+      $('dspOpen').textContent = open?'기록하기':'닫기';
+      if(!open){ dLoad(); $('dsp').scrollIntoView({behavior:'smooth', block:'nearest'}); }
+    };
+    $('dspGps').onclick=function(){
+      if(!navigator.geolocation){ dMsg('이 기기는 위치를 못 씁니다'); return; }
+      dMsg('위치 확인 중…');
+      navigator.geolocation.getCurrentPosition(function(pos){
+        dGps={lat:+pos.coords.latitude.toFixed(5), lng:+pos.coords.longitude.toFixed(5)};
+        $('dspGps').style.background='var(--brandSoft)'; dMsg('위치 담았습니다 (' + dGps.lat + ', ' + dGps.lng + ')');
+      }, function(){ dMsg('위치를 못 받았습니다 — 장소만 적어도 됩니다'); }, {enableHighAccuracy:true, timeout:8000});
+    };
+    $('dspKey').onclick=function(){
+      var cur=dKey(), next=prompt('새 열쇠를 정하세요 (4자 이상, 관서에서 함께 씁니다)');
+      if(!next) return;
+      dSend('/api/code', {code:cur, next:next}).then(function(o){
+        if(o.ok){ storeSet('ggDspKey', next); dMsg('열쇠를 정했습니다'); dLoad(); }
+        else dMsg(o.why||'열쇠를 바꾸지 못했습니다');
+      }).catch(function(){ dMsg('연결 실패'); });
+    };
+    $('dspSave').onclick=function(){
+      if(!dType){ dMsg('무슨 출동인지 먼저 고르세요'); return; }
+      if(!CUR){ dMsg('자료를 아직 못 받았습니다'); return; }
+      $('dspSave').disabled=true; dMsg('기록 중…');
+      var body = {station:CUR.station, sigun:CUR.sigun, type:dType, wx:CUR.wx,
+                  place:$('dspPlace').value.trim(), memo:$('dspMemo').value.trim()};
+      if(dGps){ body.lat=dGps.lat; body.lng=dGps.lng; }
+      dSend('/api/note', body).then(function(o){
+        $('dspSave').disabled=false;
+        if(o.ok){
+          dMsg('기록했습니다 — ' + dType + (body.place? (' · '+body.place):'') + ' (그때 비 ' + (CUR.wx.rn60!=null?CUR.wx.rn60:'-') + 'mm/h)');
+          $('dspPlace').value=''; $('dspMemo').value=''; dType=null; dGps=null;
+          $('dspGps').style.background=''; Array.prototype.forEach.call($('dspTypes').children,function(o2){ o2.className=''; });
+          dLoad();
+        } else if(/열쇠/.test(o.why||'')){ if(dAsk(o.why)) $('dspSave').onclick(); }
+        else dMsg(o.why||'기록하지 못했습니다');
+      }).catch(function(){ $('dspSave').disabled=false; dMsg('연결 실패 — 잠시 뒤 다시'); });
+    };
+  }
+
   var failN=0;   /* 연속 실패 횟수 — 3회면 '못 받고 있음' */
   function poll(){
     try{
@@ -320,7 +438,7 @@
       }).catch(function(){ failN++; render(); });
     }catch(e){}
   }
-  fillSelects(); render(); setInterval(poll, 60000);
+  fillSelects(); render(); dInit(); setInterval(poll, 60000);
   /* 화면 복귀(잠금 해제·탭 복귀)·뒤로가기 때 바로 새 자료 */
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) poll(); });
   window.addEventListener('pageshow', function(ev){ if(ev.persisted) poll(); });
