@@ -2516,16 +2516,7 @@ def fetch_rivers_by_station():
                     history.append({'time': ymdhm, 'value': vf})
                     # 댐이면 추가 필드도 같이
                     if api == 'dam':
-                        def safe_f(k):
-                            x = entry.get(k, '')
-                            try: return float(x)
-                            except: return None
-                        dam_info_latest = {
-                            'storage_rate': safe_f('ecpc'),   # 저수율 %
-                            'inflow': safe_f('inf'),          # 유입량 m³/s
-                            'outflow': safe_f('sfw'),         # 방류량 m³/s
-                            'total_outflow': safe_f('tototf'),# 총유출량
-                        }
+                        dam_info_latest = _dam_info(entry)
 
                 if not history:
                     break
@@ -2622,6 +2613,17 @@ def fetch_hrfco_bulk(kind, unit, sess=None):
     return out
 
 
+def _dam_info(row):
+    """홍수통제소 댐 항목 → 화면·알림 값. sfw 는 저수량(백만㎥), ecpc 는 공용량(백만㎥, 남은 빈 용량), tototf 가 총방류량(㎥/s).
+    예전엔 sfw 를 방류량으로, ecpc 를 저수율로 썼다 — 평화의댐 저수율 2743%, 군남댐 큰비 때 '방류' 71(실제 13,775㎥/s). 2026-11-07 수정.
+    근거: sfw+ecpc 가 총저수용량과 맞는다(팔당 244, 청평 185.5)."""
+    storage, empty = _fnum(row.get('sfw')), _fnum(row.get('ecpc'))
+    whole = storage + empty if storage is not None and empty is not None else None
+    out = _fnum(row.get('tototf'))
+    return {'storage_rate': round(storage / whole * 100, 1) if whole else None, 'storage': storage,
+            'inflow': _fnum(row.get('inf')), 'outflow': out, 'total_outflow': out}
+
+
 def _river_hist_load():
     try:
         return json.loads(RIVER_HIST_PATH.read_text(encoding='utf-8'))
@@ -2701,9 +2703,7 @@ def _assemble_river(st, latest, hist):
         'has_cctv': st.get('has_cctv', True), 'api': api,
     }
     if api == 'dam' and latest:
-        row = latest['row']
-        item['dam_info'] = {'storage_rate': _fnum(row.get('ecpc')), 'inflow': _fnum(row.get('inf')),
-                            'outflow': _fnum(row.get('sfw')), 'total_outflow': _fnum(row.get('tototf'))}
+        item['dam_info'] = _dam_info(latest['row'])
     _river_mark_suspect(item, raw_series, series, spikes)
     return item
 
@@ -3656,6 +3656,46 @@ def notify_rivers(rivers):
         _save_river_state(new_state)
 
 
+# 방류량 급증 알림 — 군남댐·한탄강댐만. 청평·팔당은 발전 방류로 거의 매일 조건이 맞는다(최근 1년 236일·104일).
+# 직전 값이 아니라 1시간 전 값과 비교한다: 큰비 때 방류는 서서히 늘어 10분 간격으론 1.5배가 안 된다(2026-07 군남 7,626㎥/s 때도 해당 없음).
+DAM_OUTFLOW_CODES = {'1021701', '1022701'}
+DAM_OUTFLOW_PATH = TMP / 'dam_outflow.json'
+DAM_OUTFLOW_QUIET_S = 3 * 3600    # 한 번 알리면 3시간은 같은 댐을 다시 알리지 않는다
+
+
+def _dam_outflow_check(rivers, now):
+    """이번 값을 기록하고 1시간 전(50~70분 전 기록)과 비교한다 → (메시지들, 상태, 알린 댐 코드).
+    수집이 끊겨 1시간 전 기록이 없으면 비교하지 않는다(오래된 값과 비교한 오경보 방지)."""
+    try:
+        state = json.loads(DAM_OUTFLOW_PATH.read_text(encoding='utf-8'))
+    except Exception:
+        state = {}
+    msgs, fired = [], []
+    for r in (rivers or []):
+        code = str(r.get('code'))
+        cur = (r.get('dam_info') or {}).get('outflow')
+        if code not in DAM_OUTFLOW_CODES or cur is None:
+            continue
+        st = state.setdefault(code, {'pts': [], 'alerted': 0})
+        pts = [p for p in st['pts'] if now - p[0] <= 75 * 60]
+        old = [p for p in pts if 50 * 60 <= now - p[0] <= 70 * 60]
+        if old and now - st.get('alerted', 0) >= DAM_OUTFLOW_QUIET_S:
+            was = min(old, key=lambda p: abs(now - p[0] - 3600))[1]
+            if cur >= 200 and cur >= was * 1.5 and cur - was >= 100:
+                msgs.append(f"🚨 <b>댐 방류량 급증</b>\n{r.get('name', '')}\n"
+                            f"1시간 전 {was:.0f} → 현재 {cur:.0f} ㎥/s\n하류 수위 상승 주의")
+                fired.append(code)
+        st['pts'] = pts + [[now, cur]]
+    return msgs, state, fired
+
+
+def _dam_outflow_save(state):
+    try:
+        _atomic_write_text(DAM_OUTFLOW_PATH, json.dumps(state, ensure_ascii=False))
+    except Exception:
+        pass
+
+
 def detect_and_notify(prev, data):
     """이전 데이터(prev)와 현재(data)를 비교해 급변 시 텔레그램 알림.
     조건: ③-2 댐 방류량 급증 ④재난문자 신규. (①②특보=notify_warnings, ③하천수위=notify_rivers 전담)
@@ -3672,23 +3712,13 @@ def detect_and_notify(prev, data):
 
     # ①② 기상특보·예비특보 = notify_warnings(), ③ 하천 수위 주의/위험 = notify_rivers()가 전담한다.
     #    (둘 다 check_warnings.py 1분 주기 + 여기 5분 백업, 공유 상태로 중복 방지) → 여기선 ③-2·④만 처리.
-    prev_r = {r.get('code'): r for r in (prev.get('rivers') or [])}
 
     # ③-2 댐 방류량 급증 (홍수 조절 방류 → 임진강·신천 하류 수난 위험 직결)
-    for r in (data.get('rivers') or []):
-        if r.get('api') != 'dam':
-            continue
-        pr = prev_r.get(r.get('code'))
-        if not pr:
-            continue
-        cur_out = (r.get('dam_info') or {}).get('outflow')
-        prev_out = (pr.get('dam_info') or {}).get('outflow')
-        if cur_out is None or prev_out is None:
-            continue
-        # 급증: 현재 200㎥/s 이상 + 이전 대비 1.5배 이상 + 절대 100㎥/s 이상 증가
-        if cur_out >= 200 and cur_out >= prev_out * 1.5 and (cur_out - prev_out) >= 100:
-            msgs.append(f"🚨 <b>댐 방류량 급증</b>\n{r.get('name', '')}\n"
-                        f"{prev_out:.0f} → {cur_out:.0f} ㎥/s\n하류 수위 상승 주의")
+    # 조건: 현재 200㎥/s 이상 + 1시간 전의 1.5배 이상 + 100㎥/s 이상 증가
+    now_ts = time.time()
+    dam_msgs, dam_state, dam_fired = _dam_outflow_check(data.get('rivers'), now_ts)
+    _dam_outflow_save(dam_state)   # 값 기록은 발송과 무관하게 남긴다 — 알린 시각은 발송 성공 후에만
+    msgs.extend(dam_msgs)
 
     # ④ 재난문자 신규 — 누적 발송기록(.tmp)으로 판정해 재발송을 원천 차단.
     #    prev(직전 data.js)가 수집 실패 등으로 비어도 이미 보낸 문자는 다시 안 보냄.
@@ -3724,6 +3754,10 @@ def detect_and_notify(prev, data):
         body += f"\n\n…외 {len(msgs) - 8}건"
     sent, total = send_telegram_all(header + body)
     print(f"  ✓ 텔레그램 알림 {len(msgs)}건 → {sent}/{total}명 발송")
+    if dam_fired and (sent > 0 or total == 0):
+        for _c in dam_fired:
+            dam_state[_c]['alerted'] = now_ts
+        _dam_outflow_save(dam_state)
     # 재난문자 키는 발송 성공(최소 1명 또는 구독자 0명)일 때만 기록 — 실패 시 다음 회차 재시도
     if new_disaster and (sent > 0 or total == 0):
         for _k, _block in new_disaster:

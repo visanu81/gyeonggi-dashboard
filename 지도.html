@@ -1347,10 +1347,12 @@ class Component extends DCLogic {
         })) : null);
     }));
   }
-  // 댐 — 기준이 상시만수위 근처라 평소에도 '주의'가 되므로 상황 판정(맨 위 상태·벽면 경보색)에서 뺀다. 수위 목록에는 그대로 보인다.
+  // 댐 — 기준이 평소 수위 근처인 곳이 있어(청평 50m, 강원 의암 70.5m) 상황 판정(맨 위 상태·벽면 경보색)에서 뺀다. 수위 목록에는 그대로 보인다.
+  // 단 기록을 확인한 경기 댐은 센다 — 군남은 실제 큰비 때 위험까지 간다(2020-08 39.99m, 2026-07 35.09m). 팔당·한탄강도 평소 기준 아래. 청평만 뺀다.
   riverIsDam(r){ const x=(r&&r.raw)||r||{}; return !!(x.dam || x.api==='dam' || ((this.RIVER_META||{})[x.code]||{}).kind==='dam'); }
+  riverSkipStatus(r){ const x=(r&&r.raw)||r||{}; return this.riverIsDam(r) && !['1021701','1022701','1017310'].includes(String(x.code)); }
   overall(rivers, warns, prelimNorth){
-    const rv = rivers.filter(r=>!this.riverIsDam(r));
+    const rv = rivers.filter(r=>!this.riverSkipStatus(r));
     const anyD = rv.some(r=>r.lv==='danger') || warns.some(w=>w.level==='severe');
     const anyW = rv.some(r=>r.lv==='warning') || warns.some(w=>w.level==='warning');
     if(anyD) return {label:'경계', accent:'var(--severe)', bg:'var(--severeSoft)', border:'var(--severe)', pulse:true, head:'즉시 대응 필요'};
@@ -1435,7 +1437,7 @@ class Component extends DCLogic {
     const sevWarns=grouped.filter(g=>g.level==='severe'||String(g.type||'').includes('경보'));
     const msgs=(d.messages||[]);
     const rivers=(d.rivers||[]).map(r=>{ const lv=this.riverLevel(r); const pct=r.danger?Math.min(1,r.value/r.danger):0; return Object.assign({},r,{lv,pct}); }).sort((a,b)=>(b.pct||0)-(a.pct||0));
-    const riskRivers=rivers.filter(r=>(r.lv==='warning'||r.lv==='danger') && !this.riverIsDam(r));
+    const riskRivers=rivers.filter(r=>(r.lv==='warning'||r.lv==='danger') && !this.riverSkipStatus(r));
     const _RMw=this.RIVER_META||{};
     const worstRiver=rivers.find(r=>!(r.dam || ((_RMw[r.code]||{}).kind==='dam'))) || rivers[0];   // 리본 KPI 와 같은 기준(댐 제외)
     const pm=(d.pm||[]).slice().sort((a,b)=>(b.pm10||0)-(a.pm10||0));
@@ -1808,7 +1810,7 @@ class Component extends DCLogic {
     const riverMoreLabel = st.riverExpand ? ('접기 ▴ (상위 '+RIVER_SHOW+'곳만)') : ('전체 '+riverAll.length+'곳 보기 ▾');
     // 내 관할 하천 중 주의 이상 — 코드 기준 중복 제거(복제 행이 '4곳 주의'로 부풀리지 않게)
     const _myRisk = []; const _myRiskSeen = new Set();
-    const _rDam=r=>this.riverIsDam(r);
+    const _rDam=r=>this.riverSkipStatus(r);
     riverAll.forEach(function(r){ if(_isMine(r) && !_rDam(r) && (r.lv==='danger'||r.lv==='warning')){ const c=String(r.raw&&r.raw.code); if(!_myRiskSeen.has(c)){ _myRiskSeen.add(c); _myRisk.push(r); } } });
     // warnings
     const rawWarns=(d.warnings||[]);
@@ -1866,6 +1868,7 @@ class Component extends DCLogic {
     // kpi/ribbon chips
     // 댐은 뺀다 — 댐의 기준(계획홍수위)은 평상시에도 90%대라 KPI 가 늘 '100%'로 보였다(강원 광동댐, 2026-09-19).
     const _isDamRow = r => !!(r.raw && (r.raw.dam || (((this.RIVER_META||{})[r.raw.code]||{}).kind==='dam')));
+    const _skipRow = r => this.riverSkipStatus(r);
     // 리본 KPI 최고수위는 '내 관할' 하천 중 가장 높은 곳 — 관서를 바꿔도 전역 최고(마전3교)만 뜨던 것(2026-09-21 사장님).
     // 관할 하천이 없으면 전역 최고로 되돌아가고 이름표에 '전역'을 붙인다. (riversByRisk 는 위험 근접순 정렬)
     const _mineRivers = riversByRisk.filter(r => _isMine(r) && !_isDamRow(r));
@@ -1926,8 +1929,8 @@ class Component extends DCLogic {
       // 상황실(벽면) 모드 — 위험 시 wallAlarm 클래스로 경보색 전환(애니는 스타일시트)
       wall:st.wall, notWall:!st.wall,
       wallCls:(function(){ var A=/호우|홍수|태풍|강풍|풍랑|해일|대설/;
-        var sev = riversByRisk.some(function(r){return r.lv==='danger' && !_isDamRow(r);}) || rawWarns.some(function(w){return A.test(String(w.type||''))&&(w.level==='severe'||String(w.type||'').indexOf('경보')>=0);}) || (flood||[]).some(function(f){return f.north;});
-        var wrn = riversByRisk.some(function(r){return r.lv==='warning' && !_isDamRow(r);}) || rawWarns.some(function(w){return A.test(String(w.type||''));});
+        var sev = riversByRisk.some(function(r){return r.lv==='danger' && !_skipRow(r);}) || rawWarns.some(function(w){return A.test(String(w.type||''))&&(w.level==='severe'||String(w.type||'').indexOf('경보')>=0);}) || (flood||[]).some(function(f){return f.north;});
+        var wrn = riversByRisk.some(function(r){return r.lv==='warning' && !_skipRow(r);}) || rawWarns.some(function(w){return A.test(String(w.type||''));});
         return 'wallRoot'+(sev?' wallAlarm-severe':(wrn?' wallAlarm-warn':'')); })(),
       wallBody: st.wall ? this.wallBody(d) : null,
       MAPW:this.MAPW, MAPH:this.MAPH, HW:this.HW, HH:this.HH,
@@ -2134,7 +2137,7 @@ class Component extends DCLogic {
   statusSub(status, warns, rivers, prelimNorth){
     const parts=[];
     if(warns.length){ parts.push('발효 특보 '+warns.length+'건'); } else { parts.push('발효 특보 없음'); }
-    const rv=rivers.filter(r=>!this.riverIsDam(r));
+    const rv=rivers.filter(r=>!this.riverSkipStatus(r));
     const dR=rv.filter(r=>r.lv==='danger').length, wR=rv.filter(r=>r.lv==='warning').length;
     if(dR) parts.push('하천 '+dR+'곳 위험 수위'); else if(wR) parts.push('하천 '+wR+'곳 주의 수위'); else parts.push('하천 전 지점 안전');
     if(prelimNorth) parts.push('북부 예비특보 '+prelimNorth+'건');
@@ -2602,8 +2605,8 @@ class Component extends DCLogic {
         R('div',{style:{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px'}},
           dcell('저수율', num(r.dam.storage_rate,1)+'%'),
           dcell('유입량', num(r.dam.inflow,1)+' ㎥/s'),
-          dcell('방류량(수문)', num(r.dam.outflow,1)+' ㎥/s'),
-          dcell('총유출량', num(r.dam.total_outflow,1)+' ㎥/s')),
+          dcell('총방류량', num(r.dam.total_outflow,1)+' ㎥/s'),
+          dcell('저수량', num(r.dam.storage,1)+' 백만㎥')),
         R('div',{style:{marginTop:'8px', fontSize:'11px', color:'var(--ink3)', lineHeight:1.5}}, '※ 저수위는 유입·유출 외 수문 조작으로 조절됩니다. 하류 위험은 방류량 급증에 유의.')
       ):null,
 
