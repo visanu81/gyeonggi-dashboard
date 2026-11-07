@@ -1544,7 +1544,7 @@ class Component extends DCLogic {
     if(idx===1){ // 하천/댐 수위
       const rivers=(d.rivers||[]).map(r=>{ const lv=this.riverLevel(r); const pct=r.danger?Math.min(1,r.value/r.danger):0; return Object.assign({},r,{lv,pct}); }).sort((a,b)=>(b.pct||0)-(a.pct||0)).slice(0,8);
       return R('div',{style:{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', height:'100%'}}, rivers.map((r,i)=>R('div',{key:i, style:{background:'var(--surface2)', border:'1px solid var(--border)', borderLeft:'4px solid '+cvar(r.lv), borderRadius:'11px', padding:'7px 12px', display:'flex', flexDirection:'column', justifyContent:'center'}},
-        R('div',{style:{fontSize:'13px', fontWeight:700, color:'var(--ink2)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}, place(r.name)),
+        R('div',{style:{fontSize:'13px', fontWeight:700, color:'var(--ink2)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}, place(r.name)+(r.suspect?' ⚠ 자료 이상':'')),
         R('div',{style:{display:'flex', alignItems:'baseline', gap:'5px'}}, R('span',{style:{fontSize:'clamp(19px,1.9vw,28px)', fontWeight:800, color:cvar(r.lv), fontVariantNumeric:'tabular-nums'}}, num(r.value,2)), R('span',{style:{fontSize:'12px', color:'var(--ink3)'}}, 'm'+(r.danger?(' · '+Math.round(r.pct*100)+'%'):''))))));
     }
     if(idx===2){ // 기상영상
@@ -1728,8 +1728,8 @@ class Component extends DCLogic {
       card('기상특보', '발효 '+myWarns.length+'건 · 기상청', myWarns.length?R('div',{style:{display:'flex', flexDirection:'column', gap:'6px'}}, myWarns.map((g,i)=>{ const sev=g.level==='severe'||String(g.type).includes('경보'); return R('div',{key:i, style:{padding:'8px 12px', borderRadius:'10px', background:sev?'var(--severeSoft)':'var(--warnSoft)', borderLeft:'4px solid '+(sev?'var(--severe)':'var(--warn)'), display:'flex', justifyContent:'space-between', alignItems:'baseline'}}, R('span',{style:{fontSize:'clamp(15px,1.4vw,20px)', fontWeight:800, color:'var(--ink)'}}, g.type), R('span',{style:{fontSize:'12px', color:'var(--ink3)'}}, g.time||'')); })):R('div',{style:{fontSize:'14px', color:'var(--safe)', fontWeight:700}}, '✓ 발효 중인 기상특보 없음')),
       card('하천 수위 · 관할', '한강홍수통제소 · 위험수위 대비', near.length?R('div',{style:{display:'flex', flexDirection:'column', gap:'8px'}}, near.slice(0,3).map((r,i)=>{ const dd=r.delta1; const pctW=Math.min(100,Math.round((r.pct||0)*100)); return R('div',{key:i, style:{padding:'8px 13px', background:'var(--surface2)', border:'1px solid var(--border)', borderLeft:'4px solid '+cvar(r.lv), borderRadius:'11px', display:'flex', flexDirection:'column', gap:'6px'}},
         R('div',{style:{display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:'8px'}},
-          R('div',{style:{minWidth:0}}, R('span',{style:{fontSize:'clamp(14px,1.3vw,18px)', fontWeight:800, color:'var(--ink)'}}, place(r.name)), R('span',{style:{fontSize:'12px', color:'var(--ink3)', marginLeft:'8px'}}, (dd!=null?((dd>=0?'▲':'▼')+num(Math.abs(dd),2)+'m · '):'')+'위험 '+num(r.danger,1)+'m')),
-          R('div',{style:{display:'flex', alignItems:'baseline', gap:'8px', flexShrink:0}}, R('span',{style:{fontSize:'clamp(17px,1.6vw,24px)', fontWeight:800, color:cvar(r.lv), fontVariantNumeric:'tabular-nums'}}, num(r.value,2)+'m'), R('span',{style:{fontSize:'12px', fontWeight:800, color:cvar(r.lv)}}, r.lv==='danger'?'위험':r.lv==='warning'?'주의':'정상'))),
+          R('div',{style:{minWidth:0}}, R('span',{style:{fontSize:'clamp(14px,1.3vw,18px)', fontWeight:800, color:'var(--ink)'}}, place(r.name)+(r.suspect?' ⚠ 자료 이상':'')), R('span',{style:{fontSize:'12px', color:'var(--ink3)', marginLeft:'8px'}}, (dd!=null?((dd>=0?'▲':'▼')+num(Math.abs(dd),2)+'m · '):'')+'위험 '+num(r.danger,1)+'m')),
+          R('div',{style:{display:'flex', alignItems:'baseline', gap:'8px', flexShrink:0}}, R('span',{style:{fontSize:'clamp(17px,1.6vw,24px)', fontWeight:800, color:cvar(r.lv), fontVariantNumeric:'tabular-nums'}}, num(r.value,2)+'m'), R('span',{style:{fontSize:'12px', fontWeight:800, color:cvar(r.lv)}}, r.suspect?'자료 이상':r.lv==='danger'?'위험':r.lv==='warning'?'주의':'정상'))),
         R('div',{style:{height:'8px', background:'var(--border)', borderRadius:'999px', overflow:'hidden'}}, R('div',{style:{width:pctW+'%', height:'100%', background:cvar(r.lv), borderRadius:'999px'}}))); })):R('div',{style:{fontSize:'13px', color:'var(--ink3)'}}, '관할 하천 관측소 없음')),
       card('출동 영향 판단', '현재 기상값 기반 자동 판정', R('div',{style:{display:'flex', flexDirection:'column', gap:'8px'}}, judges.map((j,i)=>R('div',{key:i, style:{display:'flex', alignItems:'center', gap:'12px', padding:'9px 14px', background:j.st.soft, borderLeft:'5px solid '+j.st.c, borderRadius:'12px'}},
         R('span',{style:{fontSize:'clamp(22px,2vw,32px)', flexShrink:0, lineHeight:1}}, j.icon),
@@ -1778,10 +1778,10 @@ class Component extends DCLogic {
     // rivers ranked
     const riversByRisk = (d.rivers||[]).map(r=>{
       const lv=this.riverLevel(r); const sp=this.spark(r.history); const pct=r.danger? Math.min(1, r.value/r.danger):0;
-      return { name:r.name, value:this.fmtNum(r.value,2), raw:r, lv, color:this.cvar(lv),
+      return { name:r.name+(r.suspect?' ⚠ 자료 이상':''), value:this.fmtNum(r.value,2), raw:r, lv, color:this.cvar(lv),
         sparkLine:sp.line, sparkArea:sp.area, sparkFill:this.cvar(lv), dotX:sp.dotX, dotY:sp.dotY,
         pctW:Math.round(pct*100)+'%', deltaTxt:this.deltaTxt(r.delta1),
-        statusTxt: lv==='danger'?'위험':lv==='warning'?'주의':'안전',
+        statusTxt: r.suspect?'자료 이상':lv==='danger'?'위험':lv==='warning'?'주의':'안전',
         near:String(r.name).includes(mySg),
         open:()=>this.setState({modal:{kind:'river', key:r.name}}) };
     }).sort((a,b)=> (parseFloat(b.pctW)||0)-(parseFloat(a.pctW)||0));
@@ -1964,7 +1964,7 @@ class Component extends DCLogic {
           { k:'1시간 강수', v:(rn!=null?rn+'mm':'-'), c:(rn>0?'var(--brand)':'var(--ink)') },
           { k:'6시간 최대', v:(f6.length?(fmax+'mm'+(fmax>0&&fat?(' ('+fat+')'):'')):'-'), c:(fmax>=10?'var(--warn)':fmax>0?'var(--brand)':'var(--ink)') },
           { k:'특보', v:(myW.length?(self.groupWarns(myW).map(function(g){return g.type;}).join('·')):'없음'), c:(myW.length?'var(--severe)':'var(--safe)') },
-          { k:'하천', v:(myR.length?(myR.length+'곳 '+(myR.some(function(r){return r.lv==='danger';})?'위험':'주의')):'안전'), c:(myR.length?'var(--warn)':'var(--safe)') },
+          { k:'하천', v:(myR.length?(myR.length+'곳 '+(myR.some(function(r){return r.lv==='danger';})?'위험':'주의')):(riverAll.some(function(r){return _isMine(r)&&r.raw&&r.raw.suspect;})?'⚠ 자료 이상':'안전')), c:((myR.length||riverAll.some(function(r){return _isMine(r)&&r.raw&&r.raw.suspect;}))?'var(--warn)':'var(--safe)') },
         ];
         return items;
       })(this),
@@ -2151,7 +2151,7 @@ class Component extends DCLogic {
     if(modal.kind==='region'){
       const s=(d.stations||[]).find(x=>x.name===modal.key)||{};
       const sg=s.sigun||modal.key;
-      const near=this.riversOf(d.rivers, sg, (s&&s.name)||sg).map(r=>({name:r.name, value:r.value, danger:r.danger, lv:this.riverLevel(r)}));
+      const near=this.riversOf(d.rivers, sg, (s&&s.name)||sg).map(r=>({name:r.name, value:r.value, danger:r.danger, lv:this.riverLevel(r), suspect:r.suspect}));
       const msgs=(d.messages||[]).filter(m=>m.region===sg || m.region===modal.key || m.region==='경기도');
       const warns=(d.warnings||[]).filter(w=>this._areaHits(w.area, sg));
       const pm=(d.pm||[]).find(p=>p.region===sg);
@@ -2247,7 +2247,7 @@ class Component extends DCLogic {
             R('span',{style:{fontSize:'13px', fontWeight:800, color:fire?fireColor(fire.level):'var(--ink3)'}}, fire?(fire.levelText+' · '+fire.region):'정보 없음')),
           near.map((r,i)=>
             R('div',{key:i, style:{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 12px', background:'var(--surface2)', borderRadius:'10px', border:'1px solid var(--border)'}},
-              R('span',{style:{fontSize:'12.5px', color:'var(--ink2)', fontWeight:600}}, '🌊 '+String(r.name).split(' ')[0]+' 수위'),
+              R('span',{style:{fontSize:'12.5px', color:'var(--ink2)', fontWeight:600}}, '🌊 '+String(r.name).split(' ')[0]+' 수위'+(r.suspect?' ⚠ 자료 이상':'')),
               R('span',{style:{fontSize:'13px', fontWeight:800, color:cvar(r.lv)}}, num(r.value,2)+'m'+(r.danger?' / 위험 '+r.danger+'m':'')))))),
       // 7. 재난문자
       sect('최근 재난문자 (해당 시군)',
@@ -2563,12 +2563,13 @@ class Component extends DCLogic {
     const ff=(d.flood||[]).filter(f=>{ const rv=f.river||'', ob=f.obs||''; return (rv&&r.name.indexOf(rv)>=0)||(ob&&r.name.indexOf(ob)>=0); });
 
     return R('div',{},
+      r.suspect ? R('div',{style:{padding:'10px 12px', marginBottom:'10px', borderRadius:'10px', background:'var(--warnSoft)', border:'1px solid var(--warn)', fontSize:'13px', fontWeight:700, color:'var(--ink)', lineHeight:1.5}}, '⚠ 자료 이상 — 홍수통제소 원본 값 '+r.suspectValue+'m 이 비정상이라 제외했습니다. 아래는 마지막 정상값입니다. 실제 수위는 현장·CCTV로 확인하세요.') : null,
       // 헤더: 현재 수위 + 단계
       R('div',{style:{display:'flex', gap:'16px', alignItems:'flex-end', flexWrap:'wrap', marginBottom:'12px'}},
         R('div',{}, R('div',{style:{fontSize:'11px', color:'var(--ink3)', fontWeight:600}}, isDam?'현재 저수위':'현재 수위'),
           R('div',{style:{fontSize:'34px', fontWeight:800, color:'var(--ink)', lineHeight:1.05}}, num(r.value,2), R('span',{style:{fontSize:'15px', color:'var(--ink3)'}}, 'm'))),
         R('div',{style:{display:'flex', gap:'7px', alignItems:'center', paddingBottom:'4px'}},
-          R('span',{style:{fontSize:'12.5px', fontWeight:800, color:'#fff', background:curCol, padding:'5px 13px', borderRadius:'8px'}}, curName+' 단계'),
+          R('span',{style:{fontSize:'12.5px', fontWeight:800, color:'#fff', background:(r.suspect?'var(--warn)':curCol), padding:'5px 13px', borderRadius:'8px'}}, r.suspect?'자료 이상':curName+' 단계'),
           R('span',{style:{fontSize:'11.5px', fontWeight:700, color:chgCol(d1), background:'var(--surface2)', padding:'5px 11px', borderRadius:'8px', border:'1px solid var(--border)'}}, '1시간 '+chg(d1)))),
 
       // 변화량 1/3/6시간

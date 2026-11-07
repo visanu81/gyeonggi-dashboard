@@ -1037,7 +1037,7 @@ class Component extends DCLogic {
         const bg = r.level==='danger'?'var(--severeSoft)':r.level==='warning'?'var(--warnSoft)':'var(--surface2)';
         const d1 = (r.delta1!=null && !isNaN(r.delta1)) ? ((r.delta1>0?'▲':r.delta1<0?'▼':'-') + Math.abs(r.delta1).toFixed(2)) : '';
         return R('div',{key:i, style:{background:bg, border:'1px solid '+(r.level==='safe'?'var(--border)':c), borderRadius:'11px', padding:'10px 11px'}},
-          R('div',{style:{fontSize:'11.5px', color:'var(--ink2)', marginBottom:'4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}, r.name||''),
+          R('div',{style:{fontSize:'11.5px', color:'var(--ink2)', marginBottom:'4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}, (r.name||'')+(r.suspect?' ⚠ 자료 이상':'')),
           R('div',{style:{display:'flex', alignItems:'baseline', gap:'5px'}},
             R('span',{style:{fontSize:'19px', fontWeight:900, color:c, fontVariantNumeric:'tabular-nums'}}, (r.value!=null?(+r.value).toFixed(2):'—')),
             R('span',{style:{fontSize:'11px', color:'var(--ink3)'}}, 'm'),

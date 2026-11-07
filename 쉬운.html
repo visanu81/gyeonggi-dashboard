@@ -269,6 +269,8 @@
     var tRv=$('tRiver'); tRv.className='tile ' + (!mine.length ? '' : rLv==='danger'?'severe': rLv==='warning'?'warn':'safe');
     tRv.querySelector('.v').textContent = top ? (rLv==='danger'?'위험': rLv==='warning'?'주의':'안전') : '없음';
     tRv.querySelector('.d').textContent = top ? (shortName(top.r.name) + ' ' + num(top.r.value,2) + 'm · 위험수위의 ' + Math.round(top.pct*100) + '%') : '관할 하천 관측소 없음';
+    var susp=mine.filter(function(x){ return x.r.suspect; })[0];   /* 원본 이상값을 버린 관측소 — 정상으로 오해하지 않게 */
+    if(susp) tRv.querySelector('.d').textContent += ' · ⚠ ' + shortName(susp.r.name) + ' 자료 이상';
 
     /* 관할 하천 CCTV — 홍수통제소 실시간 화면(다른 화면의 하천 상세와 같은 출처). 있는 곳만, 최대 6곳 */
     var cc = mine.filter(function(x){ return x.r.has_cctv || (window.hrfcoCam && window.hrfcoCam(x.r.code)); }).slice(0,6);
