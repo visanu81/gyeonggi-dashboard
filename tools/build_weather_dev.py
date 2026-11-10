@@ -404,6 +404,7 @@ def main():
     print(f'빌드 완료: {DEPLOY}')
     print(f'  변환 파일 {n_files}개 · 남은 북부 흔적: {left or "없음"}')
     print(f'  배포:  cd "{DEPLOY}" && npx wrangler deploy && npx wrangler deploy --name ggweather')
+    print('         (한 줄 판: powershell -ExecutionPolicy Bypass -File tools/deploy_nationwide.ps1)')
     return 0
 
 
