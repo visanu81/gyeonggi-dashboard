@@ -1,10 +1,12 @@
 ﻿# 전국판(ggweather + weather) 배포 — 한 줄로 빌드 + 두 주소 배포 (2026-11-10)
 #
-#   powershell -ExecutionPolicy Bypass -File tools/deploy_nationwide.ps1
+#   powershell -ExecutionPolicy Bypass -File tools/deploy_nationwide.ps1              # ggweather 만 (기본)
+#   powershell -ExecutionPolicy Bypass -File tools/deploy_nationwide.ps1 -Only both   # 완성 후 weather 까지
 #   (어느 폴더에서 실행해도 된다. 데이터만 바뀐 경우엔 필요 없다 — 서버 배포가 알아서 반영)
 #
-# 옵션:  -Only weather   또는  -Only ggweather   (한 곳만)
-param([ValidateSet('both', 'weather', 'ggweather')][string]$Only = 'both')
+# ★ 2026-11-11 사장님 지시: 수정은 ggweather 에만 먼저 올리고, 완성되면 다른 사이트(weather 등)에 적용.
+#   그래서 기본값이 ggweather 다. weather 는 '-Only both' 또는 '-Only weather' 로 명시할 때만.
+param([ValidateSet('both', 'weather', 'ggweather')][string]$Only = 'ggweather')
 $ErrorActionPreference = 'Stop'
 try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch {}
 $root = Resolve-Path (Join-Path $PSScriptRoot '..')
