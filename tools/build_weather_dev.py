@@ -86,7 +86,9 @@ def inject_version(pub, bid):
     return n
 
 
-WRANGLER = """# weather 개조 작업장 배포 설정 — tools/build_weather_dev.py 가 만든다.
+# 같은 빌드를 두 주소에 올린다 (2026-11-10 사장님 지시: ggweather·weather 전국판 통합, gyeonggi-dashboard 만 별도)
+#   cd .tmp/weather-dev/deploy && npx wrangler deploy && npx wrangler deploy --name ggweather
+WRANGLER = """# 전국판 배포 설정(weather·ggweather 공용) — tools/build_weather_dev.py 가 만든다.
 name = "weather"
 compatibility_date = "2024-10-21"
 
@@ -364,12 +366,14 @@ def main():
     PUB.mkdir(parents=True, exist_ok=True)
     shutil.copytree(SITE, PUB / DEV_DIR, dirs_exist_ok=True)
     (PUB / '_redirects').write_text(REDIRECTS, encoding='utf-8')
-    # 경기 전체판(BASE 루트)도 운영 ggweather 의 데이터·이미지를 직접 읽게 — 빌드 시점 스냅샷이 아니라 5분 갱신.
+    # 경기 전체판(BASE 루트)도 운영 주소의 경기 합본(data-all.js)·이미지를 직접 읽게 — 빌드 시점 스냅샷이 아니라 배포 주기 갱신.
+    # 2026-11-10 ggweather 도 이 빌드로 통합(사장님 지시) → 예전처럼 ggweather/data.js 를 읽으면 자기 스냅샷을 읽게 된다.
+    # data-all.js 는 운영 배포(cloudflare-deploy.yml)가 merge_all.py 로 만들어 올린다.
     # (시도판은 build_sido_sites 에서 같은 방식으로 gyeonggi-dashboard 의 data-<key>.js 를 읽는다)
     for f in (PUB / DEV_DIR).glob('*.html'):
         body = f.read_text(encoding='utf-8')
-        live = 'https://ggweather.visanu81.workers.dev/'
-        body = body.replace('src="data.js"', f'src="{live}data.js"').replace("'data.js?_t='", f"'{live}data.js?_t='")
+        live = 'https://gyeonggi-dashboard.visanu81.workers.dev/'
+        body = body.replace('src="data.js"', f'src="{live}data-all.js"').replace("'data.js?_t='", f"'{live}data-all.js?_t='")
         body = body.replace("IMGH=''", f"IMGH='{live}'")
         body = body.replace("'images/kma_", f"'{live}images/kma_").replace('"images/kma_', f'"{live}images/kma_')
         f.write_text(body, encoding='utf-8')
@@ -399,7 +403,7 @@ def main():
             left.append(f.name)
     print(f'빌드 완료: {DEPLOY}')
     print(f'  변환 파일 {n_files}개 · 남은 북부 흔적: {left or "없음"}')
-    print(f'  배포:  cd "{DEPLOY}" && wrangler deploy')
+    print(f'  배포:  cd "{DEPLOY}" && npx wrangler deploy && npx wrangler deploy --name ggweather')
     return 0
 
 
