@@ -26,6 +26,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 경기 전체 데이터(data-all.js = data.js + data-south.js 합본)를 같이 올린다 — 2026-11-10 사장님 지시로
+      # ggweather·weather 가 전국판으로 통합되면서, 두 주소의 '경기도' 화면이 이 주소의 data-all.js 를 읽는다.
+      # 이 사이트(경기북부) 화면은 data-all.js 를 쓰지 않으므로 화면에는 영향이 없다. 합치기가 실패해도 배포는 계속.
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 경기 전체 데이터 합치기 (data-all.js, 수집 아님)
+        run: |
+          if python tools/merge_all.py && test -s data-all.js; then
+            echo "data-all.js 생성 완료"
+          else
+            echo "::warning::data-all.js 생성 실패 — 전국판 경기 화면이 이전 값을 보게 됨"
+            rm -f data-all.js
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

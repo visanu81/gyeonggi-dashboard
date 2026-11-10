@@ -31,7 +31,8 @@ from datetime import datetime, timedelta, timezone
 
 KST = timezone(timedelta(hours=9))
 SITES = [
-    ('경기 전체(ggweather)', 'https://ggweather.visanu81.workers.dev/data.js'),
+    # 2026-11-10 ggweather·weather 전국판 통합 — 두 주소의 경기 화면은 운영 주소의 합본(data-all.js)을 읽는다
+    ('경기 전체(data-all.js)', 'https://gyeonggi-dashboard.visanu81.workers.dev/data-all.js'),
     ('경기북부(gyeonggi-dashboard)', 'https://gyeonggi-dashboard.visanu81.workers.dev/data.js'),
 ]
 STALE_MIN = 60
