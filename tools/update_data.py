@@ -3952,6 +3952,13 @@ def push_only():
     except Exception as e:
         print(f'  · 전국 요약 실패({type(e).__name__}) — 건너뜀')
     try:
+        # 경기 전체 합본(data.js + data-south.js) — 전국판(ggweather·weather)의 경기 화면이 운영 주소에서 읽는다(2026-11-10).
+        _r = subprocess.run([sys.executable, str(ROOT / 'tools' / 'merge_all.py')], cwd=str(ROOT),
+                            capture_output=True, timeout=60)
+        print('  · 경기 합본 → data-all.js' if _r.returncode == 0 else f'  · 경기 합본 실패(rc={_r.returncode}) — 건너뜀')
+    except Exception as e:
+        print(f'  · 경기 합본 실패({type(e).__name__}) — 건너뜀')
+    try:
         _nk, _nh = build_cctv_files()
         print(f'  · CCTV 목록: KBS {_nk}대 · 통제소 장치번호 {_nh}곳 → data-cctv.js')
     except Exception as e:
