@@ -23,6 +23,15 @@
  *   POST /api/del                     한 건 지우기             (열쇠 필요)
  *   GET  /api/stats?key=all&days=90   관서·유형·장소별 집계    (열쇠 필요)
  *
+ *   ── 관서 현황판 (2026-11-13) — 각 관서 화면의 체크·점검·한 줄 기록을 본부가 모아 본다 ──
+ *   POST /api/board/set               한 줄 올리기/고치기     (열쇠 필요)
+ *   POST /api/board/del               한 줄 지우기           (열쇠 필요)
+ *   GET  /api/board?key=all&hours=48  모든 관서의 줄(cfg= 로 그 관서의 목록 설정도) (열쇠 필요)
+ *     줄 하나 = (관서, 종류, id). 종류: chk 위험구역 점검 확인 · todo 체크리스트 체크 · note 한 줄 기록
+ *     · beat 관서 요약(상태·진행·접속 시각, 관서마다 1줄) · cfg 관서의 체크리스트 목록(관서마다 1줄)
+ *     관서 화면이 상태를 통째로 올리지 않고 줄 단위로 올리는 이유: 같은 관서의 PC 둘이 동시에 체크해도
+ *     서로 지우지 않게.
+ *
  * 지역키(key)는 화면의 REGION_CONF.key 를 그대로 쓴다(경기 전체판은 'all').
  */
 
@@ -33,6 +42,13 @@ const MAX_MEMO = 60;        // 한 줄 메모 — 길면 사연이 들어가고 
 const MAX_PLACE = 40;
 const KEEP_DAYS = 1100;     // 3년쯤 보관(장마 세 번 비교용). 그 이상은 스스로 지운다
 const MAX_ROWS = 20000;     // 한 지역 상한 — 넘으면 오래된 것부터
+
+const BOARD_KINDS = ['chk', 'todo', 'note', 'beat', 'cfg'];
+const BOARD_TEXT = 80;      // 한 줄 글자 수
+const BOARD_EXTRA = 1000;   // 딸린 값(JSON 문자열) 길이 — cfg(체크리스트 목록)만 8000
+const BOARD_EXTRA_CFG = 8000;
+const BOARD_KEEP_DAYS = 14; // 체크·점검·기록·요약은 2주 뒤 스스로 지운다(cfg 는 남긴다)
+const BOARD_MAX_ROWS = 20000;
 
 /* 전화번호·주민번호·카드번호처럼 보이면 막는다. 완벽한 검사가 아니라 '실수 방지'가 목적. */
 function looksPersonal(s) {
@@ -73,6 +89,38 @@ export class Log extends DurableObject {
       place TEXT, lat REAL, lng REAL, memo TEXT, wx TEXT, who TEXT)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS i_ts ON notes(ts)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS board(
+      station TEXT, kind TEXT, id TEXT, ts INTEGER, text TEXT, extra TEXT,
+      PRIMARY KEY(station, kind, id))`);
+    this.sql.exec(`CREATE INDEX IF NOT EXISTS i_board_ts ON board(ts)`);
+  }
+
+  /* ── 관서 현황판 ── */
+  async boardSet(r) {
+    /* 같은 줄을 두 화면이 올리면 더 나중 시각의 것이 남는다(늦게 도착한 옛 값이 새 값을 덮지 않게) */
+    this.sql.exec(`INSERT INTO board(station,kind,id,ts,text,extra) VALUES(?,?,?,?,?,?)
+      ON CONFLICT(station,kind,id) DO UPDATE SET ts=excluded.ts, text=excluded.text, extra=excluded.extra
+      WHERE excluded.ts >= board.ts`, r.station, r.kind, r.id, r.ts, r.text, r.extra);
+    this.sql.exec(`DELETE FROM board WHERE kind<>'cfg' AND ts < ?`, Date.now() - BOARD_KEEP_DAYS * 86400000);
+    const n = [...this.sql.exec('SELECT COUNT(*) AS c FROM board')][0].c;
+    if (n > BOARD_MAX_ROWS) this.sql.exec(`DELETE FROM board WHERE rowid IN
+      (SELECT rowid FROM board WHERE kind<>'cfg' ORDER BY ts ASC LIMIT ?)`, n - BOARD_MAX_ROWS);
+    return { ok: true, ts: r.ts };
+  }
+
+  async boardDel(station, kind, id) {
+    this.sql.exec('DELETE FROM board WHERE station=? AND kind=? AND id=?', station, kind, id);
+    return { ok: true };
+  }
+
+  /* 모든 관서의 줄. beat 는 기간과 상관없이(마지막 접속 시각을 보여 주려고), cfg 는 부탁한 관서 것만(크다). */
+  async boardList(hours, cfgStation) {
+    const from = Date.now() - hours * 3600000;
+    const rows = [...this.sql.exec(
+      `SELECT station,kind,id,ts,text,extra FROM board
+       WHERE (kind IN ('chk','todo','note') AND ts>=?) OR kind='beat' OR (kind='cfg' AND station=?)
+       ORDER BY ts DESC LIMIT 5000`, from, cfgStation || '')];
+    return rows;
   }
 
   _meta(k) { const r = [...this.sql.exec('SELECT v FROM meta WHERE k=?', k)]; return r.length ? r[0].v : null; }
@@ -184,6 +232,44 @@ export default {
       if (p === '/api/del' && request.method === 'POST') {
         if (!(await broom.ok(code))) return j({ ok: false, why: '열쇠가 필요합니다' }, 401);
         return j(await broom.del(String(body.id || '')));
+      }
+
+      /* ── 관서 현황판 ── */
+      if (p === '/api/board/set' && request.method === 'POST') {
+        if (!(await broom.ok(code))) return j({ ok: false, why: '열쇠가 필요합니다' }, 401);
+        const station = String(body.station || '').slice(0, 20).trim();
+        const kind = String(body.kind || '');
+        const id = String(body.id || '').slice(0, 120);
+        if (!station) return j({ ok: false, why: '관서가 없습니다' }, 400);
+        if (!BOARD_KINDS.includes(kind) || !id) return j({ ok: false, why: '종류나 id 가 올바르지 않습니다' }, 400);
+        const text = String(body.text || '').slice(0, BOARD_TEXT).trim();
+        let extra = body.extra == null ? '' : (typeof body.extra === 'string' ? body.extra : JSON.stringify(body.extra));
+        if (extra.length > (kind === 'cfg' ? BOARD_EXTRA_CFG : BOARD_EXTRA)) return j({ ok: false, why: '내용이 너무 깁니다' }, 400);
+        /* 개인정보 — 사람이 적는 글만 본다(beat 의 숫자 묶음을 긴 숫자로 오인하지 않게) */
+        let bad = (kind === 'beat') ? null : looksPersonal(text);
+        if (!bad && kind === 'cfg' && extra) {
+          try { for (const it of (JSON.parse(extra).items || [])) { bad = looksPersonal(it && it.text); if (bad) break; } }
+          catch (e) { return j({ ok: false, why: '목록 형식이 아닙니다' }, 400); }
+        }
+        if (bad) return j({ ok: false, why: bad + ' — 개인정보는 적지 않습니다' }, 400);
+        /* 시각 — 화면이 보낸 값을 쓰되(체크한 시각), 미래이거나 너무 옛날이면 지금으로 */
+        const now = Date.now();
+        let ts = +body.ts;
+        if (!(ts > now - BOARD_KEEP_DAYS * 86400000 && ts < now + 5 * 60000)) ts = now;
+        return j(await broom.boardSet({ station, kind, id, ts, text, extra }));
+      }
+
+      if (p === '/api/board/del' && request.method === 'POST') {
+        if (!(await broom.ok(code))) return j({ ok: false, why: '열쇠가 필요합니다' }, 401);
+        const kind = String(body.kind || '');
+        if (!BOARD_KINDS.includes(kind)) return j({ ok: false, why: '종류가 올바르지 않습니다' }, 400);
+        return j(await broom.boardDel(String(body.station || '').slice(0, 20).trim(), kind, String(body.id || '').slice(0, 120)));
+      }
+
+      if (p === '/api/board') {
+        if (!(await room.ok(code))) return j({ ok: false, why: '열쇠가 필요합니다' }, 401);
+        const hours = Math.min(24 * BOARD_KEEP_DAYS, Math.max(1, +(url.searchParams.get('hours') || 48)));
+        return j({ ok: true, now: Date.now(), rows: await room.boardList(hours, (url.searchParams.get('cfg') || '').slice(0, 20).trim()) });
       }
 
       if (p === '/api/stats') {
