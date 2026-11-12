@@ -125,6 +125,14 @@ def merge(n, s):
     msgs = cat_unique(n.get('messages'), s.get('messages'),
                       lambda m: str(m.get('sn') or (m.get('time'), m.get('msg'))))
     out['messages'] = sorted(msgs, key=lambda m: str(m.get('sn') or ''), reverse=True)
+    # 사건 기록(위젯 상황판) — 북부·남부가 같은 일을 따로 적으면 키(k)가 같다 → 한 번만. 최신순.
+    # 강수 줄은 많아서 따로 센다(특보·하천 줄을 밀어내지 않게).
+    evs = cat_unique(n.get('events'), s.get('events'),
+                     lambda e: e.get('k') or (e.get('ts'), e.get('text')))
+    evs.sort(key=lambda e: str(e.get('ts') or ''), reverse=True)
+    _rain = [e for e in evs if e.get('kind') == 'rain'][:300]
+    _other = [e for e in evs if e.get('kind') != 'rain'][:300]
+    out['events'] = sorted(_rain + _other, key=lambda e: str(e.get('ts') or ''), reverse=True)
 
     # ── 전국 공통 — 더 최근 것 ─────────────────────────────────
     for k in ('bulletins', 'mid_forecast', 'kma_images'):

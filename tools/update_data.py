@@ -3396,6 +3396,245 @@ def merge_apihub_warnings(d):
         d['warnings'] = (d.get('warnings') or []) + add
 
 
+# ───────── 사건 기록 — 위젯 상황판 '상황 기록'·사후 보고용 (2026-11-13) ─────────
+# 화면은 '지금 값'만 받아서, 화면이 닫혀 있던 동안의 일(시간당 20mm 넘음 등)은 알 길이 없었다.
+# 수집 회차(5분)마다 이전 회차와 견줘 달라진 것만 한 줄씩 남기고, 최근 72시간 분을 data['events'] 로 내보낸다.
+#   · 특보 발효/해제 — 알림(notify_warnings)과 같은 방식으로 '종류별 시군 집합'을 견준다. 지역 이름은
+#     _canon_region 으로 맞춘다(통보문은 '가평', 허브는 '가평군' — 그대로 견주면 같은 발효가 두 번 적힌다).
+#     해제는 온전한 회차에서 두 번 연속 빠져 있어야 적는다(통보문이 한 회차 비어 오면 '해제→다시 발효'가 된다).
+#     각 특보에 서버가 처음 본 시각 since 도 붙인다 — warnings[].time 은 발효 시각이 아니라
+#     '최근 현황 통보 시각'이라 화면이 쓸 수 없다.
+#   · 시간당 강수 5·20·30·50mm 통과 — 실측(rn60, 없으면 초단기실황 rn1)만 본다. 내려갈 때는 기준의 80% 아래로
+#     떨어져야 내린 것으로 본다(경계에서 오르내리며 줄이 쌓이지 않게)
+#   · 하천 주의·위험수위 통과 — 댐·자료 이상 제외, 내려갈 때는 2cm 여유
+# 상태·기록은 TMP(지역별, git 미추적)에 둔다. 처음 보는 것은 상태만 잡고 줄을 만들지 않는다(한꺼번에 쏟아지지 않게).
+# ⚠ 이 기록이 실패해도 수집·알림·저장은 그대로 가야 한다 — main() 에서 따로 try 로 감싼다.
+EVENTS_PATH = TMP / 'events.json'
+EVENTS_STATE_PATH = TMP / 'events_state.json'
+EVENTS_KEEP_H = 72
+EVENTS_MAX_RAIN = 200       # 강수 줄은 많다(시군 수 × 기준 4개) — 따로 세어, 특보·하천 줄을 밀어내지 않게
+EVENTS_MAX_OTHER = 200
+EVENT_RAIN_BANDS = (5, 20, 30, 50)
+
+
+def _ev_load(path, default):
+    try:
+        return json.loads(Path(path).read_text(encoding='utf-8'))
+    except Exception:
+        return default
+
+
+def _ev_num(v):
+    """숫자로 못 읽거나 NaN 이면 None."""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if f == f else None
+
+
+def _ev_rain_band(v, prev_band):
+    """시간당 강수(mm) → 구간 번호 0~4. 내려갈 때만 20% 여유(히스테리시스)."""
+    band = sum(1 for th in EVENT_RAIN_BANDS if v >= th)
+    if prev_band is not None and band < prev_band:
+        while band < prev_band and v >= EVENT_RAIN_BANDS[band] * 0.8:
+            band += 1
+    return band
+
+
+def _ev_river_name(name):
+    """'신천 (동두천 송천교)' → '신천 · 송천교' (화면 riverName 과 같은 규칙)."""
+    s = str(name or '').strip()
+    i, j = s.find('('), s.rfind(')')
+    if 0 < i < j:
+        site = s[i + 1:j].split()
+        if site:
+            return s[:i].strip() + ' · ' + site[-1]
+    return s
+
+
+def _ev_warn_names(w):
+    """특보 한 건의 지역 → 정규화한 시군 이름들(순서 유지, 중복 없음)."""
+    out = []
+    for part in str(w.get('area') or '').split(','):
+        c = _canon_region(part)
+        if c and c not in out:
+            out.append(c)
+    return out
+
+
+def _ev_trim(events, cutoff):
+    """72시간 안의 것만, 최신순. 강수 줄과 나머지를 따로 센다."""
+    events = [e for e in events if isinstance(e, dict) and str(e.get('ts') or '') >= cutoff]
+    events.sort(key=lambda e: str(e.get('ts') or ''), reverse=True)
+    rain = [e for e in events if e.get('kind') == 'rain'][:EVENTS_MAX_RAIN]
+    other = [e for e in events if e.get('kind') != 'rain'][:EVENTS_MAX_OTHER]
+    return sorted(rain + other, key=lambda e: str(e.get('ts') or ''), reverse=True)
+
+
+def record_events(data, warn_complete=True, now=None, prev_events=None):
+    """이전 회차와 견줘 사건을 기록하고 data['events'](최근 72시간, 최신순)와 warnings[].since 를 채운다.
+    warn_complete: 특보 목록이 온전할 때만 True — 한쪽 출처가 실패한 회차에 '해제'로 오판하지 않게
+    (특보 알림의 핑퐁 방지와 같은 조건).
+    prev_events: 기록 파일이 없을 때(.tmp 가 새로 생긴 서버) 이어받을 이전 data.js 의 events."""
+    now = now or datetime.now()
+    ts = now.strftime('%Y-%m-%d %H:%M:%S')
+
+    def bucket(t):
+        return t[:13].replace('-', '').replace(' ', '') + t[14:15]   # 10분 칸 — 북부·남부가 같은 일을 따로 적어도 같은 키
+
+    state = _ev_load(EVENTS_STATE_PATH, None)
+    if not isinstance(state, dict):
+        state = {}
+    sw = state.get('warn') if isinstance(state.get('warn'), dict) else {}
+    sg = state.get('warn_gone') if isinstance(state.get('warn_gone'), dict) else {}
+    sr = state.get('rain') if isinstance(state.get('rain'), dict) else {}
+    sv = state.get('river') if isinstance(state.get('river'), dict) else {}
+    # 특보는 '온전한 회차를 한 번이라도 본 적이 있나'를 따로 본다 — 첫 회차에 한쪽 출처가 실패하면
+    # 상태가 빈 채로 저장되고, 다음 온전한 회차에 발효 중인 특보가 전부 '방금 발효'로 쏟아진다.
+    warn_first = not state.get('warn_ready')
+    new = []
+
+    def add(kind, lv, text, key, at=None, **extra):
+        ev = {'ts': at or ts, 'kind': kind, 'lv': lv, 'text': text, 'k': key}
+        ev.update({k: v for k, v in extra.items() if v not in (None, '', [])})
+        new.append(ev)
+
+    # ── 특보 ──
+    warnings = [w for w in (data.get('warnings') or []) if isinstance(w, dict) and w.get('type')]
+    cur = {}
+    for w in warnings:
+        names = _ev_warn_names(w)
+        if names:
+            cur.setdefault(str(w['type']).strip(), set()).update(names)
+    if warn_complete:
+        for typ, names in cur.items():
+            known = sw.get(typ) if isinstance(sw.get(typ), dict) else {}
+            sw[typ] = known
+            back = sg.get(typ) if isinstance(sg.get(typ), dict) else {}
+            fresh = sorted(n for n in names if n not in known)
+            for n in fresh:
+                known[n] = None if warn_first else ts      # 처음 잡을 때는 언제부터인지 모른다
+            for n in names:
+                back.pop(n, None)                           # 한 회차 빠졌다가 돌아온 것 — 해제가 아니었다
+            if back:
+                sg[typ] = back
+            else:
+                sg.pop(typ, None)
+            if fresh and not warn_first:
+                add('warn', 'severe' if '경보' in typ else 'warn', typ + ' 발효',
+                    'w|' + typ + '|' + '·'.join(fresh) + '|' + bucket(ts), area=', '.join(fresh))
+        for typ in list(sw):
+            if not isinstance(sw[typ], dict):
+                del sw[typ]
+                continue
+            missing = sorted(n for n in sw[typ] if n not in cur.get(typ, ()))
+            pend = sg.get(typ) if isinstance(sg.get(typ), dict) else {}
+            confirmed = [n for n in missing if n in pend]   # 지난 온전한 회차에도 없었다 → 해제 확정
+            for n in missing:
+                if n not in pend:
+                    pend[n] = ts                            # 처음 빠진 시각을 적어 두고 다음 회차에 확정
+            if confirmed:
+                at = min(str(pend[n]) for n in confirmed)   # 해제 시각 = 처음 빠진 시각
+                for n in confirmed:
+                    del sw[typ][n]
+                    del pend[n]
+                # 주의보 → 경보 격상은 '해제'가 아니다 — 같은 지역에 경보가 떠 있으면 해제 줄을 만들지 않는다
+                upper = cur.get(typ[:-3] + '경보', set()) if typ.endswith('주의보') else set()
+                lifted = [n for n in confirmed if n not in upper]
+                if lifted and not warn_first:
+                    add('warn', 'clear', typ + ' 해제', 'w|' + typ + '|-' + '·'.join(lifted) + '|' + bucket(at),
+                        at=at, area=', '.join(lifted))
+            if pend:
+                sg[typ] = pend
+            else:
+                sg.pop(typ, None)
+            if not sw[typ]:
+                del sw[typ]
+                sg.pop(typ, None)
+        state['warn_ready'] = True
+    for w in warnings:
+        known = sw.get(str(w['type']).strip()) or {}
+        seen = [known.get(n) for n in _ev_warn_names(w)]
+        # 지역 가운데 하나라도 '언제부터인지 모름'이면 붙이지 않는다 — 나중에 늘어난 지역의 시각이 발효 시각처럼 보이지 않게
+        if seen and all(seen):
+            w['since'] = min(seen)[:16]            # 'YYYY-MM-DD HH:MM' — 가장 먼저 본 시각
+
+    # ── 시간당 강수 (실측만 — region['rain'] 은 실측이 없을 때 예보값이 들어가 있어 쓰지 않는다) ──
+    for r in data.get('regions') or []:
+        if not isinstance(r, dict) or not r.get('name'):
+            continue
+        name = str(r['name'])
+        det = r.get('detail') or {}
+        v = _ev_num((det.get('aws') or {}).get('rn60'))
+        if v is None:
+            v = _ev_num((det.get('observation') or {}).get('rn1'))
+        if v is None:
+            continue                               # 실측이 없으면 이전 구간 유지
+        pb = sr.get(name)
+        pb = pb if (type(pb) is int and 0 <= pb <= len(EVENT_RAIN_BANDS)) else None
+        b = _ev_rain_band(v, pb)
+        if pb is not None:
+            if b > pb:
+                th = EVENT_RAIN_BANDS[b - 1]
+                add('rain', 'severe' if th >= 20 else 'warn', '%s 시간당 %dmm 넘음' % (name, th),
+                    'p|%s|%d|%s' % (name, th, bucket(ts)), sub='1시간 %.1fmm' % v, where=[name])
+            elif b == 0 and pb >= 1:
+                add('rain', 'clear', '%s 시간당 5mm 아래로' % name, 'p|%s|0|%s' % (name, bucket(ts)),
+                    sub='1시간 %.1fmm' % v, where=[name])
+        sr[name] = b
+
+    # ── 하천 수위 ──
+    for rv in data.get('rivers') or []:
+        if not isinstance(rv, dict) or rv.get('api') == 'dam' or rv.get('dam_info') or rv.get('suspect'):
+            continue
+        code = str(rv.get('code') or '')
+        val, dg, wn = _ev_num(rv.get('value')), _ev_num(rv.get('danger')), _ev_num(rv.get('warning'))
+        if not code or val is None or dg is None or dg <= 0 or val > dg * 2.5:   # 위험수위 2.5배 초과 = 자료 이상
+            continue
+        pl = sv.get(code) if (type(sv.get(code)) is int and sv.get(code) in (0, 1, 2)) else None
+        lv = 2 if val >= dg else (1 if wn is not None and val >= wn else 0)
+        if pl is not None and lv < pl:
+            # 내려가는 중 — 기준보다 2cm 넘게 떨어져야 내린 것으로 본다
+            if pl == 2 and val > dg - 0.02:
+                lv = 2
+            elif lv == 0 and wn is not None and val > wn - 0.02:
+                lv = 1
+        if pl is not None and lv != pl:
+            nm = _ev_river_name(rv.get('name'))
+            if lv > pl:
+                th = dg if lv == 2 else wn
+                text, elv = (nm + ' 위험수위 넘음', 'severe') if lv == 2 else (nm + ' 주의수위 넘음', 'warn')
+            elif lv == 0 and wn is not None:
+                th = wn
+                text, elv = nm + ' 주의수위 아래로', 'clear'
+            elif lv == 0:
+                th = dg                             # 주의수위가 없는 관측소 — 위험수위에서 바로 정상으로
+                text, elv = nm + ' 위험수위 아래로', 'clear'
+            else:
+                th = dg
+                text, elv = nm + ' 위험수위 아래로', 'warn'
+            add('river', elv, text, 'r|%s|%d|%s' % (code, lv, bucket(ts)),
+                sub='%.2fm · 기준 %.1fm' % (val, th), code=code, sigun=rv.get('sigun'))
+        sv[code] = lv
+
+    # ── 저장 — 상태를 먼저. 상태를 못 쓰면 예외로 끝낸다(기록만 쓰고 상태를 못 쓰면 다음 회차에 같은 줄이 또 생긴다) ──
+    state['warn'], state['warn_gone'], state['rain'], state['river'] = sw, sg, sr, sv
+    _atomic_write_text(EVENTS_STATE_PATH, json.dumps(state, ensure_ascii=False))
+    if Path(EVENTS_PATH).exists():
+        old = _ev_load(EVENTS_PATH, [])
+    else:
+        old = prev_events                           # 기록 파일이 없다(.tmp 가 새로 생김) → 이전 data.js 것을 이어받는다
+    if not isinstance(old, list):
+        old = []
+    cutoff = (now - timedelta(hours=EVENTS_KEEP_H)).strftime('%Y-%m-%d %H:%M:%S')
+    have = {e.get('k') for e in new}
+    events = _ev_trim(new + [e for e in old if isinstance(e, dict) and e.get('k') not in have], cutoff)
+    _atomic_write_text(EVENTS_PATH, json.dumps(events, ensure_ascii=False))
+    data['events'] = events
+    return len(new)
+
+
 WARN_STATE_PATH = TMP / 'notified_warnings.json'
 
 
@@ -4260,10 +4499,21 @@ def main():
         print(f'  ✓ {len(fetched_msgs)}건')
 
     # 화면(normalizeWarningsFromApihub)과 동일하게 허브 특보를 warnings/prelim에 병합.
+    _hub_merge_ok = True
     try:
         merge_apihub_warnings(data)
     except Exception as e:
+        _hub_merge_ok = False      # 병합이 깨진 회차는 특보 목록이 온전하지 않다 → 사건 기록이 '해제'로 오판하지 않게
         print(f'  · 허브 특보 병합 오류: {e}')
+
+    # 사건 기록(특보·강수·하천 변화) — 위젯 상황판이 읽는다. 실패해도 수집은 그대로 간다.
+    try:
+        _n_ev = record_events(data, warn_complete=(warn_ok and apihub_ok and _hub_merge_ok),
+                              prev_events=prev.get('events'))
+        print(f'[사건 기록] 새 {_n_ev}건 · 최근 {EVENTS_KEEP_H}시간 {len(data.get("events") or [])}건')
+    except Exception as e:
+        data['events'] = prev.get('events') or []
+        print(f'[사건 기록] ✗ {type(e).__name__}: {e} — 이전 기록 유지')
 
     # 급변 감지 → 텔레그램 알림 (봇 미설정 시 자동 skip)
     print('[텔레그램 급변 알림]')
