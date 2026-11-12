@@ -18,7 +18,10 @@
      2026-11-12 지금 점검할 곳 — 위험구역 구글시트(관서 탭)를 지금 강수·하천 값과 겹쳐 먼저/다음/평소로 나눔
      · 기준은 CHECK_RULES 한 곳, 확인 표시는 이 브라우저에만(24시간)
      2026-11-12 대응 체크리스트: 평시·주의·경보 단계별 할 일, 항목은 화면에서 직접 편집(기본값은 '예시' 표시)
-     · 목록·체크는 이 브라우저에만 저장(목록 복사·붙여넣기로 다른 PC에 옮김), 체크하면 상황 기록·상황보고에 반영 -->
+     · 목록·체크는 이 브라우저에만 저장(목록 복사·붙여넣기로 다른 PC에 옮김), 체크하면 상황 기록·상황보고에 반영
+     2026-11-12 사후 보고: 상황이 진행되는 동안 최고 단계·최대 강수·최고 수위·조치 진행을 기록해 두었다가(run record) 정상으로 돌아오면 '끝난 상황'으로 7일 보관, 상황보고 위젯 '사후' 양식과 '상황 종료' 띠에서 초안 복사
+     · 화면이 열려 있던 동안의 기록이라는 한계를 문구에 적는다 -->
+
 <script src="region.js"></script>
 <script src="risk-zones.js"></script>
 <script src="map-geo.js"></script>
@@ -226,6 +229,9 @@ table.tb{width:100%;border-collapse:collapse}
 .sitbar.severe{background:var(--severeSoft)}.sitbar.warn{background:var(--warnSoft)}
 .sitbar .lab{font-weight:600}.sitbar .hl{font-weight:500;min-width:0;overflow-wrap:anywhere}.sitbar .since{color:var(--ink2)}
 .sitbar .tag{display:inline-flex;align-items:center;height:24px;padding:0 8px;border:1px solid var(--line2);border-radius:6px;background:var(--card);color:var(--ink2);font-size:12px;font-weight:500}
+.sitbar.ended{background:var(--raised)}
+.repnote{margin-bottom:8px;color:var(--ink3);font-size:12px}
+.btn:disabled{opacity:.5;pointer-events:none}
 
 /* 상황 기록 · 상황보고 */
 .tlctl,.repctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
@@ -450,7 +456,8 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
      값이 '튀는' 게 아니라 멈춰 있어서 서버의 튐 거르기에 안 걸린다). 상태·지도·요약 판정에서 뺀다 */
   function riverBad(r){ return !!r.suspect || (r.danger!=null && r.danger>0 && +r.value > r.danger*2.5); }
   function riverLv(r){ if(riverBad(r)) return 'bad'; if(r.danger!=null && r.value>=r.danger) return 'severe'; if(r.warning!=null && r.value>=r.warning) return 'warn'; return 'safe'; }
-  function riverPct(r){ return r.danger ? Math.max(0, Math.min(1.2, r.value/r.danger)) : 0; }
+  function riverPct(r){ return r.danger ? Math.max(0, Math.min(1.2, r.value/r.danger)) : 0; }   /* 막대 폭용(120% 에서 자름) */
+  function riverPctRaw(r){ return r.danger ? +r.value/r.danger : 0; }   /* 화면·문구에 적는 % 와 순서용(자르지 않음) */
   function riversOf(st){
     var rc=RC.riverCodes||{}, all=(D().rivers||[]).filter(function(r){ return !isDam(r); });
     if(rc[st]) return all.filter(function(r){ return rc[st].indexOf(String(r.code))>=0; });
@@ -490,6 +497,16 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   function digTs(s){ s=String(s||''); if(!/^\d{10}(\d{2})?$/.test(s)) return null; return kstTs(+s.slice(0,4), +s.slice(4,6), +s.slice(6,8), +s.slice(8,10), s.length>=12 ? +s.slice(10,12) : 0); }
   function jget(k, def){ try{ var v=JSON.parse(storeGet(k)||'null'); return v==null ? def : v; }catch(e){ return def; } }
   function dayStart(ts){ var k=kst(ts); return kstTs(k.getUTCFullYear(), k.getUTCMonth()+1, k.getUTCDate(), 0, 0); }
+  function fDur(ms){ var mn=Math.max(0, Math.floor(ms/60000)), hh=Math.floor(mn/60), mm=mn%60; return (hh ? hh+'시간 ' : '')+mm+'분'; }
+  function storeDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+  /* 모의 훈련 저장 자료(.sim 로 끝나는 이 상황판의 키)를 모두 지운다 — 훈련을 새로 시작할 때 */
+  function clearSimKeys(){
+    var ks=[], i, k;
+    try{ for(i=0; i<localStorage.length; i++){ k=localStorage.key(i); if(k && /^ggDash/.test(k) && k.indexOf('.v1.'+(RC.key||'x')+'.')>0 && /\.sim$/.test(k)) ks.push(k); } }catch(e){}
+    ks.forEach(function(key){ storeDel(key); });
+  }
+  /* 모의 상황이 끝났다는 표시(이 탭에서만) — 켜져 있으면 모의 자료를 더 얹지 않는다 */
+  function simOver(){ try{ return SIT.sim && sessionStorage.getItem('ggDashSimEnd')==='1'; }catch(e){ return false; } }
 
   SIT.parseWarnTime = function(s){
     s = String(s||'').trim(); if(!s) return null;
@@ -507,12 +524,42 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   }
   function typeWord(title){ return String(title||'').replace(/\s*(발표|해제|변경).*$/, '').trim(); }
 
+  /* 특보 시각 — 자료의 warnings[].time 은 '가장 최근 통보문 시각'이라 발효 시각이 아니다(통보문이 나올 때마다 앞으로 간다).
+     ① 통보문(warnings_full) 중 가장 최근 '발표' 시각(src '발표') ② 없으면 이 화면이 그 특보를 처음 본 시각(src '현황', 이 브라우저에 기억해 두고 뒤로 밀리지 않게) */
+  function warnSeenKey(){ return sk('ggDashWarnSeen.v1.'); }
+  function warnId(w){ return w.type+'|'+(w.area||''); }
+  SIT.warnTime = function(w, st){
+    var now=Date.now(), best=null;
+    ((D().bulletins||{}).warnings_full||[]).forEach(function(b){
+      var ts=digTs(b.tmFc); if(ts==null || ts>now || now-ts>72*3600000) return;
+      var title=String(b.title||''); if(title.indexOf(w.type)<0 || title.indexOf('발표')<0) return;
+      var cur=String(b.current||''), i=cur.indexOf(':'), area=(i>=0 ? cur.slice(i+1) : '').trim();
+      if(area && area.split(',').every(function(p){ return SEA.test(p); })) return;
+      if(st && !areaHits(area, st)) return;
+      if(best==null || ts>best) best=ts;
+    });
+    if(best!=null) return {ts:best, src:'발표'};
+    var s0=jget(warnSeenKey(), {})[warnId(w)], c=SIT.parseWarnTime(w.time);
+    if(c==null) c=now;
+    return {ts:(s0!=null && s0<c) ? s0 : c, src:'현황'};
+  };
+  /* 처음 본 시각을 적어 두고(한 번 정하면 뒤로 밀지 않고, 더 이른 시각이 나오면 그쪽으로), 이제 없는 특보는 지운다 */
+  SIT.warnSeenUpdate = function(){
+    if(simOver()) return;
+    var old=jget(warnSeenKey(), {}), out={}, now=Date.now();
+    (D().warnings||[]).forEach(function(w){
+      var id=warnId(w), c=SIT.parseWarnTime(w.time); if(c==null) c=now;
+      out[id]=(old[id]!=null && old[id]<c) ? old[id] : c;
+    });
+    storeSet(warnSeenKey(), JSON.stringify(out));
+  };
+
   /* 지금 자료만으로 알 수 있는 일 */
   SIT.derived = function(){
     var d=D(), out=[], buls=[];
     (d.warnings||[]).forEach(function(w){
-      var ts=SIT.parseWarnTime(w.time); if(ts==null) return;
-      out.push({ts:ts, kind:'warn', lv:isBo(w)?'severe':'warn', text:w.type+' 발효', sub:w.area||'', area:w.area||'', key:'w|'+w.type+'|'+w.area, tw:w.type});
+      var wt=SIT.warnTime(w, null); if(wt.src==='발표') return;   /* 발표 통보문 줄이 이미 있다 */
+      out.push({ts:wt.ts, kind:'warn', lv:isBo(w)?'severe':'warn', text:w.type+' 발효 중', sub:w.area||'', area:w.area||'', key:'w|'+w.type+'|'+w.area, tw:w.type});
     });
     ((d.bulletins||{}).warnings_full||[]).forEach(function(b){
       var ts=digTs(b.tmFc); if(ts==null) return;
@@ -520,7 +567,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
       if(area && area.split(',').every(function(p){ return SEA.test(p); })) return;
       buls.push({ts:ts, kind:'warn', lv:/해제/.test(title)?'clear':(/경보/.test(title)?'severe':'warn'), text:title, sub:area, area:area, key:'b|'+b.tmFc+'|'+title, tw:typeWord(title)});
     });
-    out = out.filter(function(e){ return !buls.some(function(b){ return b.tw===e.tw && Math.abs(b.ts-e.ts)<=600000; }); }).concat(buls);
+    out = out.concat(buls);
     var rank={safe:0, warn:1, severe:2};
     (d.rivers||[]).forEach(function(r){
       if(isDam(r) || riverBad(r) || !r.danger) return;
@@ -576,6 +623,8 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
       if(evs.length) SIT.logAdd(evs);
     }
     storeSet(pk, JSON.stringify(cur));
+    try{ SIT.warnSeenUpdate(); }catch(e){ if(window.console) console.error(e); }
+    try{ SIT.track(); }catch(e){ if(window.console) console.error(e); }
   };
 
   /* 출동 메모 — 읽기만 한다 */
@@ -586,13 +635,17 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     if(SIT.notesBusy || (!force && Date.now()-SIT.notesAt < 300000)) return;
     SIT.notesBusy=true; SIT.notesAt=Date.now();
     var room=(RC.key==='north'||RC.key==='south') ? 'all' : (RC.key||'all');
-    var done=function(){ SIT.notesBusy=false; renderAll(); };
+    var fin=false, timer=null;
+    var done=function(){ if(fin) return; fin=true; clearTimeout(timer); SIT.notesBusy=false; renderAll(); };
+    /* 응답이 15초 넘게 없으면 쉬는 표시를 풀어 다음 새로고침이 막히지 않게 한다. 그 뒤에 늦게 온 응답은 무시 */
+    timer=setTimeout(function(){ if(fin) return; fin=true; SIT.notesBusy=false; }, 15000);
     try{
       fetch(DSP_URL+'?key='+encodeURIComponent(room)+'&days=3&code='+encodeURIComponent(code)).then(function(r){ return r.json(); }).then(function(j){
+        if(fin) return;
         if(j && j.ok){ SIT.notes=j.notes||[]; SIT.notesFail=false; } else { SIT.notes=null; SIT.notesFail=true; }
         done();
       }).catch(function(){ done(); });
-    }catch(e){ SIT.notesBusy=false; }
+    }catch(e){ fin=true; clearTimeout(timer); SIT.notesBusy=false; }
   };
   SIT.askKey = function(){
     var v=prompt('출동 메모 열쇠를 넣으세요 (관서에서 함께 쓰는 암호)');
@@ -601,30 +654,43 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   };
   SIT.dispatchEvents = function(){
     return (SIT.notes||[]).map(function(n){
-      return {ts:n.ts, kind:'dispatch', lv:'info', text:'출동 · '+n.type, sub:[n.station, n.place, n.memo].filter(Boolean).join(' · '), where:[n.station], dtype:n.type, key:'d|'+n.id};
+      return {ts:n.ts, kind:'dispatch', lv:'info', text:'출동 · '+n.type, sub:[n.station, n.place, n.memo].filter(Boolean).join(' · '), where:[n.station], dtype:n.type, place:n.place||'', key:'d|'+n.id};
     });
   };
 
-  function mineHit(e){
-    var st=stationNow(), sg=sigunOf(st);
+  function mineHit(e, stn){
+    var st=stn||stationNow(), sg=sigunOf(st);
     if(e.where && e.where.some(function(w){ return w===st || w===sg || sigunOf(w)===sg; })) return true;
     if(e.area && areaHits(e.area, st)) return true;
     if(e.code!=null && riversOf(st).some(function(r){ return String(r.code)===String(e.code); })) return true;
     if(e.region && (e.region===sg || e.region===st)) return true;
     return false;
   }
-  SIT.events = function(scope, hours){
-    var cut=Date.now()-hours*3600000, seen={};
+  /* t0~t1 사이의 일(최신이 앞). stn 은 '내 관서' 판단에 쓸 관서(없으면 지금 고른 관서) */
+  SIT.eventsBetween = function(scope, t0, t1, stn){
+    var seen={};
     return SIT.derived().concat(SIT.logRead(), SIT.dispatchEvents()).filter(function(e){
-      if(!e || e.ts==null || e.ts<cut || seen[e.key]) return false;
-      seen[e.key]=1; return scope==='all' || mineHit(e);
+      if(!e || e.ts==null || e.ts<t0 || e.ts>t1 || seen[e.key]) return false;
+      seen[e.key]=1; return scope==='all' || mineHit(e, stn);
     }).sort(function(a,b){ return b.ts-a.ts; });
   };
+  SIT.events = function(scope, hours){ return SIT.eventsBetween(scope, Date.now()-hours*3600000, Infinity); };
 
-  /* 지금 상황이 있는가 */
-  SIT.state = function(){
-    var st=stationNow(), s=statusOf(st), res, sinceKey=sk('ggDashSit.v1.');
-    var wordOf={warn:'주의', severe:'경보'};
+  /* 지금 상황이 있는가 — 내 관서(mine)와 전체(all) 두 줄을 따로 본다 */
+  var RANK = {safe:0, warn:1, severe:2};
+  SIT.levelOf = function(scope){
+    if(simOver()) return {active:false, lv:'safe'};   /* 모의 상황이 끝났다 — 실제 자료로 모의 상황을 새로 만들지 않는다 */
+    if(scope==='all'){
+      var worst='safe'; ORDER.forEach(function(n){ var l=statusOf(n).lv; if(RANK[l]>RANK[worst]) worst=l; });
+      return {active:worst!=='safe', lv:worst};
+    }
+    var lv=statusOf(stationNow()).lv; return {active:lv!=='safe', lv:lv};
+  };
+  /* 지금 자료로 본 상황 — 저장소는 건드리지 않는다. 내 관서가 주의 이상이면 mine, 아니고 다른 관서가 그렇다면 all */
+  SIT.evalNow = function(){
+    var st=stationNow(), res;
+    if(simOver()) return {active:false, lv:'safe', scope:'mine', headline:''};
+    var s=statusOf(st), wordOf={warn:'주의', severe:'경보'};
     if(s.lv!=='safe'){
       res={active:true, lv:s.lv, scope:'mine', headline:st+' '+(s.lv==='severe'?'경보':'주의')+' · '+s.why.slice(0,3).join(' · ')};
     } else {
@@ -634,20 +700,119 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
         res={active:true, lv:worst, scope:'all', headline:(RC.label||'')+' '+bad.length+'개 관서 주의 이상 · '+bad.slice(0,3).map(function(n){ return n+' '+wordOf[statusOf(n).lv]; }).join(', ')+(bad.length>3?' 외':'')};
       } else res={active:false, lv:'safe', scope:'mine', headline:''};
     }
-    if(!res.active){ try{ localStorage.removeItem(sinceKey); }catch(e){} res.since=null; return res; }
-    var stored=jget(sinceKey, null);
-    if(stored && stored.since){ res.since=stored.since; return res; }
-    var mine=res.scope==='mine', times=[Date.now()];
-    (mine ? s.warns : (D().warnings||[])).forEach(function(w){ var t=SIT.parseWarnTime(w.time); if(t!=null) times.push(t); });
+    return res;
+  };
+  /* 상황이 시작된 때 — 지금 특보 발표(없으면 처음 본) 시각·지금 주의 이상인 하천이 수위를 넘은 가장 최근 시각·지금 중 가장 이른 때 */
+  SIT.sinceOf = function(scope){
+    var st=stationNow(), mine=scope==='mine', times=[Date.now()];
+    (mine ? statusOf(st).warns : (D().warnings||[])).forEach(function(w){ times.push(SIT.warnTime(w, mine ? st : null).ts); });
     var curCodes={};
     (mine ? riversOf(st) : (D().rivers||[]).filter(function(r){ return !isDam(r); })).forEach(function(r){ var l=riverLv(r); if(l==='warn'||l==='severe') curCodes[String(r.code)]=1; });
     var lastUp=null;
     SIT.derived().forEach(function(e){ if(e.kind==='river' && e.up && curCodes[String(e.code)] && (lastUp==null || e.ts>lastUp)) lastUp=e.ts; });
     if(lastUp!=null) times.push(lastUp);
-    res.since=Math.min.apply(null, times);
-    storeSet(sinceKey, JSON.stringify({since:res.since}));
+    return Math.min.apply(null, times);
+  };
+  /* 진행 중 기록(run record)과 가장 최근 끝난 상황 — 내 관서는 관서마다, 전체는 하나. 읽기만 한다(쓰는 곳은 SIT.track 과 닫기 버튼) */
+  function runKey(kind, scope, stn){ return (kind==='last' ? 'ggDashSitLast.v1.' : 'ggDashSit.v1.')+(RC.key||'x')+'.'+scope+(scope==='mine' ? '.'+stn : '')+(SIT.sim ? '.sim' : ''); }
+  SIT.run = function(scope){
+    scope=scope==='all' ? 'all' : 'mine';
+    var r=jget(runKey('run', scope, stationNow()), null); return (r && typeof r==='object' && r.since) ? r : null;
+  };
+  SIT.last = function(scope){
+    scope=scope==='all' ? 'all' : 'mine';
+    var r=jget(runKey('last', scope, stationNow()), null);
+    if(!r || typeof r!=='object' || !r.since || !r.end || Date.now()-r.end>7*86400000) return null;
+    return r;
+  };
+  SIT.dismiss = function(scope){
+    scope=scope==='all' ? 'all' : 'mine';
+    var l=SIT.last(scope); if(l){ l.dismissed=true; storeSet(runKey('last', scope, stationNow()), JSON.stringify(l)); }
+  };
+  SIT.state = function(){
+    var res=SIT.evalNow();
+    if(!res.active){ res.since=null; return res; }
+    var rec=SIT.run(res.scope);
+    res.since=rec ? rec.since : SIT.sinceOf(res.scope);
     return res;
   };
+
+  /* 상황이 진행되는 동안의 기록 — observe 때마다 갱신한다. 상황이 끝나면 10분 넘었거나 경보였을 때만 '끝난 상황'으로 남긴다 */
+  function sitFinish(rec, endTs, rk, lk){
+    if(SIT.sim || endTs-rec.since>=600000 || rec.lvMax==='severe'){ rec.end=endTs; storeSet(lk, JSON.stringify(rec)); }
+    storeDel(rk);
+  }
+  SIT.trackOne = function(scope, stn, now){
+    var rk=runKey('run', scope, stn), lk=runKey('last', scope, stn), lv=SIT.levelOf(scope), mine=scope==='mine', rec=jget(rk, null);
+    if(rec && !(typeof rec==='object' && rec.since)) rec=null;
+    if(rec){
+      /* 화면이 30분 넘게 닫혀 있었다면 끝난 때는 마지막으로 본 때. 다시 켰을 때 시작 시각이 그 뒤라면 새 상황 */
+      var stale=!!rec.lastSeen && now-rec.lastSeen>1800000, endTs=stale ? rec.lastSeen : now;
+      if(!lv.active || (stale && SIT.sinceOf(scope)>rec.lastSeen)){ sitFinish(rec, endTs, rk, lk); rec=null; }
+    }
+    if(!lv.active) return;
+    if(!rec){ rec={since:SIT.sinceOf(scope), scope:scope, lvMax:lv.lv, lastSeen:now, warns:[]}; if(mine) rec.station=stn; }
+    rec.lastSeen=now;
+    if(RANK[lv.lv]>RANK[rec.lvMax||'warn']) rec.lvMax=lv.lv;
+    /* 특보 종류 — 처음 본 때(더 이른 시각이 나오면 그쪽으로) */
+    rec.warns=rec.warns||[];
+    (mine ? statusOf(stn).warns : (D().warnings||[])).forEach(function(w){
+      if(!w.type) return;
+      var wt=SIT.warnTime(w, mine ? stn : null), cur=null;
+      rec.warns.forEach(function(x){ if(x.type===w.type) cur=x; });
+      if(!cur) rec.warns.push({type:w.type, ts:wt.ts, src:wt.src});
+      else if(wt.ts<cur.ts){ cur.ts=wt.ts; cur.src=wt.src; }
+    });
+    /* 최대 강수 — 내 관서는 그 관서만, 전체는 모든 관서(같은 시의 두 관서는 한 번만) */
+    var seenSg={}, sts=mine ? [stn] : ORDER.filter(function(n){ var g=sigunOf(n); if(seenSg[g]) return false; seenSg[g]=1; return true; });
+    sts.forEach(function(n){
+      var reg=regOf(n), v=rain1h(reg), dv=rainDay(reg);
+      if(v!=null && !isNaN(v) && v>0 && (!rec.r1 || v>rec.r1.v)) rec.r1={v:v, st:n, ts:now};
+      if(dv!=null && !isNaN(dv) && dv>0 && (!rec.day || dv>rec.day.v)) rec.day={v:dv, st:n, d:fMD(now)};
+    });
+    /* 가장 높은 하천 수위(위험수위 대비) — 자료 이상은 뺀다 */
+    (mine ? riversOf(stn) : (D().rivers||[]).filter(function(r){ return !isDam(r); })).forEach(function(r){
+      if(riverBad(r) || !r.danger || r.value==null || isNaN(+r.value)) return;
+      var pct=Math.round(riverPctRaw(r)*1000)/10;
+      if(!rec.river || pct>rec.river.pct) rec.river={name:r.name||'', value:+r.value, danger:+r.danger, pct:pct, ts:now};
+    });
+    /* 조치 진행 — 내 관서만. 점검은 확인한 곳이 가장 많았던 때, 체크리스트는 가장 높은 단계에서 가장 많이 한 때 */
+    if(mine){
+      try{
+        var pz=RISKZ.peek(stn);
+        if(pz && pz.state==='ok'){
+          var f1=checkZones(stn, pz.items, checkLive(stn)).filter(function(z){ return z.tier==='first'; });
+          if(f1.length){ var cm=f1.filter(function(z){ return z.ts; }).length; if(!rec.chk || cm>=rec.chk.m) rec.chk={n:f1.length, m:cm}; }
+        }
+      }catch(x){}
+      if(lv.lv==='warn' || lv.lv==='severe'){
+        try{
+          var tp=TODO.progress(lv.lv), od=rec.todo;
+          if(tp && tp.n>0 && (!od || RANK[lv.lv]>RANK[od.stage] || (lv.lv===od.stage && tp.m>=od.m))) rec.todo={stage:lv.lv, n:tp.n, m:tp.m};
+        }catch(x){}
+      }
+    }
+    storeSet(rk, JSON.stringify(rec));
+  };
+  /* 다른 관서를 보다가 두고 온 내 관서 기록 — 30분 넘게 갱신이 없으면 마지막으로 본 때로 끝낸다 */
+  SIT.sweep = function(now){
+    var pre='ggDashSit.v1.'+(RC.key||'x')+'.mine.', cur=runKey('run', 'mine', stationNow()), ks=[], i, k;
+    try{ for(i=0; i<localStorage.length; i++){ k=localStorage.key(i); if(k && k.indexOf(pre)===0) ks.push(k); } }catch(e){ return; }
+    ks.forEach(function(key){
+      if(key===cur || /\.sim$/.test(key)!==!!SIT.sim) return;
+      var rec=jget(key, null);
+      if(!rec || !rec.since || !rec.lastSeen || now-rec.lastSeen<=1800000) return;
+      sitFinish(rec, rec.lastSeen, key, 'ggDashSitLast.v1.'+key.slice('ggDashSit.v1.'.length));
+    });
+  };
+  SIT.track = function(){
+    var now=Date.now();
+    try{ SIT.sweep(now); }catch(e){ if(window.console) console.error(e); }
+    try{ SIT.trackOne('mine', stationNow(), now); }catch(e){ if(window.console) console.error(e); }
+    try{ SIT.trackOne('all', null, now); }catch(e){ if(window.console) console.error(e); }
+  };
+  /* 예전 형식(관서·범위 구분 없는 기록)은 지운다 */
+  ['ggDashSit.v1.', 'ggDashSitLast.v1.'].forEach(function(b){ storeDel(b+(RC.key||'x')); storeDel(b+(RC.key||'x')+'.sim'); });
 
   /* 복사 */
   function copyText(t, btn){
@@ -665,9 +830,15 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   /* 상황 띠 */
   SIT.renderBar = function(){
     var el=$('sitbar'); if(!el) return;
-    var s=SIT.state();
-    if(!s.active && !SIT.sim){ el.hidden=true; el.innerHTML=''; el.className='sitbar'; return; }
-    el.hidden=false; el.className='sitbar'+(s.active ? ' '+s.lv : '');
+    var s=SIT.state(), ended=null, endSc='mine';
+    if(!s.active){
+      /* 끝난 상황 — 내 관서 것을 먼저, 없으면 전체 것. 6시간 안에 끝났고 닫지 않은 것만 */
+      var okEnd=function(l){ return !!l && !l.dismissed && Date.now()-l.end<=6*3600000; };
+      var lm=SIT.last('mine'), la=SIT.last('all');
+      if(okEnd(lm)) ended=lm; else if(okEnd(la)){ ended=la; endSc='all'; }
+    }
+    if(!s.active && !SIT.sim && !ended){ el.hidden=true; el.innerHTML=''; el.className='sitbar'; return; }
+    el.hidden=false; el.className='sitbar'+(s.active ? ' '+s.lv : (ended ? ' ended' : ''));
     var h='';
     if(SIT.sim) h+='<span class="tag">모의 훈련 자료</span>';
     if(s.active){
@@ -675,7 +846,12 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
       h+='<span class="dot '+s.lv+'"></span><span class="lab">상황 진행 중</span><span class="hl">'+esc(s.headline)+'</span>'+
         '<span class="since">'+fHM(s.since)+'부터 · '+(hh ? hh+'시간 ' : '')+mm+'분째</span><span class="sp"></span>'+
         '<button class="btn" data-a="log">상황 기록</button><button class="btn" data-a="copy">보고 문구 복사</button>';
+    } else if(ended){
+      h+='<span class="dot"></span><span class="lab">상황 종료</span><span class="hl">'+esc(ended.scope==='all' ? (RC.label||'') : (ended.station||''))+' · 최고 '+(ended.lvMax==='severe' ? '경보' : '주의')+'</span>'+
+        '<span class="muted">'+fMDHM(ended.since)+' ~ '+(dayStart(ended.end)===dayStart(ended.since) ? fHM(ended.end) : fMDHM(ended.end))+' · '+fDur(ended.end-ended.since)+'</span><span class="sp"></span>'+
+        '<button class="btn" data-a="afcopy">사후 보고 복사</button><button class="btn" data-a="afclose">닫기</button>';
     } else h+='<span class="sp"></span>';
+    if(SIT.sim && s.active) h+='<button class="btn" data-a="simend">모의 상황 종료</button>';
     if(SIT.sim) h+='<button class="btn" data-a="endsim">모의 끝내기</button>';
     el.innerHTML=h;
     var on=function(a, fn){ var b=el.querySelector('[data-a="'+a+'"]'); if(b) b.onclick=function(){ fn(b); }; };
@@ -687,6 +863,9 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
       if(node && node.scrollIntoView) node.scrollIntoView({behavior:'smooth', block:'center'});
     });
     on('copy', function(b){ copyText(SIT.report(s.scope, 'full'), b); });
+    on('afcopy', function(b){ var a=SIT.after(endSc); if(a) copyText(a.text, b); });
+    on('afclose', function(){ SIT.dismiss(endSc); SIT.renderBar(); });
+    on('simend', function(){ try{ sessionStorage.setItem('ggDashSimEnd', '1'); }catch(e){} location.reload(); });
     on('endsim', function(){ window.DASHW.sim(false); });
   };
 
@@ -703,7 +882,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
       L.push(bad.length ? '■ 상태: 주의 이상 '+bad.length+'개 관서 ('+bad.slice(0,5).map(function(n){ return n+' '+(statusOf(n).lv==='severe'?'경보':'주의'); }).join(', ')+(bad.length>5?' 외':'')+')' : '■ 상태: 전 관서 정상');
     }
     var ws=(d.warnings||[]).filter(function(w){ return !mine || areaHits(w.area, st); });
-    L.push(ws.length ? '■ 특보: '+ws.map(function(w){ var t=SIT.parseWarnTime(w.time); return w.type+(t!=null ? '('+fT(t)+' 발효)' : '')+' '+(w.area||''); }).join(' / ') : '■ 특보: 발효 없음');
+    L.push(ws.length ? '■ 특보: '+ws.map(function(w){ var wt=SIT.warnTime(w, mine ? st : null); return w.type+'('+fT(wt.ts)+(wt.src==='발표' ? ' 발표' : ' 현황 기준')+') '+(w.area||''); }).join(' / ') : '■ 특보: 발효 없음');
     if(mine){
       var reg=regOf(st), r1=rain1h(reg), rd=rainDay(reg);
       if(r1!=null) L.push('■ 강수: '+st+' 1시간 '+num(r1,1)+'mm'+(rd!=null ? ' · 오늘 누적 '+num(rd,1)+'mm' : ''));
@@ -717,9 +896,9 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
       }
     }
     var rv=(mine ? riversOf(st) : (d.rivers||[]).filter(function(r){ return !isDam(r); })).filter(function(r){ if(!r.danger) return false; var l=riverLv(r); return l==='warn'||l==='severe'; });
-    rv.sort(function(a,b){ return riverPct(b)-riverPct(a); });
+    rv.sort(function(a,b){ return riverPctRaw(b)-riverPctRaw(a); });
     L.push(rv.length ? '■ 하천: '+rv.slice(0,5).map(function(r){ var p=riverParts(r), nm=p.river+(p.site ? ' '+p.site.split(/\s+/).pop() : '');
-      return nm+(riverLv(r)==='severe' ? ' 위험수위 넘음' : ' 주의수위 넘음')+'('+Math.round(riverPct(r)*100)+'%)'; }).join(' / ') : '■ 하천: 주의수위 넘은 곳 없음');
+      return nm+(riverLv(r)==='severe' ? ' 위험수위 넘음' : ' 주의수위 넘음')+'('+Math.round(riverPctRaw(r)*100)+'%)'; }).join(' / ') : '■ 하천: 주의수위 넘은 곳 없음');
     if(mine){
       try{
         var rk=RISKZ.peek(st);
@@ -758,9 +937,86 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     return L.join('\n');
   };
 
+  /* 사후 보고 초안 — 진행 중이면 지금까지, 끝났으면 가장 최근 끝난 상황(7일 안). 기록해 둔 사실만 적고 평가·권고는 쓰지 않는다 */
+  SIT.after = function(scope){
+    scope=scope==='all' ? 'all' : 'mine';
+    var rec=null, ongoing=false;
+    if(SIT.levelOf(scope).active){ rec=SIT.run(scope); ongoing=!!rec; }
+    if(!rec) rec=SIT.last(scope);
+    if(!rec) return null;
+    var now=Date.now(), end=ongoing ? now : rec.end, mine=scope==='mine', stn=rec.station||stationNow();
+    var fR=function(ts){ return dayStart(ts)===dayStart(rec.since) ? fHM(ts) : fMDHM(ts); };
+    var fm=function(v){ return (+v).toFixed(2).replace(/0$/, ''); };
+    var warns=(rec.warns||[]).slice().sort(function(a,b){ return a.ts-b.ts; });
+    var wide=warns.some(function(w){ return String(w.type||'').indexOf('호우')>=0; }) ? '호우' : '기상';
+    var secs=[], lines;
+    /* 1. 개요 */
+    lines=[];
+    lines.push(' - 기간: '+fMDHM(rec.since)+' ~ '+(ongoing ? '진행 중 ('+fDur(now-rec.since)+'째)' : fMDHM(end)+' ('+fDur(end-rec.since)+')'));
+    lines.push(' - 최고 단계: '+(rec.lvMax==='severe' ? '경보' : '주의'));
+    lines.push(' - 특보: '+(warns.length ? warns.map(function(w){ return w.type+'('+fR(w.ts)+(w.src==='발표' ? ' 발표' : (w.src==='현황' ? ' 현황 기준' : ''))+')'; }).join(' → ') : '없음'));
+    secs.push({t:'개요', l:lines});
+    /* 2. 기상·수위 */
+    lines=[];
+    if(rec.r1) lines.push(' - 최대 1시간 강수: '+num(rec.r1.v,1)+'mm ('+rec.r1.st+', '+fR(rec.r1.ts)+' 관측)');
+    if(rec.day) lines.push(' - 일 누적 강수 최대: '+num(rec.day.v,1)+'mm ('+rec.day.st+(rec.day.d ? ', '+rec.day.d : '')+')');
+    if(rec.river){
+      var rp=riverParts({name:rec.river.name});
+      lines.push(' - 하천 최고: '+rp.river+(rp.site ? ' '+rp.site.split(/\s+/).pop() : '')+' '+fm(rec.river.value)+'m (위험수위 '+fm(rec.river.danger)+'m의 '+Math.round(rec.river.pct)+'%, '+fR(rec.river.ts)+')');
+    }
+    secs.push({t:'기상·수위', l:lines});
+    /* 이 기간의 기록 */
+    var evs=SIT.eventsBetween(scope, rec.since-1800000, end, stn).slice().reverse();   /* 오래된 것부터 */
+    var noteLines=function(list, strip){
+      var out=list.slice(0,12).map(function(e){ return '   · '+fR(e.ts)+' '+(strip ? String(e.text||'').replace(strip, '') : e.text); });
+      if(list.length>12) out.push('   · 그 밖에 '+(list.length-12)+'건');
+      return out;
+    };
+    var notes=evs.filter(function(e){ return e.kind==='note'; });
+    var doneN=notes.filter(function(e){ return /^조치 · /.test(e.text||''); });
+    var chkN=notes.filter(function(e){ return /^점검 · /.test(e.text||''); });
+    var otherN=notes.filter(function(e){ return !/^(점검|조치) · /.test(e.text||''); });
+    /* 3. 조치 */
+    lines=[];
+    if(rec.todo && rec.todo.n>0) lines.push(' - 대응 체크리스트: '+(TODO_LAB[rec.todo.stage]||'')+' 단계 '+rec.todo.n+'개 중 '+rec.todo.m+'개 완료');
+    if(rec.chk && rec.chk.n>0) lines.push(' - 위험구역 점검: 먼저 볼 곳 '+rec.chk.n+'곳 중 '+rec.chk.m+'곳 확인');
+    if(doneN.length){ lines.push(' - 조치 기록'); noteLines(doneN, /^조치 · /).forEach(function(x){ lines.push(x); }); }
+    if(chkN.length){ lines.push(' - 점검 기록'); noteLines(chkN, /^점검 · /).forEach(function(x){ lines.push(x); }); }
+    if(otherN.length){ lines.push(' - 그 밖의 기록'); noteLines(otherN, null).forEach(function(x){ lines.push(x); }); }
+    secs.push({t:'조치', l:lines});
+    /* 4. 출동 — 출동 메모를 읽어 온 경우만 */
+    lines=[];
+    var dsp=(SIT.notes && !SIT.sim) ? evs.filter(function(e){ return e.kind==='dispatch'; }) : [];
+    if(dsp.length){
+      var by={}, order=[];
+      dsp.forEach(function(e){ if(!by[e.dtype]){ by[e.dtype]=0; order.push(e.dtype); } by[e.dtype]++; });
+      lines.push(' - 모두 '+dsp.length+'건 ('+order.map(function(t){ return t+' '+by[t]; }).join(', ')+')');
+      dsp.slice(0,12).forEach(function(e){ lines.push(' - '+fR(e.ts)+' '+e.dtype+(e.place ? ' · '+e.place : '')); });
+      if(dsp.length>12) lines.push(' - 그 밖에 '+(dsp.length-12)+'건');
+    }
+    secs.push({t:'출동', l:lines});
+    /* 5. 시간대별 경과 — 기록해 둔 특보 시각은 지금 자료에 없으면 여기서 보탠다 */
+    /* 수동 기록·점검·조치는 위 '조치' 절에 이미 있다 — 경과에는 특보·강수·수위처럼 자동으로 잡힌 일만 (같은 줄이 두 번 나오지 않게) */
+    var tl=evs.filter(function(e){ return e.kind!=='msg' && e.kind!=='dispatch' && e.kind!=='note'; });
+    warns.forEach(function(w){
+      if(w.ts<rec.since-1800000 || w.ts>end) return;
+      if(!tl.some(function(e){ return e.kind==='warn' && e.tw===w.type && Math.abs(e.ts-w.ts)<=60000; })) tl.push({ts:w.ts, kind:'warn', text:w.type+(w.src==='발표' ? ' 발표' : ' 발효 중')});
+    });
+    tl.sort(function(a,b){ return a.ts-b.ts; });
+    lines=tl.slice(0,30).map(function(e){ return ' - '+fR(e.ts)+' '+e.text; });
+    if(tl.length>30) lines.push(' - 그 밖에 '+(tl.length-30)+'건');
+    secs.push({t:'시간대별 경과', l:lines});
+
+    var L=[(SIT.sim ? '[모의 훈련] ' : '')+'['+(RC.label||'')+(mine ? ' '+stn : '')+' '+wide+' 상황 사후 보고 (초안)]'], n=0;
+    secs.forEach(function(s){ if(!s.l.length) return; n++; L.push(n+'. '+s.t); s.l.forEach(function(x){ L.push(x); }); });
+    L.push('※ 화면에 남은 기록으로 만든 초안입니다 · 강수 최대값은 화면이 열려 있던 동안의 관측값입니다');
+    L.push('※ 자료: 기상청 · 한강홍수통제소');
+    return {text:L.join('\n'), rec:rec, ongoing:ongoing};
+  };
+
   /* 모의 훈련 — 받아 온 자료를 제자리에서 바꾼다. 실제 기록과는 저장 키가 다르다 */
   SIT.applySim = function(data){
-    if(!SIT.sim || !data) return;
+    if(!SIT.sim || !data || simOver()) return;
     var me=stationNow(), n=ORDER.length, i=ORDER.indexOf(me), nb=[], now=Date.now();
     /* 이웃 둘 — 같은 시(분당→성남, 일산→고양)는 건너뛴다. 특보 지역에 같은 이름이 두 번 나오지 않게 */
     for(var k=1, seenSg=[sigunOf(me)]; k<n && nb.length<2; k++){ var cand=ORDER[(i+k)%n]; if(seenSg.indexOf(sigunOf(cand))<0){ seenSg.push(sigunOf(cand)); nb.push(cand); } }
@@ -846,9 +1102,10 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     if(admin && admin!==st) tabs.push(admin);
     var add=function(list){ list.forEach(function(z){ if(!seen[z.id]){ seen[z.id]=1; items.push(z); } }); };
     var finish=function(state){
-      var res={t:Date.now(), state:state, items:state==='ok' ? items : []};
+      /* 요청이 하나라도 실패했으면(네트워크·429·오류 화면) 찾은 줄은 보여 주되 보관하지 않고 5분 뒤 다시 읽는다 */
+      var res={t:Date.now(), state:state, items:state==='ok' ? items : [], partial:soft && state!=='fail'};
       RISKZ.cache[st]=res;
-      if(state!=='fail'){ try{ sessionStorage.setItem('ggRiskZ.v1.'+st, JSON.stringify(res)); }catch(e){} }
+      if(state!=='fail' && !res.partial){ try{ sessionStorage.setItem('ggRiskZ.v1.'+st, JSON.stringify(res)); }catch(e){} }
       try{ renderAll(); }catch(e){ if(window.console) console.error(e); }
     };
     var step=function(i){
@@ -865,7 +1122,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   /* 보관된 결과(없으면 null). 읽기 실패는 5분 뒤, 나머지는 30분 뒤 다시 읽는다 */
   RISKZ.real = function(st){
     var c=RISKZ.cache[st], now=Date.now();
-    if(c && now-c.t < (c.state==='loading' ? 60000 : (c.state==='fail' ? 300000 : 1800000))) return c;
+    if(c && now-c.t < (c.state==='loading' ? 60000 : ((c.state==='fail' || c.partial) ? 300000 : 1800000))) return c;
     try{
       var s=JSON.parse(sessionStorage.getItem('ggRiskZ.v1.'+st)||'null');
       if(s && s.t && now-s.t < 1800000 && (s.state==='ok' || s.state==='none') && Array.isArray(s.items)){ RISKZ.cache[st]={t:s.t, state:s.state, items:s.items}; return RISKZ.cache[st]; }
@@ -998,7 +1255,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   W.rivers = { title:'하천 수위', w:6, h:6, render:function(el, inst){
     var mine=(inst.opt||{}).mine===true, st=stationNow();
     var rv=(mine?riversOf(st):(D().rivers||[]).filter(function(r){ return !isDam(r); })).filter(function(r){ return r.danger; });
-    rv.sort(function(a,b){ return (riverBad(a)?-1:riverPct(a))<(riverBad(b)?-1:riverPct(b)) ? 1 : -1; });   /* 자료 이상은 맨 아래로 */
+    rv.sort(function(a,b){ return (riverBad(a)?-1:riverPctRaw(a))<(riverBad(b)?-1:riverPctRaw(b)) ? 1 : -1; });   /* 자료 이상은 맨 아래로 */
     var h=seg('mine', mine?1:0, [[0,'전체'],[1,'내 관서']]);
     if(!rv.length){ el.innerHTML=h+'<div class="calm">'+(mine?esc(st)+' 관할 ':'')+'관측소 없음</div>'; tabs(el, inst); return; }
     var SCALE=1.2;   /* 막대 끝 = 위험수위의 120% */
@@ -1009,7 +1266,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
       var tip = esc(r.name)+' '+num(r.value,2)+'m · 주의 '+num(r.warning,1)+'m · 위험 '+num(r.danger,1)+'m';
       return '<div class="gauge '+lv+'" title="'+tip+'"><span class="n"><b>'+esc(parts.river)+'</b><span>'+esc(parts.site||r.sigun||'')+'</span></span>'+
         '<span class="staff">'+fill+(tw!=null?'<span class="tk w" style="left:'+tw+'%"></span>':'')+'<span class="tk d" style="left:'+(100/SCALE)+'%"></span></span>'+
-        '<span class="v">'+(lv==='bad'?'자료 이상':Math.round(p*100)+'%')+'</span></div>'; }).join('')+'</div>';
+        '<span class="v">'+(lv==='bad'?'자료 이상':Math.round(riverPctRaw(r)*100)+'%')+'</span></div>'; }).join('')+'</div>';
     h+='<div class="legend"><span><i class="tkw"></i>주의수위</span><span><i class="tkd"></i>위험수위</span><span>값 = 위험수위 대비 %</span>'+(rv.length>16?'<span>그 밖에 '+(rv.length-16)+'곳</span>':'')+'</div>';
     el.innerHTML=h; tabs(el, inst);
   }};
@@ -1018,7 +1275,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     if(!all.length){ el.innerHTML='<div class="calm">추이 자료 없음</div>'; return; }
     var mineR=riversOf(stationNow()).filter(function(r){ return (r.history||[]).length>1; });
     var code=(inst.opt||{}).code, r=all.filter(function(x){ return String(x.code)===String(code); })[0];
-    if(!r){ var pool=(mineR.length?mineR:all).filter(function(x){ return !riverBad(x); }).sort(function(a,b){ return riverPct(b)-riverPct(a); }); r=pool[0]||all[0]; }
+    if(!r){ var pool=(mineR.length?mineR:all).filter(function(x){ return !riverBad(x); }).sort(function(a,b){ return riverPctRaw(b)-riverPctRaw(a); }); r=pool[0]||all[0]; }
     var sel='<select data-o="code" aria-label="관측소" style="height:28px;max-width:100%;margin-bottom:12px;padding:0 8px;border-radius:8px;border:1px solid var(--line2);background:var(--raised);font-size:13px">'+
       all.slice().sort(function(a,b){ return riverName(a)<riverName(b)?-1:1; }).map(function(x){ return '<option value="'+esc(x.code)+'"'+(x===r?' selected':'')+'>'+esc(riverName(x))+'</option>'; }).join('')+'</select>';
     var hs=r.history.slice(-24), vals=hs.map(function(p){ return +p.value; }).filter(function(v){ return !isNaN(v); });
@@ -1059,9 +1316,11 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     el.innerHTML='<table class="tb">'+f.map(function(x){ var k=c(+x.level); return '<tr><td>'+esc(x.region)+'</td><td class="'+(k?'t-'+k:'')+'">'+esc(x.levelText||x.level)+'</td></tr>'; }).join('')+'</table>';
   }};
 
-  W.timeline = { title:'상황 기록', w:4, h:8, render:function(el, inst){
+  W.timeline = { title:'상황 기록', w:4, h:8, render:function(el, inst, force){
+    /* 한 줄 기록 칸에 초점이 있으면(한글 입력 중일 수 있다) 자동 새로 그리기는 건너뛴다. 기록을 올린 뒤에는 force 로 그린다 */
+    var ae=document.activeElement;
+    if(!force && ae && ae.className && String(ae.className).indexOf('tl-in')>=0 && el.contains(ae)) return;
     var o=inst.opt||{}, scope=o.scope==='all'?'all':'mine', hrs=String(o.hrs)==='72'?72:24;
-    var old=el.querySelector('.tl-in'), keep=old?old.value:'', focused=!!old && document.activeElement===old;
     var all=SIT.events(scope, hrs), evs=all.slice(0,80), days=['일','월','화','수','목','금','토'];
     var h='<div class="tlctl">'+seg('scope', scope, [['mine','내 관서'],['all','전체']])+seg('hrs', String(hrs), [['24','24시간'],['72','3일']])+'</div>'+
       '<div class="tlnote"><input class="tl-in" type="text" maxlength="60" placeholder="한 줄 기록 (예: 비상 1단계 발령)" aria-label="한 줄 기록"><button class="btn tl-add">기록</button></div>';
@@ -1086,20 +1345,27 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     }
     h+='</div>';
     el.innerHTML=h; tabs(el, inst);
-    var inp=el.querySelector('.tl-in'); if(keep) inp.value=keep; if(focused) inp.focus();
-    var add=function(){ var v=inp.value.trim(); if(!v) return; SIT.addNote(v); inp.value=''; W.timeline.render(el, inst); };
+    var inp=el.querySelector('.tl-in');
+    var add=function(){ var v=inp.value.trim(); if(!v) return; SIT.addNote(v); inp.value=''; W.timeline.render(el, inst, true); var ni=el.querySelector('.tl-in'); if(ni) ni.focus(); };
     el.querySelector('.tl-add').onclick=add;
     inp.onkeydown=function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); add(); } };
-    el.querySelectorAll('.tlx').forEach(function(b){ b.onclick=function(){ SIT.delNote(b.getAttribute('data-k')); W.timeline.render(el, inst); }; });
+    el.querySelectorAll('.tlx').forEach(function(b){ b.onclick=function(){ SIT.delNote(b.getAttribute('data-k')); W.timeline.render(el, inst, true); }; });
     var kb=el.querySelector('.tl-key'); if(kb) kb.onclick=function(){ SIT.askKey(); };
   }};
   W.report = { title:'상황보고', w:4, h:8, render:function(el, inst){
-    var o=inst.opt||{}, scope=o.scope==='all'?'all':'mine', form=o.form==='brief'?'brief':'full';
-    var text=SIT.report(scope, form);
-    el.innerHTML='<div class="repctl">'+seg('scope', scope, [['mine','내 관서'],['all','전체']])+seg('form', form, [['full','상세'],['brief','간단']])+'<button class="btn rep-copy">복사</button></div>'+
-      '<pre class="rep">'+esc(text)+'</pre>';
+    var o=inst.opt||{}, scope=o.scope==='all'?'all':'mine', form=o.form==='brief'?'brief':(o.form==='after'?'after':'full');
+    var af=(form==='after') ? SIT.after(scope) : null, text, note='', body;
+    if(form==='after'){
+      text=af ? af.text : '';
+      if(af) note='<div class="repnote">'+(af.ongoing ? '진행 중인 상황 기준' : '끝난 상황 · '+fMDHM(af.rec.end)+' 종료')+'</div>';
+      body=af ? '<pre class="rep">'+esc(text)+'</pre>' : '<div class="calm">최근 7일 안에 끝난 상황이 없습니다</div>';
+    } else {
+      text=SIT.report(scope, form);
+      body='<pre class="rep">'+esc(text)+'</pre>';
+    }
+    el.innerHTML='<div class="repctl">'+seg('scope', scope, [['mine','내 관서'],['all','전체']])+seg('form', form, [['full','상세'],['brief','간단'],['after','사후']])+'<button class="btn rep-copy"'+((form==='after' && !af) ? ' disabled' : '')+'>복사</button></div>'+note+body;
     tabs(el, inst);
-    el.querySelector('.rep-copy').onclick=function(){ copyText(text, this); };
+    el.querySelector('.rep-copy').onclick=function(){ if(text) copyText(text, this); };
   }};
 
   /* ── 지금 점검할 곳 ── 위험구역 시트의 곳을 지금 강수·특보·하천 값과 겹쳐 먼저/다음/평소로 나눈다. 화면은 사실과 기준만 적는다 ── */
@@ -1123,10 +1389,9 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   function checkNum(v){ return (v==null || v==='' || isNaN(+v)) ? null : +v; }
   /* 이 관서의 지금 값. 없는 값은 null (그 검사는 건너뜀) */
   function checkLive(st){
-    var reg=regOf(st), cum=((reg||{}).detail||{}).rain_cumul||{}, rd=rainDay(reg), c12=checkNum(cum['12h']);
-    var L={ r1:rain1h(reg), r3:checkNum(cum['3h']), r12:null, f6:null, wBo:false, wJu:false, sv:[], wn:[] };
-    rd = checkNum(rd);
-    if(c12!=null || rd!=null) L.r12 = Math.max(c12==null ? -1 : c12, rd==null ? -1 : rd);
+    var reg=regOf(st), cum=((reg||{}).detail||{}).rain_cumul||{}, c12=checkNum(cum['12h']);
+    if(c12==null) c12=checkNum(((((reg||{}).detail||{}).aws)||{}).rn12h);   /* 12시간 값만 — 오늘 0시부터의 누적은 12시간이 아니다 */
+    var L={ r1:rain1h(reg), r3:checkNum(cum['3h']), r12:c12, day:checkNum(rainDay(reg)), f6:null, wBo:false, wJu:false, sv:[], wn:[] };
     var uf=((D().ultra_fcst||{})[sigunOf(st)]||[]).slice(0,6);
     if(uf.length) L.f6 = Math.max.apply(null, uf.map(function(u){ return +u.rain_mm||0; }));
     (D().warnings||[]).filter(function(w){ return areaHits(w.area, st) && String(w.type||'').indexOf('호우')>=0; }).forEach(function(w){ if(isBo(w)) L.wBo=true; else L.wJu=true; });
@@ -1148,9 +1413,17 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   }
   /* 확인 표시 — 이 브라우저에만, 24시간 */
   function chkKey(){ return 'ggDashChk.v1.'+(RC.key||'x')+(SIT.sim ? '.sim' : ''); }
-  function chkRead(){
-    var m=jget(chkKey(), {}), out={}, cut=Date.now()-86400000;
-    if(m && typeof m==='object') Object.keys(m).forEach(function(k){ if(+m[k]>=cut) out[k]=+m[k]; });
+  /* 확인·체크 표시가 '이번 상황'의 것인가 — 내 관서 상황이 진행 중이면 그 시작(30분 전)부터, 아니면 24시간 안.
+     저장된 표시를 지우는 건 예전처럼 24시간이 지났을 때뿐 */
+  function markFloor(){
+    var cut=Date.now()-86400000, r=null;
+    try{ if(SIT.levelOf('mine').active) r=SIT.run('mine'); }catch(e){}
+    return (r && r.since) ? Math.max(cut, r.since-1800000) : cut;
+  }
+  function markLive(ts, fl){ return ts>=(fl==null ? markFloor() : fl); }
+  function chkRead(raw){
+    var m=jget(chkKey(), {}), out={}, cut=Date.now()-86400000, fl=raw ? cut : markFloor();
+    if(m && typeof m==='object') Object.keys(m).forEach(function(k){ if(+m[k]>=cut && markLive(+m[k], fl)) out[k]=+m[k]; });
     return out;
   }
   function chkWrite(m){ storeSet(chkKey(), JSON.stringify(m)); }
@@ -1191,7 +1464,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     var o=inst.opt||{}, L=checkLive(st), zs=checkZones(st, rz.items, L), by={first:[], next:[], rest:[]}, shown=[], secN=0, h='';
     zs.forEach(function(z){ by[z.tier].push(z); });
     var hm=function(ts){ return fHM(ts); };
-    var live=[]; if(L.r1!=null) live.push('1시간 '+num(L.r1,1)); if(L.r3!=null) live.push('3시간 '+num(L.r3,1)); if(L.r12!=null) live.push('12시간 '+num(L.r12,1));
+    var live=[]; if(L.r1!=null) live.push('1시간 '+num(L.r1,1)); if(L.r3!=null) live.push('3시간 '+num(L.r3,1)); if(L.r12!=null) live.push('12시간 '+num(L.r12,1)); if(L.day!=null) live.push('오늘 '+num(L.day,1));
     var wTxt=L.wBo ? '호우경보 발효 중' : (L.wJu ? '호우주의보 발효 중' : '');
     h+='<div class="ckh'+(wTxt ? ' w' : '')+'"><span>'+esc(st)+' · 위험구역 '+zs.length+'곳</span>'+(live.length ? '<span class="live">'+live.join(' · ')+' mm</span>' : '')+'</div>';
     if(wTxt) h+='<div class="ckw '+(L.wBo ? 'first' : 'next')+'">'+wTxt+'</div>';
@@ -1235,7 +1508,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     }; });
     el.querySelectorAll('[data-a]').forEach(function(b){ b.onclick=function(){
       var z=shown[+b.getAttribute('data-i')]; if(!z) return;
-      var m=chkRead();
+      var m=chkRead(true);
       if(b.getAttribute('data-a')==='ok'){
         m[z.id]=Date.now(); chkWrite(m);
         SIT.addNote(('점검 · '+z.it.type+' '+z.name.slice(0,24)).replace(/\s+$/, ''));
@@ -1274,15 +1547,15 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     return todoDefaults();
   }
   function todoWrite(items){ todoMem = items.slice(); storeSet(todoKey(), JSON.stringify({items:items})); }
-  function todoChkRead(){
-    var m = jget(todoChkKey(), {}), out = {}, cut = Date.now() - 86400000;
-    if(m && typeof m === 'object') Object.keys(m).forEach(function(k){ if(+m[k] >= cut) out[k] = +m[k]; });
+  function todoChkRead(raw){
+    var m = jget(todoChkKey(), {}), out = {}, cut = Date.now() - 86400000, fl = raw ? cut : markFloor();
+    if(m && typeof m === 'object') Object.keys(m).forEach(function(k){ if(+m[k] >= cut && markLive(+m[k], fl)) out[k] = +m[k]; });
     return out;
   }
   function todoChkWrite(m){ storeSet(todoChkKey(), JSON.stringify(m)); }
   /* 목록에 없는 항목의 체크 표시를 지운다 */
   function todoChkPrune(items){
-    var have = {}, m = todoChkRead(), out = {};
+    var have = {}, m = todoChkRead(true), out = {};
     items.forEach(function(it){ have[it.id] = 1; });
     Object.keys(m).forEach(function(k){ if(have[k]) out[k] = m[k]; });
     todoChkWrite(out);
@@ -1351,7 +1624,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     var q = function(sl){ return el.querySelector(sl); };
     if(!ed){
       el.querySelectorAll('.tdr').forEach(function(b){ b.onclick = function(){
-        var id = b.getAttribute('data-id'), mk = todoChkRead(), it = null, on;
+        var id = b.getAttribute('data-id'), mk = todoChkRead(true), it = null, on;
         items.forEach(function(x){ if(x.id === id) it = x; });
         if(!it) return;
         on = !mk[id]; if(on) mk[id] = Date.now(); else delete mk[id];
@@ -1468,7 +1741,20 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     var el=document.querySelector('.grid-stack-item[gs-id="'+inst.id+'"] .wb'); if(!el) return;
     try{ W[inst.type].render(el, inst); }catch(e){ el.innerHTML='<div class="calm">표시하지 못함 · '+esc(e.message)+'</div>'; if(window.console) console.error(e); }
   }
-  function renderAll(){ try{ SIT.renderBar(); }catch(e){ if(window.console) console.error(e); } Object.keys(INST).forEach(function(k){ renderOne(INST[k]); }); updStamp(); }
+  /* 사람이 만지고 있는 위젯은 자동으로 다시 그리지 않는다 — 하천 추이의 고르기 칸이 열려 있을 때, 상황보고에서 글을 드래그해 고른 때 */
+  function busyWidget(inst){
+    var el=document.querySelector('.grid-stack-item[gs-id="'+inst.id+'"] .wb'); if(!el) return false;
+    try{
+      var ae=document.activeElement;
+      if(inst.type==='riverTrend' && ae && ae.tagName==='SELECT' && el.contains(ae)) return true;
+      if(inst.type==='report'){
+        var sel=window.getSelection ? window.getSelection() : null;
+        if(sel && !sel.isCollapsed && sel.rangeCount && el.contains(sel.getRangeAt(0).commonAncestorContainer)) return true;
+      }
+    }catch(e){}
+    return false;
+  }
+  function renderAll(){ try{ SIT.renderBar(); }catch(e){ if(window.console) console.error(e); } Object.keys(INST).forEach(function(k){ if(!busyWidget(INST[k])) renderOne(INST[k]); }); updStamp(); }
   var loading=false;
   function save(){
     reorder();
@@ -1513,12 +1799,18 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     try{
       fetch('data.js?_t=' + Date.now(), {cache:'no-store'}).then(function(r){ return r.ok ? r.text() : null; }).then(function(t){
         if(!t) return; var i=t.indexOf('{'), j=t.lastIndexOf('}'); if(i<0||j<0) return;
-        try{ window.DASHBOARD_DATA = JSON.parse(t.slice(i,j+1)); if(SIT.sim) SIT.applySim(window.DASHBOARD_DATA); SIT.observe(); renderAll(); SIT.loadNotes(); }catch(e){ if(window.console) console.error(e); }
+        try{
+          window.DASHBOARD_DATA = JSON.parse(t.slice(i,j+1));
+          try{ if(SIT.sim) SIT.applySim(window.DASHBOARD_DATA); }catch(e){ if(window.console) console.error(e); }
+          try{ SIT.observe(); }catch(e){ if(window.console) console.error(e); }
+          renderAll(); SIT.loadNotes();
+        }catch(e){ if(window.console) console.error(e); }
       }).catch(function(){});
     }catch(e){}
   }
   fillSelects();
-  try{ if(SIT.sim) SIT.applySim(D()); SIT.observe(); }catch(e){ if(window.console) console.error(e); }
+  try{ if(SIT.sim) SIT.applySim(D()); }catch(e){ if(window.console) console.error(e); }
+  try{ SIT.observe(); }catch(e){ if(window.console) console.error(e); }
   renderAll(); SIT.loadNotes();
   setInterval(function(){ try{ SIT.renderBar(); }catch(e){} }, 30000);
   setInterval(poll, 60000); setInterval(updStamp, 30000);
@@ -1526,7 +1818,10 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   window.addEventListener('resize', function(){ clearTimeout(window._rz); window._rz=setTimeout(renderAll, 200); });
   try{ if(RC.sidoList && RC.sidoCurrent){ var me=RC.sidoList.filter(function(x){ return x.label===RC.sidoCurrent; })[0]; if(me) storeSet('ggSido', me.base); } }catch(e){}
   window.DASHW = { W:W, grid:grid, INST:INST, render:renderAll, load:load, preset:fromPreset, SIT:SIT,   /* 점검용 */
-    sim:function(on){ var u=new URL(location.href); if(on) u.searchParams.set('sim','1'); else u.searchParams.delete('sim'); location.href=u.toString(); } };
+    sim:function(on){
+      try{ sessionStorage.removeItem('ggDashSimEnd'); }catch(e){}
+      if(on) clearSimKeys();   /* 새 모의 훈련은 처음부터 */
+      var u=new URL(location.href); if(on) u.searchParams.set('sim','1'); else u.searchParams.delete('sim'); location.href=u.toString(); } };
   $('btnSim').onclick=function(){ window.DASHW.sim(!SIT.sim); };
   if(SIT.sim) $('btnSim').textContent='모의 끝내기';
 })();

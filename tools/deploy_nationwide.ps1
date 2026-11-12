@@ -28,9 +28,18 @@ foreach ($t in $targets) {
 }
 
 Set-Location $root
+# 배포 직후에는 옛 version.json 이 잠깐 보일 수 있다(2026-11-12 겪음: 새 판이 올라갔는데 이전 빌드 번호가 찍힘).
+# 방금 만든 빌드 번호(로컬 version.json)와 같아질 때까지 몇 번 다시 본다.
+$want = $null
+try { $want = (Get-Content (Join-Path $root '.tmp\weather-dev\deploy\publicersion.json') -Raw -Encoding UTF8 | ConvertFrom-Json).build } catch {}
 foreach ($t in $targets) {
-    try {
-        $v = Invoke-RestMethod "https://$t.visanu81.workers.dev/version.json?t=$([DateTime]::Now.Ticks)"
-        Write-Host "OK $t : 빌드 $($v.build)" -ForegroundColor Green
-    } catch { Write-Host "? $t : version.json 확인 실패 (잠시 뒤 다시 확인)" -ForegroundColor Yellow }
+    $got = $null
+    for ($i = 0; $i -lt 6; $i++) {
+        try { $got = (Invoke-RestMethod "https://$t.visanu81.workers.dev/version.json?t=$([DateTime]::Now.Ticks)").build } catch { $got = $null }
+        if (-not $want -or $got -eq $want) { break }
+        Start-Sleep -Seconds 3
+    }
+    if ($got -and (-not $want -or $got -eq $want)) { Write-Host "OK $t : 빌드 $got" -ForegroundColor Green }
+    elseif ($got) { Write-Host "? $t : 아직 이전 빌드 $got 가 보임 (올린 것: $want) - 잠시 뒤 다시 확인" -ForegroundColor Yellow }
+    else { Write-Host "? $t : version.json 확인 실패 (잠시 뒤 다시 확인)" -ForegroundColor Yellow }
 }
