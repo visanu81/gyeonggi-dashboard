@@ -31,7 +31,7 @@ Set-Location $root
 # 배포 직후에는 옛 version.json 이 잠깐 보일 수 있다(2026-11-12 겪음: 새 판이 올라갔는데 이전 빌드 번호가 찍힘).
 # 방금 만든 빌드 번호(로컬 version.json)와 같아질 때까지 몇 번 다시 본다.
 $want = $null
-try { $want = (Get-Content (Join-Path $root '.tmp\weather-dev\deploy\publicersion.json') -Raw -Encoding UTF8 | ConvertFrom-Json).build } catch {}
+try { $want = (Get-Content (Join-Path $root '.tmp/weather-dev/deploy/public/version.json') -Raw -Encoding UTF8 | ConvertFrom-Json).build } catch {}
 foreach ($t in $targets) {
     $got = $null
     for ($i = 0; $i -lt 6; $i++) {
