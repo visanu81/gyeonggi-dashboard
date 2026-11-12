@@ -3,11 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>위젯 상황판</title>
-<!-- 위젯 상황판(시제품, 2026-11-11 사장님 지시 "한 화면에 대시보드, 원하는 정보를 골라 위젯처럼 구성")
+<title>상황판</title>
+<!-- 위젯 상황판 (2026-11-11 사장님 지시 "한 화면에 대시보드, 원하는 정보를 골라 위젯처럼 구성")
+     2026-11-12 디자인 손질(unslop) — 방향: 야간 근무 중인 소방 상황실. 바탕은 무채색, 색은 경보·주의·정상의 '뜻'에만,
+       파란 강조색은 선택된 것에만. 눈에 띄는 곳은 둘 — 가운데 큰 지도, 수위표처럼 그린 하천 수위. 고유 표시는 갱신 시각 옆 '자료 신선도 점' 하나.
      · 데이터·설정은 다른 화면과 같은 파일(region.js · data.js · map-geo.js) — 빌드(build_weather_dev.py)가 운영 주소로 바꿔 끼운다
-     · 배치는 이 브라우저에만 저장(localStorage 'ggDash.v1.<시도키>'), '내 관서'는 다른 화면과 같은 값(ggMyStation)
-     · 격자: gridstack 10.3.1 (MIT, gridstack-all.js 저장소에 동봉 — 관공서 망에서 외부 CDN 차단 대비) -->
+     · 배치는 이 브라우저에만 저장(localStorage 'ggDash.v2.<시도키>'), '내 관서'는 다른 화면과 같은 값(ggMyStation)
+     · 격자: gridstack 10.3.1 (MIT, gridstack-all.js 저장소에 동봉 — 관공서 망에서 외부 CDN 차단 대비)
+     · 아이콘: lucide (ISC) 경로를 아래 ICON 표에 직접 넣음 -->
 <script src="region.js"></script>
 <script src="map-geo.js"></script>
 <script src="data.js"></script>
@@ -16,129 +19,240 @@
 /* gridstack 10.3.1 기본 CSS (gridstack.min.css) */
 .grid-stack{position:relative}.grid-stack-rtl{direction:ltr}.grid-stack-rtl>.grid-stack-item{direction:rtl}.grid-stack-placeholder>.placeholder-content{background-color:rgba(0,0,0,.1);margin:0;position:absolute;width:auto;z-index:0!important}.grid-stack>.grid-stack-item{position:absolute;padding:0}.grid-stack>.grid-stack-item>.grid-stack-item-content{margin:0;position:absolute;width:auto;overflow-x:hidden;overflow-y:auto}.grid-stack>.grid-stack-item.size-to-content:not(.size-to-content-max)>.grid-stack-item-content{overflow-y:hidden}.grid-stack-item>.ui-resizable-handle{position:absolute;font-size:.1px;display:block;-ms-touch-action:none;touch-action:none}.grid-stack-item.ui-resizable-autohide>.ui-resizable-handle,.grid-stack-item.ui-resizable-disabled>.ui-resizable-handle{display:none}.grid-stack-item>.ui-resizable-ne,.grid-stack-item>.ui-resizable-nw,.grid-stack-item>.ui-resizable-se,.grid-stack-item>.ui-resizable-sw{background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="%23666" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 20 20"><path d="m10 3 2 2H8l2-2v14l-2-2h4l-2 2M3 10l2 2V8l-2 2h14l-2 2V8l2 2"/></svg>');background-repeat:no-repeat;background-position:center}.grid-stack-item>.ui-resizable-ne{transform:translate(0,10px) rotate(45deg)}.grid-stack-item>.ui-resizable-sw{transform:rotate(45deg)}.grid-stack-item>.ui-resizable-nw{transform:translate(0,10px) rotate(-45deg)}.grid-stack-item>.ui-resizable-se{transform:rotate(-45deg)}.grid-stack-item>.ui-resizable-nw{cursor:nw-resize;width:20px;height:20px;top:0}.grid-stack-item>.ui-resizable-n{cursor:n-resize;height:10px;top:0;left:25px;right:25px}.grid-stack-item>.ui-resizable-ne{cursor:ne-resize;width:20px;height:20px;top:0}.grid-stack-item>.ui-resizable-e{cursor:e-resize;width:10px;top:15px;bottom:15px}.grid-stack-item>.ui-resizable-se{cursor:se-resize;width:20px;height:20px}.grid-stack-item>.ui-resizable-s{cursor:s-resize;height:10px;left:25px;bottom:0;right:25px}.grid-stack-item>.ui-resizable-sw{cursor:sw-resize;width:20px;height:20px}.grid-stack-item>.ui-resizable-w{cursor:w-resize;width:10px;top:15px;bottom:15px}.grid-stack-item.ui-draggable-dragging>.ui-resizable-handle{display:none!important}.grid-stack-item.ui-draggable-dragging{will-change:left,top;cursor:move}.grid-stack-item.ui-resizable-resizing{will-change:width,height}.ui-draggable-hover{cursor:grab}.ui-draggable-dragging,.ui-resizable-resizing{z-index:10000}.ui-draggable-dragging>.grid-stack-item-content,.ui-resizable-resizing>.grid-stack-item-content{box-shadow:1px 4px 6px rgba(0,0,0,.2);opacity:.8}.grid-stack-animate,.grid-stack-animate .grid-stack-item{transition:left .3s,top .3s,height .3s,width .3s}.grid-stack-animate .grid-stack-item.grid-stack-placeholder,.grid-stack-animate .grid-stack-item.ui-draggable-dragging,.grid-stack-animate .grid-stack-item.ui-resizable-resizing{transition:left 0s,top 0s,height 0s,width 0s}.grid-stack>.grid-stack-item[gs-y="0"]{top:0}.grid-stack>.grid-stack-item[gs-x="0"]{left:0}.gs-12>.grid-stack-item{width:8.333%}.gs-12>.grid-stack-item[gs-x="1"]{left:8.333%}.gs-12>.grid-stack-item[gs-w="2"]{width:16.667%}.gs-12>.grid-stack-item[gs-x="2"]{left:16.667%}.gs-12>.grid-stack-item[gs-w="3"]{width:25%}.gs-12>.grid-stack-item[gs-x="3"]{left:25%}.gs-12>.grid-stack-item[gs-w="4"]{width:33.333%}.gs-12>.grid-stack-item[gs-x="4"]{left:33.333%}.gs-12>.grid-stack-item[gs-w="5"]{width:41.667%}.gs-12>.grid-stack-item[gs-x="5"]{left:41.667%}.gs-12>.grid-stack-item[gs-w="6"]{width:50%}.gs-12>.grid-stack-item[gs-x="6"]{left:50%}.gs-12>.grid-stack-item[gs-w="7"]{width:58.333%}.gs-12>.grid-stack-item[gs-x="7"]{left:58.333%}.gs-12>.grid-stack-item[gs-w="8"]{width:66.667%}.gs-12>.grid-stack-item[gs-x="8"]{left:66.667%}.gs-12>.grid-stack-item[gs-w="9"]{width:75%}.gs-12>.grid-stack-item[gs-x="9"]{left:75%}.gs-12>.grid-stack-item[gs-w="10"]{width:83.333%}.gs-12>.grid-stack-item[gs-x="10"]{left:83.333%}.gs-12>.grid-stack-item[gs-w="11"]{width:91.667%}.gs-12>.grid-stack-item[gs-x="11"]{left:91.667%}.gs-12>.grid-stack-item[gs-w="12"]{width:100%}.gs-1>.grid-stack-item{width:100%}
 
-/* ── 화면 ── 색은 지도.html 과 같은 토큰 */
+/* ── 색 ── 무채색(graphite) 한 줄 + 뜻 있는 색 셋 + 강조색 하나 */
 :root{
-  --bg:#eef1f7; --bg2:#e6ebf4; --surface:#fff; --surface2:#f3f7fc; --border:#e4e9f2; --border2:#d3dbe9;
-  --ink:#0f1b2d; --ink2:#4b5a74; --ink3:#71809a; --brand:#2563eb; --brandSoft:#e9f0ff;
-  --safe:#0ea371; --safeSoft:#e5f7f0; --caution:#e0930a; --cautionSoft:#fdf2df; --warn:#ef6c1a; --warnSoft:#ffece0;
-  --severe:#d42a2f; --severeSoft:#fbe3e3; --hexEmpty:#dde5f1; --sh:0 1px 2px rgba(16,27,45,.06),0 6px 18px -10px rgba(16,27,45,.18);
+  --page:#f4f4f5; --card:#ffffff; --raised:#f4f4f5; --deep:#e9e9eb; --mapEmpty:#e4e4e7;
+  --line:rgba(23,23,23,.08); --line2:rgba(23,23,23,.14);
+  --ink:#171717; --ink2:#525252; --ink3:#737373;
+  --accent:#2563eb; --accentSoft:rgba(37,99,235,.10);
+  --safe:#16a34a; --warn:#c2620a; --severe:#dc2626;
+  --safeSoft:rgba(22,163,74,.12); --warnSoft:rgba(194,98,10,.12); --severeSoft:rgba(220,38,38,.12);
+  --warnFill:#f59e0b; --severeFill:#ef4444;
+  --rain1:#dbeafe; --rain2:#93c5fd; --rain3:#3b82f6; --rain4:#1d4ed8;
+  --shadow:0 1px 2px rgba(0,0,0,.05);
+  --ease:cubic-bezier(.22,1,.36,1);
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#080d18; --bg2:#0b1222; --surface:#111a2c; --surface2:#18233b; --border:#26314c; --border2:#354364;
-  --ink:#e9eef9; --ink2:#9fb0cf; --ink3:#8090ad; --brand:#4b8bf5; --brandSoft:rgba(75,139,245,.15);
-  --safe:#34d399; --safeSoft:rgba(52,211,153,.13); --caution:#fbbf24; --cautionSoft:rgba(251,191,36,.13); --warn:#fb923c; --warnSoft:rgba(251,146,60,.14);
-  --severe:#ef4444; --severeSoft:rgba(239,68,68,.16); --hexEmpty:#1e2a45; --sh:0 1px 2px rgba(0,0,0,.5),0 8px 22px -12px rgba(0,0,0,.6);
+  --page:#141415; --card:#19191b; --raised:#232325; --deep:#0f0f10; --mapEmpty:#2a2a2d;
+  --line:rgba(237,237,237,.08); --line2:rgba(237,237,237,.14);
+  --ink:#ededed; --ink2:#a1a1a6; --ink3:#85858b;
+  --accent:#5b8def; --accentSoft:rgba(91,141,239,.16);
+  --safe:#4cc38a; --warn:#f5a524; --severe:#f16a6e;
+  --safeSoft:rgba(76,195,138,.14); --warnSoft:rgba(245,165,36,.16); --severeSoft:rgba(229,72,77,.18);
+  --warnFill:#d98a14; --severeFill:#e5484d;
+  --rain1:#1e2b44; --rain2:#25467a; --rain3:#3b6fd0; --rain4:#7aa7ff;
+  --shadow:none;
 }}
 :root[data-theme="dark"]{
-  --bg:#080d18; --bg2:#0b1222; --surface:#111a2c; --surface2:#18233b; --border:#26314c; --border2:#354364;
-  --ink:#e9eef9; --ink2:#9fb0cf; --ink3:#8090ad; --brand:#4b8bf5; --brandSoft:rgba(75,139,245,.15);
-  --safe:#34d399; --safeSoft:rgba(52,211,153,.13); --caution:#fbbf24; --cautionSoft:rgba(251,191,36,.13); --warn:#fb923c; --warnSoft:rgba(251,146,60,.14);
-  --severe:#ef4444; --severeSoft:rgba(239,68,68,.16); --hexEmpty:#1e2a45; --sh:0 1px 2px rgba(0,0,0,.5),0 8px 22px -12px rgba(0,0,0,.6);
+  --page:#141415; --card:#19191b; --raised:#232325; --deep:#0f0f10; --mapEmpty:#2a2a2d;
+  --line:rgba(237,237,237,.08); --line2:rgba(237,237,237,.14);
+  --ink:#ededed; --ink2:#a1a1a6; --ink3:#85858b;
+  --accent:#5b8def; --accentSoft:rgba(91,141,239,.16);
+  --safe:#4cc38a; --warn:#f5a524; --severe:#f16a6e;
+  --safeSoft:rgba(76,195,138,.14); --warnSoft:rgba(245,165,36,.16); --severeSoft:rgba(229,72,77,.18);
+  --warnFill:#d98a14; --severeFill:#e5484d;
+  --rain1:#1e2b44; --rain2:#25467a; --rain3:#3b6fd0; --rain4:#7aa7ff;
+  --shadow:none;
 }
+
+/* ── 바탕 ── */
 *{box-sizing:border-box}
-html,body{margin:0;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;background:var(--bg);color:var(--ink);font-feature-settings:'tnum';-webkit-font-smoothing:antialiased}
-body{min-height:100vh;background:linear-gradient(180deg,var(--bg),var(--bg2) 70%)}
-button,select{font-family:inherit;font-size:13px;color:var(--ink)}
-.top{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 16px;background:color-mix(in srgb,var(--surface) 86%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
-.top h1{font-size:17px;margin:0 6px 0 0;font-weight:800;letter-spacing:-.3px;white-space:nowrap}
-.top .sp{flex:1}
-.top select,.btn{height:34px;padding:0 12px;border-radius:9px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;font-weight:700}
-.btn.on{background:var(--brand);border-color:var(--brand);color:#fff}
-.btn.ghost{background:transparent}
-.upd{font-size:12px;color:var(--ink3);white-space:nowrap}.upd.old{color:var(--warn);font-weight:700}
-.editbar{display:none;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 16px;background:var(--brandSoft);border-bottom:1px solid var(--border);font-size:13px}
+html,body{margin:0;background:var(--page);color:var(--ink);font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;
+  font-size:14px;line-height:20px;font-feature-settings:'tnum';font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+button,select,a{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.ic{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.num{font-variant-numeric:tabular-nums}
+
+/* ── 윗줄 ── 높이 56, 좌우 24 */
+.top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 24px;background:var(--page);border-bottom:1px solid var(--line)}
+.top h1{margin:0 8px 0 0;font-size:16px;line-height:20px;font-weight:600;white-space:nowrap}
+.ctl{display:flex;align-items:center;gap:8px;color:var(--ink3);font-size:13px}
+.top select,.btn{height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--ink);font-size:13px;cursor:pointer;
+  transition:background-color .15s var(--ease),border-color .15s var(--ease),color .15s var(--ease)}
+.top select:hover,.btn:hover{border-color:var(--ink3)}
+.btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-weight:500}
+.btn.icon{width:32px;padding:0;justify-content:center;color:var(--ink2)}
+.btn.quiet{border-color:transparent;background:transparent;color:var(--ink2)}
+.btn.quiet:hover{color:var(--ink);border-color:transparent;background:var(--raised)}
+.btn.on{background:var(--ink);border-color:var(--ink);color:var(--card)}
+.btn:active{transform:scale(.98)}
+.fresh{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink3);white-space:nowrap}
+.fresh i{width:8px;height:8px;border-radius:50%;background:var(--safe);flex:none}
+.fresh.old i{background:var(--warn)}
+.fresh.old{color:var(--warn)}
+.sp{flex:1}
+
+/* ── 꾸미기 줄 ── */
+.editbar{display:none;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 24px;border-bottom:1px solid var(--line);background:var(--card)}
 body.editing .editbar{display:flex}
-.editbar b{margin-right:4px}
-.chip{height:30px;padding:0 10px;border-radius:15px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;font-weight:700;font-size:12.5px}
-.chip:hover{border-color:var(--brand);color:var(--brand)}
-#grid{margin:6px 10px 40px}
-.grid-stack-item-content{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--sh);display:flex;flex-direction:column;overflow:hidden!important}
-body.editing .grid-stack-item-content{outline:2px dashed color-mix(in srgb,var(--brand) 45%,transparent);outline-offset:-2px}
-.wh{display:flex;align-items:center;gap:6px;padding:9px 12px 6px;font-size:13px;font-weight:800;color:var(--ink2);flex:none}
+.editbar .lb{font-size:13px;color:var(--ink2);margin-right:4px}
+.chip{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--line2);background:var(--raised);color:var(--ink);font-size:13px;cursor:pointer;
+  transition:border-color .15s var(--ease),background-color .15s var(--ease)}
+.chip .ic{color:var(--ink3)}
+.chip:hover{border-color:var(--ink3)}
+.editbar .note{margin-left:auto;font-size:12px;color:var(--ink3)}
+
+/* ── 격자와 카드 ── 카드 사이 16, 페이지 가장자리 24 */
+#grid{margin:8px 16px 40px}
+.grid-stack-item-content{display:flex;flex-direction:column;overflow:hidden!important;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+body.editing .grid-stack-item-content{border-style:dashed;border-color:var(--line2)}
+.wh{flex:none;display:flex;align-items:center;gap:8px;height:40px;padding:0 16px;color:var(--ink2);font-size:13px;font-weight:500}
+.wh .ic{color:var(--ink3)}
 body.editing .wh{cursor:move}
-.wh .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wh .x{display:none;border:0;background:var(--severeSoft);color:var(--severe);width:24px;height:24px;border-radius:7px;cursor:pointer;font-weight:900}
-body.editing .wh .x{display:block}
-.wb{flex:1;min-height:0;overflow:auto;padding:0 12px 10px;font-size:13px}
-.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
-.tabs button{height:24px;padding:0 8px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:11.5px;font-weight:700;color:var(--ink2)}
-.tabs button.on{background:var(--brand);border-color:var(--brand);color:#fff}
-.empty{color:var(--ink3);font-size:12.5px;padding:10px 0}
-.muted{color:var(--ink3)}
-.lv-safe{color:var(--safe)}.lv-warn{color:var(--warn)}.lv-severe{color:var(--severe)}
-.badge{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11.5px;font-weight:800}
-.b-safe{background:var(--safeSoft);color:var(--safe)}.b-warn{background:var(--warnSoft);color:var(--warn)}.b-severe{background:var(--severeSoft);color:var(--severe)}.b-caution{background:var(--cautionSoft);color:var(--caution)}
-/* 상태 */
-.status{display:flex;align-items:center;gap:12px;height:100%;padding:4px 2px;border-radius:12px}
-.status .dot{width:46px;height:46px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:24px}
-.status.safe .dot{background:var(--safeSoft)}.status.warn .dot{background:var(--warnSoft)}.status.severe .dot{background:var(--severeSoft)}
-.status .big{font-size:22px;font-weight:900;letter-spacing:-.4px}
-.status .why{font-size:12.5px;color:var(--ink2);margin-top:2px}
+.wh .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wh .meta{font-size:12px;color:var(--ink3);font-weight:400;white-space:nowrap}
+.wh .x{display:none;width:24px;height:24px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--ink3);cursor:pointer;align-items:center;justify-content:center}
+.wh .x:hover{background:var(--severeSoft);color:var(--severe)}
+body.editing .wh .x{display:inline-flex}
+body.editing .wh .meta{display:none}
+.wb{flex:1;min-height:0;overflow:auto;padding:0 16px 16px;font-size:13px}
+.wb::-webkit-scrollbar{width:8px}.wb::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}
+
+/* 구간 선택 — 강조색이 아니라 면 한 단계 */
+.seg{display:flex;width:fit-content;max-width:100%;gap:2px;padding:2px;margin-bottom:12px;border-radius:8px;background:var(--raised)}
+.seg button{height:24px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:var(--ink3);font-size:12px;cursor:pointer;transition:background-color .15s var(--ease),color .15s var(--ease)}
+.seg button:hover{color:var(--ink)}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 0 0 1px var(--line2)}
+
+/* 공통 */
+.muted{color:var(--ink3)}.sec{color:var(--ink2)}
+.t-safe{color:var(--safe)}.t-warn{color:var(--warn)}.t-severe{color:var(--severe)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none;background:var(--ink3)}
+.dot.safe{background:var(--safe)}.dot.warn{background:var(--warn)}.dot.severe{background:var(--severe)}
+.calm{display:flex;align-items:center;gap:8px;color:var(--ink3);font-size:13px}
+.calm .dot{background:var(--safe)}
+
+/* 내 관서 상태 */
+.st{display:flex;flex-direction:column;gap:4px}
+.st .who{font-size:13px;color:var(--ink2)}
+.st .word{display:flex;align-items:center;gap:8px;font-size:28px;line-height:32px;font-weight:500}
+.st .word .dot{width:12px;height:12px}
+.st .why{font-size:13px;color:var(--ink2)}
+.st .meta{font-size:12px;color:var(--ink3)}
+.box-safe{} .box-warn .word{color:var(--warn)} .box-severe .word{color:var(--severe)}
+
 /* 수치 */
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
-.kpi{background:var(--surface2);border-radius:10px;padding:8px 10px}
-.kpi .k{font-size:11.5px;color:var(--ink3);font-weight:700}
-.kpi .v{font-size:21px;font-weight:900;letter-spacing:-.4px;margin-top:2px}
-.kpi .s{font-size:11.5px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* 목록·막대 */
-.rows{display:flex;flex-direction:column;gap:5px}
-.row{display:grid;grid-template-columns:64px 1fr 58px;align-items:center;gap:8px;font-size:12.5px}
-.row .n{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row .v{text-align:right;font-weight:800}
-.row.me .n{color:var(--brand)}
-.bar{height:9px;background:var(--surface2);border-radius:5px;overflow:hidden;position:relative}
-.bar i{display:block;height:100%;border-radius:5px;background:var(--brand)}
-.item{padding:7px 9px;border-radius:9px;background:var(--surface2);margin-bottom:5px;font-size:12.5px;line-height:1.45}
-.item .h{display:flex;gap:6px;align-items:center;font-weight:800;margin-bottom:1px}
-.item .h .tm{margin-left:auto;font-weight:600;color:var(--ink3);font-size:11.5px}
-table.tb{width:100%;border-collapse:collapse;font-size:12.5px}
-.tb th{position:sticky;top:0;background:var(--surface);text-align:right;color:var(--ink3);font-size:11.5px;font-weight:700;padding:4px 4px;border-bottom:1px solid var(--border)}
-.tb td{padding:4px;text-align:right;border-bottom:1px solid var(--border)}
-.tb th:first-child,.tb td:first-child{text-align:left;font-weight:700}
-.tb tr.me td{background:var(--brandSoft)}
-.img{width:100%;height:calc(100% - 32px);object-fit:contain;border-radius:8px;background:var(--surface2)}
-svg text{font-family:inherit}
-.fc{display:flex;align-items:flex-end;gap:6px;height:calc(100% - 4px);min-height:90px}
-.fc .c{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:11.5px;gap:3px}
-.fc .c .col{width:70%;max-width:34px;background:var(--brand);border-radius:5px 5px 2px 2px;min-height:2px}
-.fc .c .mm{font-weight:800}
-.add-note{font-size:12px;color:var(--ink3);margin-left:auto}
-@media (max-width:760px){ .top{padding:8px 10px}.top h1{font-size:15px;width:100%}.hide-m{display:none!important}#grid{margin:6px 6px 30px}
-  /* 휴대폰: 격자 대신 PC 배치 순서(위→아래, 왼→오)대로 한 줄 쌓기. 목록형은 내용만큼, 그림형은 고정 높이 */
-  #grid.grid-stack{display:flex!important;flex-direction:column;gap:8px;height:auto!important}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));height:100%}
+.kpi{padding:0 16px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi:first-child{border-left:0;padding-left:0}
+.kpi .k{font-size:13px;color:var(--ink2)}
+.kpi .v{font-size:28px;line-height:32px;font-weight:500}
+.kpi .v small{font-size:14px;color:var(--ink3);font-weight:400;margin-left:2px}
+.kpi .s{font-size:12px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 목록 */
+.list{display:flex;flex-direction:column}
+.li{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-top:1px solid var(--line)}
+.li:first-child{border-top:0;padding-top:0}
+.li .h{display:flex;align-items:center;gap:8px}
+.li .h b{font-weight:500}
+.li .h .tm{margin-left:auto;font-size:12px;color:var(--ink3)}
+.li .b{color:var(--ink2);font-size:13px}
+
+/* 막대 줄 (강수) */
+.bars{display:flex;flex-direction:column;gap:4px}
+.bar-row{display:grid;grid-template-columns:64px 1fr 48px;align-items:center;gap:8px;height:24px}
+.bar-row .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink2)}
+.bar-row.me .n{color:var(--accent);font-weight:500}
+.bar-row .v{text-align:right}
+.track{position:relative;height:8px;border-radius:4px;background:var(--raised);overflow:hidden}
+.track i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+
+/* 하천 수위표 — 주의·위험 눈금이 있는 막대. 평상시엔 회색, 주의부터 색이 오른다 */
+.gauges{display:flex;flex-direction:column;gap:0}
+.gauge{display:grid;grid-template-columns:minmax(96px,28%) 1fr 56px;align-items:center;gap:12px;height:40px}
+.gauge .n{display:flex;flex-direction:column;min-width:0;line-height:16px}
+.gauge .n b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gauge .n span{font-size:12px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gauge .v{text-align:right;color:var(--ink2)}
+.staff{position:relative;height:12px;border-radius:4px;background:var(--raised)}
+.staff i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--ink3);opacity:.45}
+.staff .tk{position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:1px}
+.staff .tk.w{background:var(--warn)}.staff .tk.d{background:var(--severe)}
+.gauge.warn .staff i{background:var(--warnFill);opacity:1}.gauge.warn .v{color:var(--warn)}
+.gauge.severe .staff i{background:var(--severeFill);opacity:1}.gauge.severe .v{color:var(--severe)}
+.gauge.bad .staff{background:repeating-linear-gradient(135deg,var(--raised) 0 6px,transparent 6px 12px)}
+.gauge.bad .v{color:var(--ink3)}
+.legend{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:12px;font-size:12px;color:var(--ink3)}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.legend .sw{width:12px;height:12px;border-radius:3px}
+.legend .tkw{width:2px;height:12px;background:var(--warn)}.legend .tkd{width:2px;height:12px;background:var(--severe)}
+
+/* 표 */
+table.tb{width:100%;border-collapse:collapse}
+.tb th{position:sticky;top:0;z-index:1;height:32px;background:var(--card);text-align:right;color:var(--ink3);font-size:12px;font-weight:400;border-bottom:1px solid var(--line)}
+.tb td{height:32px;text-align:right;border-bottom:1px solid var(--line);color:var(--ink2)}
+.tb th:first-child,.tb td:first-child{text-align:left;color:var(--ink)}
+.tb th,.tb td{padding:0 8px}.tb th:first-child,.tb td:first-child{padding-left:0}.tb th:last-child,.tb td:last-child{padding-right:0}
+.tb tr.me td{background:var(--accentSoft)}
+.tb tr.me td:first-child{color:var(--accent);font-weight:500;padding-left:8px;border-radius:6px 0 0 6px}
+.tb tr.me td:last-child{border-radius:0 6px 6px 0;padding-right:8px}
+
+/* 기상 영상 — 어두운 틀 안에 */
+.frame{display:flex;align-items:center;justify-content:center;height:calc(100% - 40px);border-radius:8px;background:var(--deep);overflow:hidden}
+.frame img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+:root[data-theme="dark"] .frame img{filter:brightness(.82)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .frame img{filter:brightness(.82)} }
+
+/* 6시간 예보 */
+.fc{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;height:100%;align-items:end}
+.fc .c{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;font-size:12px;color:var(--ink3)}
+.fc .c .col{width:100%;max-width:28px;border-radius:4px 4px 2px 2px;background:var(--rain3)}
+.fc .c .mm{color:var(--ink);font-size:13px}
+.fc .c .hh{color:var(--ink2)}
+.fc-flat{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:12px;text-align:center}
+.fc-flat div{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--ink3)}
+.fc-flat b{font-weight:400;color:var(--ink2);font-size:13px}
+
+/* 지도 */
+.mapwrap{position:relative;height:calc(100% - 40px);display:flex;flex-direction:column}
+.mapwrap svg{flex:1;min-height:0;width:100%}
+.mapwrap path{transition:fill .3s var(--ease)}
+.mapwrap path:hover{filter:brightness(1.08)}
+
+/* 휴대폰 */
+@media (max-width:760px){
+  .top{flex-wrap:wrap;padding:8px 16px;gap:8px}.top h1{width:100%;margin:0}
+  .hide-m{display:none!important}
+  #grid{margin:8px 8px 32px}
+  #grid.grid-stack{display:flex!important;flex-direction:column;gap:12px;height:auto!important}
   #grid>.grid-stack-item{position:relative!important;left:auto!important;top:auto!important;width:auto!important;height:auto!important;min-height:0!important}
   #grid>.grid-stack-item>.grid-stack-item-content{position:relative!important;inset:auto!important;left:0!important;right:0!important;top:0!important;bottom:0!important}
-  #grid>.grid-stack-item .wb{max-height:62vh}
-  #grid>.grid-stack-item[data-t="map"] .wb{height:400px;max-height:none}
+  #grid>.grid-stack-item .wb{max-height:64vh}
+  #grid>.grid-stack-item[data-t="map"] .wb{height:440px;max-height:none}
   #grid>.grid-stack-item[data-t="image"] .wb{height:420px;max-height:none}
-  #grid>.grid-stack-item[data-t="riverTrend"] .wb{height:270px}
-  #grid>.grid-stack-item[data-t="fcst"] .wb{height:190px}
+  #grid>.grid-stack-item[data-t="riverTrend"] .wb{height:280px}
+  #grid>.grid-stack-item[data-t="fcst"] .wb{height:200px}
   #grid>.grid-stack-item>.ui-resizable-handle{display:none!important}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:16px}
+  .kpi:nth-child(3){border-left:0;padding-left:0}
 }
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
 </style>
 </head>
 <body>
 <div class="top">
-  <h1 id="ttl">위젯 상황판</h1>
-  <select id="selSido" style="display:none" title="시도"></select>
-  <select id="selStation" title="내 관서"></select>
-  <span class="upd" id="upd">—</span>
+  <h1 id="ttl">상황판</h1>
+  <select id="selSido" style="display:none" aria-label="시도"></select>
+  <label class="ctl">내 관서 <select id="selStation" aria-label="내 관서"></select></label>
+  <span class="fresh" id="upd"><i></i><span>—</span></span>
   <span class="sp"></span>
-  <select id="selPreset" class="hide-m" title="기본 배치 불러오기">
-    <option value="">기본 배치 ▾</option>
+  <select id="selPreset" class="hide-m" aria-label="기본 배치 불러오기">
+    <option value="">기본 배치</option>
     <option value="normal">평상시</option>
     <option value="rain">호우 대응</option>
     <option value="river">하천 감시</option>
     <option value="all">전부 보기</option>
   </select>
-  <button class="btn hide-m" id="btnEdit" title="위젯 옮기기·크기·추가·삭제">✎ 꾸미기</button>
-  <button class="btn ghost" id="btnTheme" title="라이트/다크">◐</button>
-  <a class="btn ghost" href="지도.html" style="display:inline-flex;align-items:center;text-decoration:none" title="기존 지도 화면">지도 화면</a>
+  <button class="btn hide-m" id="btnEdit"></button>
+  <button class="btn icon" id="btnTheme" aria-label="밝게/어둡게" title="밝게/어둡게"></button>
+  <a class="btn quiet" href="지도.html">지도 화면</a>
 </div>
 <div class="editbar">
-  <b>＋ 위젯 추가</b><span id="addList"></span>
-  <span class="add-note">제목 줄을 끌어 옮기고, 모서리를 당겨 크기 조절 · 배치는 이 브라우저에 저장됩니다</span>
-  <button class="chip" id="btnReset">↺ 처음 배치로</button>
+  <span class="lb">위젯 추가</span><span id="addList" style="display:contents"></span>
+  <span class="note">제목 줄을 끌어 옮기고 모서리로 크기 조절 · 이 브라우저에 저장</span>
+  <button class="chip" id="btnReset"></button>
 </div>
 <div class="grid-stack" id="grid"></div>
 
@@ -153,9 +267,35 @@ svg text{font-family:inherit}
   var storeSet = function(k,v){ try{ localStorage.setItem(k,v); }catch(e){} };
   var esc = function(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
   var num = function(v,d){ return (v==null||v===''||isNaN(+v)) ? '—' : (+v).toFixed(d==null?0:d); };
-  var LAYOUT_KEY = 'ggDash.v1.' + (RC.key || 'x');
+  var LAYOUT_KEY = 'ggDash.v2.' + (RC.key || 'x');   /* v2: 2026-11-12 디자인 손질과 함께 기본 배치를 새로 — 예전(v1) 배치는 그대로 두되 안 읽는다 */
   var memStation = null;
   function D(){ return window.DASHBOARD_DATA || {}; }
+
+  /* ── 아이콘 (lucide 16px, 선 1.5) ── */
+  var P = {
+    status:'<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>',
+    kpi:'<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
+    warnings:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    map:'<path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/>',
+    rain:'<path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M16 14v6"/><path d="M8 14v6"/><path d="M12 16v6"/>',
+    fcst:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    image:'<path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/>',
+    rivers:'<path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>',
+    riverTrend:'<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/>',
+    weather:'<path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/>',
+    pm:'<path d="M12.8 19.6A2 2 0 1 0 14 16H2"/><path d="M17.5 8a2.5 2.5 0 1 1 2 4H2"/><path d="M9.8 4.4A2 2 0 1 1 11 8H2"/>',
+    messages:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+    fire:'<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+    pencil:'<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+    check:'<path d="M20 6 9 17l-5-5"/>',
+    contrast:'<circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/>',
+    reset:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+    x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    plus:'<path d="M5 12h14"/><path d="M12 5v14"/>'
+  };
+  function ic(k){ return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">'+(P[k]||'')+'</svg>'; }
+  $('btnTheme').innerHTML = ic('contrast');
+  $('btnReset').innerHTML = ic('reset')+'처음 배치로';
 
   /* ── 테마 (다른 화면과 같은 저장값) ── */
   function applyTheme(){ var t=storeGet('ggTheme'); if(t==='dark'||t==='light') document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme'); }
@@ -164,6 +304,7 @@ svg text{font-family:inherit}
     var cur = document.documentElement.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
     storeSet('ggTheme', cur==='dark'?'light':'dark'); applyTheme(); renderAll();
   };
+  function cv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 
   /* ── 관서 ── */
   function stationNow(){
@@ -177,14 +318,14 @@ svg text{font-family:inherit}
   function setStation(st){ memStation=st; storeSet('ggMyStation', st); $('selStation').value=st; renderAll(); }
   function fillSelects(){
     var s=$('selStation'), cur=stationNow(); s.innerHTML='';
-    ORDER.forEach(function(n){ var o=document.createElement('option'); o.value=n; o.textContent='📍 '+n; if(n===cur) o.selected=true; s.appendChild(o); });
+    ORDER.forEach(function(n){ var o=document.createElement('option'); o.value=n; o.textContent=n; if(n===cur) o.selected=true; s.appendChild(o); });
     s.onchange=function(){ setStation(s.value); };
     if(SIDOS.length){ var sd=$('selSido'); sd.style.display=''; sd.innerHTML='';
       SIDOS.forEach(function(x){ var o=document.createElement('option'); o.value=x.base; o.textContent=x.label; if(x.label===RC.sidoCurrent) o.selected=true; sd.appendChild(o); });
       sd.onchange=function(){ storeSet('ggSido', sd.value); location.href = sd.value + '대시보드.html'; };
     }
-    $('ttl').textContent = (RC.label || '') + ' 위젯 상황판';
-    document.title = (RC.label || '') + ' 위젯 상황판';
+    $('ttl').textContent = (RC.label || '') + ' 상황판';
+    document.title = (RC.label || '') + ' 상황판';
   }
 
   /* ── 판정 (쉬운.html 과 같은 규칙) ── */
@@ -222,7 +363,8 @@ svg text{font-family:inherit}
   }
   function rain1h(reg){ if(!reg) return null; var a=((reg.detail||{}).aws)||{}; return a.rn60!=null ? +a.rn60 : (reg.rain!=null ? +reg.rain : null); }
   function rainDay(reg){ if(!reg) return null; var a=((reg.detail||{}).aws)||{}; return a.rnday!=null ? +a.rnday : null; }
-  function riverName(r){ var s=String(r.name||''); var m=s.match(/^\s*([^(]+?)\s*\(([^)]+)\)/); return m ? m[1].trim()+' · '+m[2].trim().split(/\s+/).pop() : s; }
+  function riverParts(r){ var s=String(r.name||''); var m=s.match(/^\s*([^(]+?)\s*\(([^)]+)\)/); return m ? {river:m[1].trim(), site:m[2].trim()} : {river:s, site:''}; }
+  function riverName(r){ var p=riverParts(r); return p.site ? p.river+' · '+p.site.split(/\s+/).pop() : p.river; }
   function statusOf(st){
     var reg=regOf(st), why=[], lv='safe';
     var warns=(D().warnings||[]).filter(function(w){ return areaHits(w.area, st); });
@@ -230,180 +372,213 @@ svg text{font-family:inherit}
     warns.forEach(function(w){ if(why.indexOf(w.type)<0) why.push(w.type); });
     var r1=rain1h(reg);
     if(r1!=null && r1>=20){ lv='severe'; why.push('시간당 '+num(r1,1)+'mm'); } else if(r1!=null && r1>=5){ if(lv==='safe') lv='warn'; why.push('시간당 '+num(r1,1)+'mm'); }
-    riversOf(st).forEach(function(r){ var l=riverLv(r); if(l==='severe'){ lv='severe'; why.push(riverName(r)+' 위험수위'); } else if(l==='warn'){ if(lv==='safe') lv='warn'; why.push(riverName(r)+' 주의'); } });
+    riversOf(st).forEach(function(r){ var l=riverLv(r); if(l==='severe'){ lv='severe'; why.push(riverName(r)+' 위험수위'); } else if(l==='warn'){ if(lv==='safe') lv='warn'; why.push(riverName(r)+' 주의수위'); } });
     return {lv:lv, why:why, warns:warns, reg:reg};
   }
+  /* 강수 색 단계 — 5mm 미만 옅은 파랑, 20mm(경보 기준)부터 주의·경보 색 */
+  var RAIN_STEPS=[[0.1,'--rain1'],[1,'--rain2'],[5,'--rain3'],[10,'--rain4'],[20,'--warnFill'],[30,'--severeFill']];
+  function rainCol(v){ if(v==null||v<0.1) return null; var c=null; RAIN_STEPS.forEach(function(s){ if(v>=s[0]) c=cv(s[1]); }); return c; }
+  function seg(key, cur, items){ return '<div class="seg">'+items.map(function(x){ return '<button data-o="'+key+'" data-v="'+x[0]+'" class="'+(String(x[0])===String(cur)?'on':'')+'">'+x[1]+'</button>'; }).join('')+'</div>'; }
 
-  /* ── 위젯 정의 ── 새 위젯은 여기에 하나 추가하면 '＋ 위젯 추가'에 저절로 뜬다 */
+  /* ── 위젯 정의 ── 새 위젯은 여기에 하나 추가하면 '위젯 추가'에 저절로 뜬다. meta = 제목 줄 오른쪽 작은 글씨 */
   var W = {};
-  W.status = { title:'내 관서 상태', icon:'🚦', w:4, h:2, render:function(el){
+  W.status = { title:'내 관서 상태', w:3, h:3, render:function(el){
     var st=stationNow(), s=statusOf(st), reg=s.reg||{};
-    var txt={safe:'정상',warn:'주의',severe:'경보'}[s.lv], ic={safe:'🟢',warn:'🟠',severe:'🔴'}[s.lv];
-    el.innerHTML='<div class="status '+s.lv+'"><div class="dot">'+ic+'</div><div><div class="big lv-'+s.lv+'">'+esc(st)+' · '+txt+'</div>'+
-      '<div class="why">'+(s.why.length?esc(s.why.slice(0,4).join(' · ')):'특보·강한 비·하천 이상 없음')+'</div>'+
-      '<div class="why muted">'+num(reg.temp,1)+'℃ · '+esc(reg.weather||'')+' · 1시간 '+num(rain1h(reg),1)+'mm · 오늘 '+num(rainDay(reg),1)+'mm</div></div></div>';
+    var word={safe:'정상',warn:'주의',severe:'경보'}[s.lv];
+    el.innerHTML='<div class="st box-'+s.lv+'"><div class="who">'+esc(st)+'</div>'+
+      '<div class="word"><span class="dot '+s.lv+'"></span>'+word+'</div>'+
+      '<div class="why">'+(s.why.length?esc(s.why.slice(0,3).join(' · ')):'특보·강한 비·하천 이상 없음')+'</div>'+
+      '<div class="meta">'+num(reg.temp,1)+'° '+esc(reg.weather||'')+' · 1시간 '+num(rain1h(reg),1)+'mm · 오늘 '+num(rainDay(reg),1)+'mm</div></div>';
   }};
-  W.kpi = { title:'한눈에 보기', icon:'📊', w:8, h:2, render:function(el){
+  W.kpi = { title:(RC.label||'')+' 전체', w:9, h:3, render:function(el){
     var d=D(), warns=d.warnings||[], types=[]; warns.forEach(function(w){ if(types.indexOf(w.type)<0) types.push(w.type); });
-    var bo=warns.filter(isBo).length, maxR={v:-1,n:''}, maxT={v:-99,n:''}, minT={v:99,n:''};
-    ORDER.forEach(function(st){ var reg=regOf(st); if(!reg) return; var r=rain1h(reg); if(r!=null && r>maxR.v) maxR={v:r,n:st};
-      if(reg.temp!=null && +reg.temp>maxT.v) maxT={v:+reg.temp,n:st}; if(reg.temp!=null && +reg.temp<minT.v) minT={v:+reg.temp,n:st}; });
+    var bo=warns.filter(isBo).length, maxR={v:-1,n:''};
+    ORDER.forEach(function(st){ var r=rain1h(regOf(st)); if(r!=null && r>maxR.v) maxR={v:r,n:st}; });
     var rv=(d.rivers||[]).filter(function(r){ return !isDam(r); }), rw=rv.filter(function(r){ var l=riverLv(r); return l==='warn'||l==='severe'; }).length, rb=rv.filter(riverBad).length;
-    var k=function(t,v,s,cls){ return '<div class="kpi"><div class="k">'+t+'</div><div class="v '+(cls||'')+'">'+v+'</div><div class="s">'+s+'</div></div>'; };
+    var ms=d.messages||[];
+    var k=function(t,v,u,s,cls){ return '<div class="kpi"><div class="k">'+t+'</div><div class="v '+(cls||'')+'">'+v+'<small>'+u+'</small></div><div class="s">'+s+'</div></div>'; };
     el.innerHTML='<div class="kpis">'+
-      k('발효 특보', warns.length+'건', types.length?esc(types.join(', ')):'없음', bo?'lv-severe':(warns.length?'lv-warn':''))+
-      k('최대 1시간 강수', maxR.v>=0?num(maxR.v,1)+'mm':'—', esc(maxR.n||'—'), maxR.v>=20?'lv-severe':(maxR.v>=5?'lv-warn':''))+
-      k('하천 주의 이상', rw+'곳', '관측 '+rv.length+'곳 중'+(rb?' · 자료 이상 '+rb:''), rw?'lv-warn':'')+
-      k('재난문자', (d.messages||[]).length+'건', (d.messages||[]).length?esc((d.messages[0]||{}).time||''):'없음')+
-      k('최고 / 최저 기온', (maxT.v>-99?num(maxT.v,1):'—')+' / '+(minT.v<99?num(minT.v,1):'—'), esc(maxT.n+' / '+minT.n))+
+      k('발효 특보', warns.length, '건', warns.length ? esc(types.join(', ')) : (RC.label||'')+' 발효 없음', bo?'t-severe':(warns.length?'t-warn':''))+
+      k('최대 1시간 강수', maxR.v>=0?num(maxR.v,1):'—', 'mm', maxR.v>0 ? esc(maxR.n)+' 관측' : '비 오는 곳 없음', maxR.v>=20?'t-severe':(maxR.v>=5?'t-warn':''))+
+      k('주의수위 넘은 하천', rw, '곳', '관측 '+rv.length+'곳 중'+(rb?' · 자료 이상 '+rb+'곳':''), rw?'t-warn':'')+
+      k('재난문자', ms.length, '건', ms.length ? '마지막 '+esc(String((ms[0]||{}).time||'').slice(-5)) : '받은 문자 없음')+
       '</div>';
   }};
-  W.warnings = { title:'특보 · 예비특보', icon:'⚠️', w:4, h:4, render:function(el, inst){
+  W.warnings = { title:'특보 · 예비특보', w:3, h:4, render:function(el, inst){
     var o=inst.opt||{}, mine=o.mine!==false, st=stationNow(), d=D();
     var ws=(d.warnings||[]).filter(function(w){ return !mine || areaHits(w.area, st); });
-    var h='<div class="tabs"><button data-o="mine" data-v="1" class="'+(mine?'on':'')+'">내 관서</button><button data-o="mine" data-v="0" class="'+(!mine?'on':'')+'">전체</button></div>';
-    h+= ws.length ? ws.map(function(w){ var c=isBo(w)?'severe':'warn'; return '<div class="item"><div class="h"><span class="badge b-'+c+'">'+esc(w.type)+'</span><span class="tm">'+esc(w.time||'')+'</span></div>'+esc(w.area||'')+'</div>'; }).join('')
-      : '<div class="empty">'+(mine?esc(st)+'에 ':'')+'발효 중인 특보 없음</div>';
+    var h=seg('mine', mine?1:0, [[1,'내 관서'],[0,'전체']]);
+    h+= ws.length ? '<div class="list">'+ws.map(function(w){ var c=isBo(w)?'severe':'warn'; return '<div class="li"><div class="h"><span class="dot '+c+'"></span><b class="t-'+c+'">'+esc(w.type)+'</b><span class="tm">'+esc(w.time||'')+'</span></div><div class="b">'+esc(w.area||'')+'</div></div>'; }).join('')+'</div>'
+      : '<div class="calm"><span class="dot"></span>'+(mine?esc(st)+' ':'')+'발효 중인 특보 없음</div>';
     var pre=[]; (d.prelim_warnings||[]).forEach(function(g){ var n=(g.items||[]).filter(function(it){ var a=String(it.area||''); return !SEA.test(a.replace(/\(.*\)/,'')) && (!mine || areaHits(a.replace(/^[^(]*\(|\)$/g,''), st)); }).length; if(n) pre.push(esc(g.type)+' '+n+'건'); });
-    if(pre.length) h+='<div class="item"><div class="h"><span class="badge b-caution">예비특보</span></div>'+pre.join(' · ')+'</div>';
+    if(pre.length) h+='<div class="li" style="border-top:1px solid var(--line);margin-top:8px;padding-top:8px"><div class="h"><span class="dot"></span><b>예비특보</b></div><div class="b">'+pre.join(' · ')+'</div></div>';
     el.innerHTML=h; tabs(el, inst);
   }};
-  W.map = { title:'지도', icon:'🗺️', w:4, h:6, render:function(el, inst){
-    var G=window.MAPGEO; if(!G){ el.innerHTML='<div class="empty">지도 자료 없음</div>'; return; }
+  W.map = { title:'지도', w:6, h:10, render:function(el, inst){
+    var G=window.MAPGEO; if(!G){ el.innerHTML='<div class="calm">지도 자료 없음</div>'; return; }
     var m=(inst.opt||{}).m||'status', st=stationNow();
-    var M={status:'상태', r1:'1시간 강수', day:'오늘 강수', temp:'기온'};
-    var h='<div class="tabs">'+Object.keys(M).map(function(k){ return '<button data-o="m" data-v="'+k+'" class="'+(k===m?'on':'')+'">'+M[k]+'</button>'; }).join('')+'</div>';
-    var css=getComputedStyle(document.documentElement), cv=function(n){ return css.getPropertyValue(n).trim(); };
-    function rainCol(v){ if(v==null||v<=0) return cv('--hexEmpty'); var s=[[1,'#bfe0ff'],[5,'#6fb5f5'],[10,'#2f86e6'],[20,'#f0a400'],[30,'#ef6c1a'],[50,'#d42a2f']]; var c='#bfe0ff'; s.forEach(function(x){ if(v>=x[0]) c=x[1]; }); return c; }
-    function tempCol(v){ if(v==null) return cv('--hexEmpty'); var t=Math.max(-15,Math.min(35,v)), p=(t+15)/50; return 'hsl('+Math.round(220-220*p)+',70%,'+(55)+'%)'; }
-    var svg='<svg viewBox="'+G.viewBox+'" style="width:100%;height:calc(100% - 34px)" preserveAspectRatio="xMidYMid meet">';
+    var empty=cv('--mapEmpty'), line=cv('--card'), ink=cv('--ink'), ink2=cv('--ink2'), halo=cv('--card');
+    function tempCol(v){ if(v==null) return empty; var t=Math.max(-15,Math.min(35,v)), p=(t+15)/50, dark=document.documentElement.getAttribute('data-theme')==='dark'||(!document.documentElement.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme: dark)').matches);
+      return 'hsl('+Math.round(215-205*p)+','+(dark?'38%':'55%')+','+(dark?'34%':'78%')+')'; }
+    var labOf=function(reg){ if(m==='r1'){ var v=rain1h(reg); return v>=0.1?num(v,1):''; } if(m==='day'){ var v2=rainDay(reg); return v2>=0.5?num(v2,0):''; } if(m==='temp'){ return reg&&reg.temp!=null?num(reg.temp,0)+'°':''; } return ''; };
+    var svg='<svg viewBox="'+G.viewBox+'" preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+esc(RC.label||'')+' 지도">';
     G.regions.forEach(function(g){
-      var reg=regOf(g.name), fill, lab='';
-      if(m==='status'){ var s=statusOf(g.name); fill = s.lv==='severe'?cv('--severe'):s.lv==='warn'?cv('--warn'):cv('--safeSoft'); lab=''; }
-      else if(m==='r1'){ var v=rain1h(reg); fill=rainCol(v); lab=v?num(v,1):''; }
-      else if(m==='day'){ var v2=rainDay(reg); fill=rainCol(v2); lab=v2?num(v2,0):''; }
-      else { fill=tempCol(reg&&reg.temp!=null?+reg.temp:null); lab=reg&&reg.temp!=null?num(reg.temp,0)+'°':''; }
-      var me=g.name===st;
-      svg+='<path d="'+g.d+'" fill="'+fill+'" stroke="'+(me?cv('--brand'):cv('--surface'))+'" stroke-width="'+(me?6:2)+'" data-st="'+esc(g.name)+'" style="cursor:pointer"><title>'+esc(g.name)+'</title></path>';
+      var reg=regOf(g.name), fill;
+      if(m==='status'){ var s=statusOf(g.name); fill = s.lv==='severe'?cv('--severeFill'):s.lv==='warn'?cv('--warnFill'):empty; }
+      else if(m==='r1'){ fill=rainCol(rain1h(reg))||empty; }
+      else if(m==='day'){ fill=rainCol(rainDay(reg)!=null?rainDay(reg)/4:null)||empty; }   /* 하루 누적은 4로 나눠 같은 색 단계에 */
+      else { fill=tempCol(reg&&reg.temp!=null?+reg.temp:null); }
+      svg+='<path d="'+g.d+'" fill="'+fill+'" stroke="'+line+'" stroke-width="2.5" stroke-linejoin="round" data-st="'+esc(g.name)+'" style="cursor:pointer"><title>'+esc(g.name)+'</title></path>';
     });
-    var fs=Math.round((G.W||1000)/42);
+    var me=G.regions.filter(function(g){ return g.name===st; })[0];
+    if(me) svg+='<path d="'+me.d+'" fill="none" stroke="'+cv('--accent')+'" stroke-width="5" stroke-linejoin="round" style="pointer-events:none"/>';
+    var fs=Math.round((G.W||1000)/30);   /* 지도 폭 300~400px 에서 글자 11~13px */
     G.regions.forEach(function(g){
-      var reg=regOf(g.name), lab='';
-      if(m==='r1'){ var v=rain1h(reg); lab=v?num(v,1):''; } else if(m==='day'){ var v2=rainDay(reg); lab=v2?num(v2,0):''; } else if(m==='temp'){ lab=reg&&reg.temp!=null?num(reg.temp,0)+'°':''; }
-      svg+='<text x="'+g.cx+'" y="'+(g.cy+(lab?-fs*0.15:fs*0.35))+'" text-anchor="middle" font-size="'+fs+'" font-weight="800" fill="'+cv('--ink')+'" style="pointer-events:none;paint-order:stroke;stroke:'+cv('--surface')+';stroke-width:'+(fs/5)+'px">'+esc(g.name)+'</text>';
-      if(lab) svg+='<text x="'+g.cx+'" y="'+(g.cy+fs*0.95)+'" text-anchor="middle" font-size="'+(fs*0.9)+'" font-weight="900" fill="'+cv('--ink')+'" style="pointer-events:none;paint-order:stroke;stroke:'+cv('--surface')+';stroke-width:'+(fs/5)+'px">'+esc(lab)+'</text>';
+      var lab=labOf(regOf(g.name)), isMe=g.name===st;
+      var f=Math.max(fs*0.62, Math.min(fs, (g.bw||200)/2.6));   /* 작은 시군(광명·의왕·군포…)은 글자도 작게 — 이웃과 겹치지 않게 */
+      var base='text-anchor="middle" style="pointer-events:none;paint-order:stroke;stroke:'+halo+';stroke-width:'+(f/4.5)+'px;stroke-linejoin:round"';
+      svg+='<text x="'+g.cx+'" y="'+(g.cy+(lab?-f*0.2:f*0.35))+'" font-size="'+f+'" font-weight="'+(isMe?600:400)+'" fill="'+(isMe?cv('--accent'):ink2)+'" '+base+'>'+esc(g.name)+'</text>';
+      if(lab) svg+='<text x="'+g.cx+'" y="'+(g.cy+f*0.95)+'" font-size="'+(f*1.05)+'" font-weight="500" fill="'+ink+'" '+base+'>'+esc(lab)+'</text>';
     });
-    el.innerHTML=h+svg+'</svg>'; tabs(el, inst);
+    svg+='</svg>';
+    var lg='';
+    if(m==='status') lg='<span><i class="sw" style="background:'+empty+';box-shadow:inset 0 0 0 1px var(--line2)"></i>정상</span><span><i class="sw" style="background:var(--warnFill)"></i>주의</span><span><i class="sw" style="background:var(--severeFill)"></i>경보</span><span class="muted">특보 · 시간당 5/20mm · 하천 수위 기준</span>';
+    else if(m==='temp') lg='<span><i class="sw" style="background:'+tempCol(-10)+'"></i>-10°</span><span><i class="sw" style="background:'+tempCol(10)+'"></i>10°</span><span><i class="sw" style="background:'+tempCol(30)+'"></i>30°</span>';
+    else { var mul=m==='day'?4:1; lg=RAIN_STEPS.map(function(s){ return '<span><i class="sw" style="background:'+cv(s[1])+'"></i>'+(s[0]*mul<1?(s[0]*mul).toFixed(1):Math.round(s[0]*mul))+'</span>'; }).join('')+'<span class="muted">mm '+(m==='day'?'(오늘 누적)':'(1시간)')+'</span>'; }
+    el.innerHTML=seg('m', m, [['status','상태'],['r1','1시간 강수'],['day','오늘 강수'],['temp','기온']])+
+      '<div class="mapwrap">'+svg+'<div class="legend" style="margin-top:8px">'+lg+'</div></div>';
+    tabs(el, inst);
     el.querySelectorAll('path[data-st]').forEach(function(p){ p.addEventListener('click', function(){ var n=p.getAttribute('data-st'); if(ORDER.indexOf(n)>=0) setStation(n); }); });
   }};
-  W.rain = { title:'강수 순위', icon:'🌧️', w:4, h:4, render:function(el, inst){
+  W.rain = { title:'강수 순위', w:3, h:5, render:function(el, inst){
     var by=(inst.opt||{}).by||'r1', st=stationNow();
-    var rows=ORDER.map(function(n){ var reg=regOf(n); return {n:n, v: by==='r1'?rain1h(reg):rainDay(reg)}; }).filter(function(x){ return x.v!=null; });
+    var rows=ORDER.map(function(n){ var reg=regOf(n); return {n:n, v: by==='r1'?rain1h(reg):rainDay(reg)}; }).filter(function(x){ return x.v!=null && x.v>=0.1; });
     rows.sort(function(a,b){ return b.v-a.v; });
-    var max=Math.max.apply(null, rows.map(function(x){ return x.v; }).concat([by==='r1'?10:30]));
-    var h='<div class="tabs"><button data-o="by" data-v="r1" class="'+(by==='r1'?'on':'')+'">1시간</button><button data-o="by" data-v="day" class="'+(by==='day'?'on':'')+'">오늘 누적</button></div>';
-    if(!rows.some(function(x){ return x.v>0; })) h+='<div class="empty">비 오는 곳 없음 (0mm)</div>';
-    h+='<div class="rows">'+rows.slice(0,12).map(function(x){ var c=(by==='r1'?(x.v>=20?'var(--severe)':x.v>=5?'var(--warn)':'var(--brand)'):'var(--brand)');
-      return '<div class="row'+(x.n===st?' me':'')+'"><span class="n">'+esc(x.n)+'</span><span class="bar"><i style="width:'+(x.v/max*100)+'%;background:'+c+'"></i></span><span class="v">'+num(x.v,1)+'</span></div>'; }).join('')+'</div>';
+    var h=seg('by', by, [['r1','1시간'],['day','오늘 누적']]);
+    if(!rows.length){ el.innerHTML=h+'<div class="calm"><span class="dot"></span>비 오는 관서 없음 · 전 관서 0mm</div>'; tabs(el, inst); return; }
+    var max=Math.max.apply(null, rows.map(function(x){ return x.v; }).concat([by==='r1'?20:80]));
+    h+='<div class="bars">'+rows.slice(0,12).map(function(x){ var c=rainCol(by==='r1'?x.v:x.v/4)||cv('--rain2');
+      return '<div class="bar-row'+(x.n===st?' me':'')+'"><span class="n">'+esc(x.n)+'</span><span class="track"><i style="width:'+(x.v/max*100)+'%;background:'+c+'"></i></span><span class="v">'+num(x.v,1)+'</span></div>'; }).join('')+'</div>';
+    if(rows.length>12) h+='<div class="legend">그 밖에 '+(rows.length-12)+'개 관서</div>';
     el.innerHTML=h; tabs(el, inst);
   }};
-  W.fcst = { title:'내 관서 6시간 예보', icon:'⏱️', w:4, h:3, render:function(el){
+  W.fcst = { title:'내 관서 6시간 예보', w:3, h:4, render:function(el){
     var st=stationNow(), uf=(D().ultra_fcst||{})[sigunOf(st)]||[];
-    if(!uf.length){ el.innerHTML='<div class="empty">예보 자료 없음</div>'; return; }
-    var six=uf.slice(0,6), mx=Math.max(5, Math.max.apply(null, six.map(function(u){ return +u.rain_mm||0; })));
+    if(!uf.length){ el.innerHTML='<div class="calm">예보 자료 없음</div>'; return; }
+    var six=uf.slice(0,6), any=six.some(function(u){ return (+u.rain_mm||0)>0; });
+    var hh=function(u){ return esc(String(u.time||'').slice(0,2))+'시'; };
+    if(!any){
+      el.innerHTML='<div class="calm"><span class="dot"></span>6시간 동안 비 예보 없음</div><div class="fc-flat">'+six.map(function(u){
+        return '<div><span>'+hh(u)+'</span><b>'+num(u.temp,0)+'°</b><span>'+num(u.pop,0)+'%</span></div>'; }).join('')+'</div>';
+      return;
+    }
+    var mx=Math.max(10, Math.max.apply(null, six.map(function(u){ return +u.rain_mm||0; })));
     el.innerHTML='<div class="fc">'+six.map(function(u){ var v=+u.rain_mm||0;
-      return '<div class="c"><span class="mm">'+(v?num(v,1):'')+'</span><div class="col" style="height:'+Math.max(2,v/mx*70)+'%;'+(v>=20?'background:var(--severe)':v>=5?'background:var(--warn)':'')+'"></div>'+
-        '<span>'+esc(String(u.time||'').slice(0,2))+'시</span><span class="muted">'+esc(u.pty_txt||'')+' '+num(u.temp,0)+'°</span><span class="muted">'+num(u.pop,0)+'%</span></div>'; }).join('')+'</div>';
+      return '<div class="c"><span class="mm">'+(v?num(v,1):'')+'</span><div class="col" style="height:'+Math.max(2,v/mx*62)+'%;background:'+(rainCol(v)||cv('--raised'))+'"></div>'+
+        '<span class="hh">'+hh(u)+'</span><span>'+num(u.temp,0)+'° · '+num(u.pop,0)+'%</span></div>'; }).join('')+'</div>';
   }};
-  W.image = { title:'기상 영상', icon:'🛰️', w:4, h:5, render:function(el, inst){
-    var k=(inst.opt||{}).k||'radar', I={radar:'레이더', qpf:'강수예측', warn:'특보 발효도', satellite:'위성'};
+  W.image = { title:'기상 영상', w:3, h:5, render:function(el, inst){
+    var k=(inst.opt||{}).k||'radar', I={radar:'레이더', qpf:'강수예측', warn:'특보', satellite:'위성'};
     var meta=((D().kma_images||{})[k==='warn'?'wrn':k])||{};
-    el.innerHTML='<div class="tabs">'+Object.keys(I).map(function(x){ return '<button data-o="k" data-v="'+x+'" class="'+(x===k?'on':'')+'">'+I[x]+'</button>'; }).join('')+
-      '<span class="muted" style="margin-left:auto;font-size:11.5px;align-self:center">'+esc(meta.ts||'')+'</span></div>'+
-      '<img class="img" alt="'+I[k]+'" src="'+IMGH+'images/'+'kma_'+k+'.png?t='+encodeURIComponent(meta.ts||D().updated||'')+'">';
+    el.innerHTML=seg('k', k, Object.keys(I).map(function(x){ return [x, I[x]]; }))+
+      '<div class="frame"><img alt="'+I[k]+' 영상 '+esc(meta.ts||'')+'" src="'+IMGH+'images/'+'kma_'+k+'.png?t='+encodeURIComponent(meta.ts||D().updated||'')+'"></div>';
+    var m=el.parentNode.querySelector('.wh .meta'); if(m) m.textContent=String(meta.ts||'').slice(5);
     tabs(el, inst);
   }};
-  W.rivers = { title:'하천 수위 순위', icon:'🌊', w:4, h:5, render:function(el, inst){
+  W.rivers = { title:'하천 수위', w:6, h:6, render:function(el, inst){
     var mine=(inst.opt||{}).mine===true, st=stationNow();
     var rv=(mine?riversOf(st):(D().rivers||[]).filter(function(r){ return !isDam(r); })).filter(function(r){ return r.danger; });
     rv.sort(function(a,b){ return (riverBad(a)?-1:riverPct(a))<(riverBad(b)?-1:riverPct(b)) ? 1 : -1; });   /* 자료 이상은 맨 아래로 */
-    var h='<div class="tabs"><button data-o="mine" data-v="0" class="'+(!mine?'on':'')+'">전체</button><button data-o="mine" data-v="1" class="'+(mine?'on':'')+'">내 관서</button><span class="muted" style="margin-left:auto;font-size:11.5px;align-self:center">위험수위 대비 %</span></div>';
-    if(!rv.length){ el.innerHTML=h+'<div class="empty">관측소 없음</div>'; tabs(el, inst); return; }
-    h+='<div class="rows">'+rv.slice(0,15).map(function(r){ var lv=riverLv(r), p=riverPct(r), c=lv==='severe'?'var(--severe)':lv==='warn'?'var(--warn)':lv==='bad'?'var(--ink3)':'var(--safe)';
-      var bar = lv==='bad' ? '<span class="muted" style="font-size:11.5px">⚠ 자료 이상 ('+num(r.value,2)+'m)</span>' : '<span class="bar"><i style="width:'+Math.min(100,p*100)+'%;background:'+c+'"></i></span>';
-      return '<div class="row" title="'+esc(r.name)+' '+num(r.value,2)+'m (주의 '+num(r.warning,1)+' · 위험 '+num(r.danger,1)+')" style="grid-template-columns:96px 1fr 44px"><span class="n">'+esc(riverName(r))+'</span>'+bar+'<span class="v" style="color:'+c+'">'+(lv==='bad'?'—':Math.round(p*100)+'%')+'</span></div>'; }).join('')+'</div>';
+    var h=seg('mine', mine?1:0, [[0,'전체'],[1,'내 관서']]);
+    if(!rv.length){ el.innerHTML=h+'<div class="calm">'+(mine?esc(st)+' 관할 ':'')+'관측소 없음</div>'; tabs(el, inst); return; }
+    var SCALE=1.2;   /* 막대 끝 = 위험수위의 120% */
+    h+='<div class="gauges">'+rv.slice(0,16).map(function(r){
+      var lv=riverLv(r), p=riverPct(r), parts=riverParts(r);
+      var tw = r.warning!=null && r.danger ? Math.min(100, r.warning/r.danger/SCALE*100) : null;
+      var fill = lv==='bad' ? '' : '<i style="width:'+Math.min(100, p/SCALE*100)+'%"></i>';
+      var tip = esc(r.name)+' '+num(r.value,2)+'m · 주의 '+num(r.warning,1)+'m · 위험 '+num(r.danger,1)+'m';
+      return '<div class="gauge '+lv+'" title="'+tip+'"><span class="n"><b>'+esc(parts.river)+'</b><span>'+esc(parts.site||r.sigun||'')+'</span></span>'+
+        '<span class="staff">'+fill+(tw!=null?'<span class="tk w" style="left:'+tw+'%"></span>':'')+'<span class="tk d" style="left:'+(100/SCALE)+'%"></span></span>'+
+        '<span class="v">'+(lv==='bad'?'자료 이상':Math.round(p*100)+'%')+'</span></div>'; }).join('')+'</div>';
+    h+='<div class="legend"><span><i class="tkw"></i>주의수위</span><span><i class="tkd"></i>위험수위</span><span>값 = 위험수위 대비 %</span>'+(rv.length>16?'<span>그 밖에 '+(rv.length-16)+'곳</span>':'')+'</div>';
     el.innerHTML=h; tabs(el, inst);
   }};
-  W.riverTrend = { title:'하천 수위 추이', icon:'📈', w:4, h:4, render:function(el, inst){
+  W.riverTrend = { title:'하천 수위 추이', w:3, h:5, render:function(el, inst){
     var all=(D().rivers||[]).filter(function(r){ return !isDam(r) && (r.history||[]).length>1; });
-    if(!all.length){ el.innerHTML='<div class="empty">추이 자료 없음</div>'; return; }
+    if(!all.length){ el.innerHTML='<div class="calm">추이 자료 없음</div>'; return; }
     var mineR=riversOf(stationNow()).filter(function(r){ return (r.history||[]).length>1; });
     var code=(inst.opt||{}).code, r=all.filter(function(x){ return String(x.code)===String(code); })[0];
     if(!r){ var pool=(mineR.length?mineR:all).filter(function(x){ return !riverBad(x); }).sort(function(a,b){ return riverPct(b)-riverPct(a); }); r=pool[0]||all[0]; }
-    var sel='<select data-o="code" style="height:26px;border-radius:7px;border:1px solid var(--border2);background:var(--surface2);font-size:12px;max-width:100%;margin-bottom:6px">'+
+    var sel='<select data-o="code" aria-label="관측소" style="height:28px;max-width:100%;margin-bottom:12px;padding:0 8px;border-radius:8px;border:1px solid var(--line2);background:var(--raised);font-size:13px">'+
       all.slice().sort(function(a,b){ return riverName(a)<riverName(b)?-1:1; }).map(function(x){ return '<option value="'+esc(x.code)+'"'+(x===r?' selected':'')+'>'+esc(riverName(x))+'</option>'; }).join('')+'</select>';
     var hs=r.history.slice(-24), vals=hs.map(function(p){ return +p.value; }).filter(function(v){ return !isNaN(v); });
     var lo=Math.min.apply(null, vals), hi=Math.max.apply(null, vals);
-    /* 주의·위험수위 선이 너무 멀지 않으면(지금 값의 1.5배 안) 그래프 범위에 넣어 같이 보여준다 */
     if(r.warning!=null && r.warning<=hi*1.5) hi=Math.max(hi, r.warning);
     if(r.danger!=null && r.danger<=hi*1.3) hi=Math.max(hi, r.danger);
     if(hi-lo<0.2){ hi+=0.1; lo-=0.1; }
-    var Wd=300, Ht=120, X=function(i){ return 8+i*(Wd-16)/Math.max(1,hs.length-1); }, Y=function(v){ return 8+(Ht-16)*(1-(v-lo)/(hi-lo)); };
-    var css=getComputedStyle(document.documentElement), cv=function(n){ return css.getPropertyValue(n).trim(); };
+    var Wd=300, Ht=120, X=function(i){ return 4+i*(Wd-8)/Math.max(1,hs.length-1); }, Y=function(v){ return 8+(Ht-16)*(1-(v-lo)/(hi-lo)); };
     var pts=hs.map(function(p,i){ return X(i).toFixed(1)+','+Y(+p.value).toFixed(1); }).join(' ');
-    var line=function(v,c,t){ return (v!=null && v>=lo && v<=hi) ? '<line x1="0" x2="'+Wd+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="'+c+'" stroke-dasharray="4 4" stroke-width="1.5"/><text x="'+(Wd-4)+'" y="'+(Y(v)-3)+'" text-anchor="end" font-size="10" fill="'+c+'">'+t+' '+num(v,1)+'</text>' : ''; };
-    var lv=riverLv(r), c=lv==='severe'?cv('--severe'):lv==='warn'?cv('--warn'):lv==='bad'?cv('--ink3'):cv('--brand');
-    el.innerHTML=sel+'<div style="display:flex;gap:8px;align-items:baseline;margin-bottom:2px"><b style="font-size:20px;color:'+c+'">'+num(r.value,2)+'m'+(lv==='bad'?' ⚠ 자료 이상':'')+'</b><span class="muted">주의 '+num(r.warning,1)+' · 위험 '+num(r.danger,1)+' · 최근 '+hs.length+'시간</span></div>'+
-      '<svg viewBox="0 0 '+Wd+' '+Ht+'" style="width:100%;height:calc(100% - 64px)" preserveAspectRatio="none">'+line(r.warning,cv('--warn'),'주의')+line(r.danger,cv('--severe'),'위험')+
-      '<polyline points="'+pts+'" fill="none" stroke="'+c+'" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg>';
+    var line=function(v,c){ return (v!=null && v>=lo && v<=hi) ? '<line x1="0" x2="'+Wd+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="'+c+'" stroke-dasharray="4 4" stroke-width="1" vector-effect="non-scaling-stroke"/>' : ''; };
+    var grid=''; for(var g=1; g<4; g++){ grid+='<line x1="0" x2="'+Wd+'" y1="'+(Ht*g/4)+'" y2="'+(Ht*g/4)+'" stroke="'+cv('--line')+'" stroke-width="1" vector-effect="non-scaling-stroke"/>'; }
+    var lv=riverLv(r), c=lv==='severe'?cv('--severe'):lv==='warn'?cv('--warn'):cv('--ink2');
+    el.innerHTML=sel+'<div style="display:flex;gap:8px;align-items:baseline;margin-bottom:8px"><span style="font-size:28px;line-height:32px;font-weight:500;color:'+(lv==='severe'?'var(--severe)':lv==='warn'?'var(--warn)':'var(--ink)')+'">'+num(r.value,2)+'<small style="font-size:14px;color:var(--ink3);margin-left:2px">m</small></span>'+
+      '<span class="muted" style="font-size:12px">'+(lv==='bad'?'자료 이상 · ':'')+'주의 '+num(r.warning,1)+' · 위험 '+num(r.danger,1)+' · 최근 '+hs.length+'시간</span></div>'+
+      '<svg viewBox="0 0 '+Wd+' '+Ht+'" style="width:100%;height:calc(100% - 88px)" preserveAspectRatio="none">'+grid+line(r.warning,cv('--warn'))+line(r.danger,cv('--severe'))+
+      '<polyline points="'+pts+'" fill="none" stroke="'+c+'" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
     el.querySelector('select').onchange=function(){ inst.opt=inst.opt||{}; inst.opt.code=this.value; save(); W.riverTrend.render(el, inst); };
   }};
-  W.weather = { title:'기온 · 바람 · 습도', icon:'🌡️', w:4, h:5, render:function(el){
+  W.weather = { title:'기온 · 바람 · 습도', w:3, h:6, render:function(el){
     var st=stationNow(), dirs=['북','북동','동','남동','남','남서','서','북서'];
-    el.innerHTML='<table class="tb"><tr><th>관서</th><th>날씨</th><th>기온</th><th>바람</th><th>습도</th></tr>'+ORDER.map(function(n){ var r=regOf(n)||{};
+    el.innerHTML='<table class="tb"><tr><th>관서</th><th>날씨</th><th>기온</th><th>바람 m/s</th><th>습도</th></tr>'+ORDER.map(function(n){ var r=regOf(n)||{};
       var dir=r.vec!=null?dirs[Math.round(((+r.vec)%360)/45)%8]:'';
       return '<tr class="'+(n===st?'me':'')+'"><td>'+esc(n)+'</td><td>'+esc(r.weather||'—')+'</td><td>'+num(r.temp,1)+'°</td><td>'+esc(dir)+' '+num(r.wind,1)+'</td><td>'+num(r.humid,0)+'%</td></tr>'; }).join('')+'</table>';
   }};
-  W.pm = { title:'미세먼지', icon:'😷', w:4, h:4, render:function(el){
-    var pm=D().pm||[]; if(!pm.length){ el.innerHTML='<div class="empty">자료 없음</div>'; return; }
-    var cls=function(g){ return /나쁨/.test(g||'')?(/매우/.test(g)?'severe':'warn'):(/보통/.test(g||'')?'caution':'safe'); };
-    el.innerHTML='<table class="tb"><tr><th>지역</th><th>PM10</th><th>PM2.5</th><th>등급</th></tr>'+pm.map(function(p){
-      return '<tr class="'+(p.region===sigunOf(stationNow())?'me':'')+'"><td>'+esc(p.region)+'</td><td>'+num(p.pm10)+'</td><td>'+num(p.pm25)+'</td><td><span class="badge b-'+cls(p.gradeText)+'">'+esc(p.gradeText||'—')+'</span></td></tr>'; }).join('')+'</table>';
+  W.pm = { title:'미세먼지', w:3, h:5, render:function(el){
+    var pm=D().pm||[]; if(!pm.length){ el.innerHTML='<div class="calm">자료 없음</div>'; return; }
+    var cls=function(g){ return /매우/.test(g||'')?'severe':/나쁨/.test(g||'')?'warn':/좋음/.test(g||'')?'safe':''; };
+    el.innerHTML='<table class="tb"><tr><th>지역</th><th>PM10</th><th>PM2.5</th><th>등급</th></tr>'+pm.map(function(p){ var c=cls(p.gradeText);
+      return '<tr class="'+(p.region===sigunOf(stationNow())?'me':'')+'"><td>'+esc(p.region)+'</td><td>'+num(p.pm10)+'</td><td>'+num(p.pm25)+'</td><td class="'+(c?'t-'+c:'')+'">'+esc(p.gradeText||'—')+'</td></tr>'; }).join('')+'</table>';
   }};
-  W.messages = { title:'재난문자', icon:'📨', w:4, h:4, render:function(el){
-    var ms=D().messages||[]; if(!ms.length){ el.innerHTML='<div class="empty">받은 재난문자 없음</div>'; return; }
-    el.innerHTML=ms.slice(0,20).map(function(m){ return '<div class="item"><div class="h">'+esc(m.region||m.sender||'')+'<span class="tm">'+esc(m.time||'')+'</span></div>'+esc(m.text||'')+'</div>'; }).join('');
+  W.messages = { title:'재난문자', w:3, h:6, render:function(el){
+    var ms=D().messages||[]; if(!ms.length){ el.innerHTML='<div class="calm"><span class="dot"></span>받은 재난문자 없음</div>'; return; }
+    el.innerHTML='<div class="list">'+ms.slice(0,20).map(function(m){ return '<div class="li"><div class="h"><b>'+esc(m.region||m.sender||'')+'</b><span class="tm">'+esc(m.time||'')+'</span></div><div class="b">'+esc(m.text||'')+'</div></div>'; }).join('')+'</div>';
   }};
-  W.fire = { title:'산불 위험', icon:'🔥', w:4, h:3, render:function(el){
-    var f=D().fire||[]; if(!f.length){ el.innerHTML='<div class="empty">자료 없음</div>'; return; }
-    var c=function(l){ return l>=4?'severe':l>=3?'warn':l>=2?'caution':'safe'; };
-    el.innerHTML='<div class="rows">'+f.map(function(x){ return '<div class="row" style="grid-template-columns:1fr auto"><span class="n">'+esc(x.region)+'</span><span class="badge b-'+c(+x.level)+'">'+esc(x.levelText||x.level)+'</span></div>'; }).join('')+'</div>';
+  W.fire = { title:'산불 위험', w:3, h:4, render:function(el){
+    var f=D().fire||[]; if(!f.length){ el.innerHTML='<div class="calm">자료 없음</div>'; return; }
+    var c=function(l){ return l>=4?'severe':l>=3?'warn':l>=2?'':'safe'; };
+    el.innerHTML='<table class="tb">'+f.map(function(x){ var k=c(+x.level); return '<tr><td>'+esc(x.region)+'</td><td class="'+(k?'t-'+k:'')+'">'+esc(x.levelText||x.level)+'</td></tr>'; }).join('')+'</table>';
   }};
 
-  /* 위젯 안의 탭 버튼 — data-o(옵션 이름)·data-v(값)를 이 위젯 설정에 저장하고 다시 그린다 */
+  /* 위젯 안의 구간 버튼 — data-o(옵션 이름)·data-v(값)를 이 위젯 설정에 저장하고 다시 그린다 */
   function tabs(el, inst){
-    el.querySelectorAll('.tabs button[data-o]').forEach(function(b){ b.onclick=function(){
+    el.querySelectorAll('.seg button[data-o]').forEach(function(b){ b.onclick=function(){
       inst.opt=inst.opt||{}; var v=b.getAttribute('data-v'); inst.opt[b.getAttribute('data-o')] = (v==='1'?true:v==='0'?false:v);
       save(); W[inst.type].render(el, inst);
     }; });
   }
 
-  /* ── 기본 배치 ── x,y,w,h 는 12칸 격자 기준 */
+  /* ── 기본 배치 ── 12칸 격자, 한 칸 높이 64. 가운데 큰 지도를 중심으로 양옆에 목록 */
   var PRESETS = {
-    normal: [['status',0,0,4,2],['kpi',4,0,8,2],['map',0,2,4,7],['warnings',4,2,4,4],['fcst',8,2,4,3],['image',8,5,4,5,{k:'radar'}],['rain',4,6,4,4],['rivers',0,9,4,5],['weather',4,10,4,5],['messages',8,10,4,4]],
-    rain:   [['status',0,0,4,2],['kpi',4,0,8,2],['map',0,2,4,7,{m:'r1'}],['image',4,2,4,6,{k:'radar'}],['image',8,2,4,6,{k:'qpf'}],['rain',0,9,4,5],['fcst',4,8,4,3],['warnings',8,8,4,5],['rivers',4,11,4,5]],
-    river:  [['status',0,0,4,2],['kpi',4,0,8,2],['rivers',0,2,4,7],['riverTrend',4,2,4,4],['riverTrend',8,2,4,4],['map',4,6,4,7,{m:'day'}],['rain',8,6,4,5,{by:'day'}],['warnings',0,9,4,4]],
+    normal: [['status',0,0,3,3],['kpi',3,0,9,3],
+             ['warnings',0,3,3,3],['rain',0,6,3,4],['fire',0,10,3,3],['map',3,3,6,10],['image',9,3,3,6,{k:'radar'}],['fcst',9,9,3,4],
+             ['rivers',0,13,6,8],['weather',6,13,3,8],['messages',9,13,3,8]],
+    rain:   [['status',0,0,3,3],['kpi',3,0,9,3],
+             ['image',0,3,3,6,{k:'radar'}],['rain',0,9,3,6],['map',3,3,6,12,{m:'r1'}],['image',9,3,3,6,{k:'qpf'}],['fcst',9,9,3,6],
+             ['warnings',0,15,4,5],['rivers',4,15,8,5]],
+    river:  [['status',0,0,3,3],['kpi',3,0,9,3],
+             ['rivers',0,3,6,10],['map',6,3,6,10,{m:'day'}],
+             ['riverTrend',0,13,4,5],['riverTrend',4,13,4,5],['rain',8,13,4,5,{by:'day'}]],
     all:    null
   };
   function presetList(name){
-    if(name==='all'){ var out=[], x=0, y=0; Object.keys(W).forEach(function(t){ var w=W[t]; if(x+w.w>12){ x=0; y+=6; } out.push([t,x,y,w.w,w.h]); x+=w.w; }); return out; }
+    if(name==='all'){ var out=[], x=0, y=0, rowH=0; Object.keys(W).forEach(function(t){ var w=W[t]; if(x+w.w>12){ x=0; y+=rowH; rowH=0; } out.push([t,x,y,w.w,w.h]); x+=w.w; rowH=Math.max(rowH,w.h); }); return out; }
     return PRESETS[name] || PRESETS.normal;
   }
   var uidN=0; function uid(){ return 'w'+Date.now().toString(36)+(uidN++); }
   function fromPreset(name){ return presetList(name).map(function(p){ return {id:uid(), type:p[0], x:p[1], y:p[2], w:p[3], h:p[4], opt:p[5]?JSON.parse(JSON.stringify(p[5])):{}}; }); }
 
   /* ── 격자 ── */
-  var grid = GridStack.init({ column:12, cellHeight:62, margin:6, float:false, staticGrid:true, animate:true,
+  var grid = GridStack.init({ column:12, cellHeight:64, margin:8, float:false, staticGrid:true, animate:true,
     draggable:{handle:'.wh'} }, '#grid');   /* 휴대폰은 격자 대신 CSS 로 한 줄 쌓기(아래 order) */
   var isMobile = function(){ return window.matchMedia('(max-width:760px)').matches; };
   function reorder(){ (grid.engine.nodes||[]).forEach(function(n){ if(n.el) n.el.style.order = (n.y||0)*100 + (n.x||0); }); }
@@ -415,23 +590,23 @@ svg text{font-family:inherit}
     ['x','y','w','h'].forEach(function(k){ if(it[k]!=null) el.setAttribute('gs-'+k, it[k]); });
     if(it.x==null) el.setAttribute('gs-auto-position','true');
     el.setAttribute('gs-id', inst.id); el.setAttribute('gs-min-w', 2); el.setAttribute('gs-min-h', 2); el.setAttribute('data-t', inst.type);
-    el.innerHTML='<div class="grid-stack-item-content"><div class="wh"><span>'+def.icon+'</span><span class="t">'+esc(def.title)+'</span><button class="x" title="빼기">×</button></div><div class="wb"></div></div>';
+    el.innerHTML='<div class="grid-stack-item-content"><div class="wh">'+ic(inst.type)+'<span class="t">'+esc(def.title)+'</span><span class="meta"></span><button class="x" aria-label="'+esc(def.title)+' 빼기" title="빼기">'+ic('x')+'</button></div><div class="wb"></div></div>';
     $('grid').appendChild(el); grid.makeWidget(el);
     el.querySelector('.x').onclick=function(){ grid.removeWidget(el); delete INST[inst.id]; save(); };
     renderOne(inst);
   }
   function renderOne(inst){
     var el=document.querySelector('.grid-stack-item[gs-id="'+inst.id+'"] .wb'); if(!el) return;
-    try{ W[inst.type].render(el, inst); }catch(e){ el.innerHTML='<div class="empty">표시 오류: '+esc(e.message)+'</div>'; if(window.console) console.error(e); }
+    try{ W[inst.type].render(el, inst); }catch(e){ el.innerHTML='<div class="calm">표시하지 못함 · '+esc(e.message)+'</div>'; if(window.console) console.error(e); }
   }
   function renderAll(){ Object.keys(INST).forEach(function(k){ renderOne(INST[k]); }); updStamp(); }
+  var loading=false;
   function save(){
     reorder();
     if(loading) return;
     var out=grid.save(false).map(function(n){ var i=INST[n.id]; return i?{id:n.id,type:i.type,x:n.x,y:n.y,w:n.w,h:n.h,opt:i.opt}:null; }).filter(Boolean);
     storeSet(LAYOUT_KEY, JSON.stringify(out));
   }
-  var loading=false;
   function load(list){
     loading=true;
     grid.removeAll(true);
@@ -442,25 +617,28 @@ svg text{font-family:inherit}
   }
   grid.on('change', save);
   grid.on('removed', save);
+  grid.on('resizestop', function(e, el){ var id=el&&el.getAttribute('gs-id'); if(id&&INST[id]) renderOne(INST[id]); });
 
   var saved=null; try{ saved=JSON.parse(storeGet(LAYOUT_KEY)||'null'); }catch(e){}
   load(Array.isArray(saved) && saved.length ? saved : fromPreset('normal'));
 
   /* ── 꾸미기 ── */
-  function setEditing(on){ document.body.classList.toggle('editing', on); grid.setStatic(!on); $('btnEdit').classList.toggle('on', on); $('btnEdit').textContent = on?'✓ 완료':'✎ 꾸미기'; }
+  function setEditing(on){ document.body.classList.toggle('editing', on); grid.setStatic(!on); $('btnEdit').classList.toggle('on', on); $('btnEdit').innerHTML = on ? ic('check')+'완료' : ic('pencil')+'꾸미기'; }
+  setEditing(false);
   $('btnEdit').onclick=function(){ if(isMobile()) return; setEditing(!document.body.classList.contains('editing')); };
-  $('addList').innerHTML = Object.keys(W).map(function(t){ return '<button class="chip" data-t="'+t+'">'+W[t].icon+' '+esc(W[t].title)+'</button>'; }).join(' ');
+  $('addList').innerHTML = Object.keys(W).map(function(t){ return '<button class="chip" data-t="'+t+'">'+ic(t)+esc(W[t].title)+'</button>'; }).join('');
   $('addList').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ var t=b.getAttribute('data-t'); addInst({type:t, w:W[t].w, h:W[t].h}); save();
     var last=document.querySelector('.grid-stack-item[gs-id]:last-child'); if(last && last.scrollIntoView) last.scrollIntoView({behavior:'smooth', block:'center'}); }; });
-  $('btnReset').onclick=function(){ if(confirm('처음 배치(평상시)로 되돌릴까요? 지금 꾸민 배치는 사라집니다.')) load(fromPreset('normal')); };
+  $('btnReset').onclick=function(){ if(confirm('처음 배치(평상시)로 되돌릴까요? 지금 꾸민 배치는 사라집니다')) load(fromPreset('normal')); };
   $('selPreset').onchange=function(){ var v=this.value, nm=this.options[this.selectedIndex].text; this.value=''; if(!v) return;
-    if(confirm('기본 배치 "'+nm+'"를 불러올까요? 지금 꾸민 배치는 사라집니다.')) load(fromPreset(v)); };
+    if(confirm('기본 배치 "'+nm+'"를 불러올까요? 지금 꾸민 배치는 사라집니다')) load(fromPreset(v)); };
 
-  /* ── 갱신 ── 60초마다 새 데이터 */
+  /* ── 갱신 ── 60초마다 새 데이터. 자료 신선도 점: 40분 넘게 안 바뀌면 주황 */
   function updStamp(){
-    var u=D().updated||'', el=$('upd'); if(!u){ el.textContent='자료 없음'; return; }
+    var u=D().updated||'', el=$('upd'), tx=el.querySelector('span'); if(!u){ tx.textContent='자료 없음'; el.classList.add('old'); return; }
     var t=new Date(u.replace(' ','T')+'+09:00'), m=Math.round((Date.now()-t.getTime())/60000);
-    el.textContent='갱신 '+u.slice(5,16)+(isNaN(m)?'':' ('+(m<1?'방금':m+'분 전')+')'); el.classList.toggle('old', m>40);
+    tx.textContent=u.slice(5,16).replace('-','/')+' 갱신'+(isNaN(m)?'':' · '+(m<1?'방금':m+'분 전'));
+    el.classList.toggle('old', m>40); el.title = m>40 ? '자료가 '+m+'분째 바뀌지 않았습니다' : '자료가 최신입니다';
   }
   function poll(){
     try{
