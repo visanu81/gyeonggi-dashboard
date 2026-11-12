@@ -20,7 +20,9 @@
      2026-11-12 대응 체크리스트: 평시·주의·경보 단계별 할 일, 항목은 화면에서 직접 편집(기본값은 '예시' 표시)
      · 목록·체크는 이 브라우저에만 저장(목록 복사·붙여넣기로 다른 PC에 옮김), 체크하면 상황 기록·상황보고에 반영
      2026-11-12 사후 보고: 상황이 진행되는 동안 최고 단계·최대 강수·최고 수위·조치 진행을 기록해 두었다가(run record) 정상으로 돌아오면 '끝난 상황'으로 7일 보관, 상황보고 위젯 '사후' 양식과 '상황 종료' 띠에서 초안 복사
-     · 화면이 열려 있던 동안의 기록이라는 한계를 문구에 적는다 -->
+     · 화면이 열려 있던 동안의 기록이라는 한계를 문구에 적는다
+     · 서버 사건 기록(2026-11-13): 자료에 events·warnings[].since 가 있으면 그것을 우선 쓰고(화면이 닫혀 있던 동안의 강수·수위·특보 변화가 채워짐), 없으면 예전처럼 화면이 본 것만
+     · 출동 메모 위젯: 열쇠 정하기/넣기, 기록·삭제 — 쉬운 화면과 같은 저장소·같은 열쇠 -->
 
 <script src="region.js"></script>
 <script src="risk-zones.js"></script>
@@ -253,6 +255,35 @@ table.tb{width:100%;border-collapse:collapse}
 .tlx:hover{background:var(--raised);color:var(--ink)}
 pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;line-height:20px;margin:0;padding:12px;border-radius:8px;background:var(--raised);color:var(--ink);user-select:text}
 
+/* 출동 메모 */
+.dsp-types{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.dsp-t{height:28px;padding:0 8px;border-radius:8px;border:1px solid var(--line2);background:var(--raised);color:var(--ink);font-size:13px;cursor:pointer;
+  transition:border-color .15s var(--ease),background-color .15s var(--ease),color .15s var(--ease)}
+.dsp-t:hover{border-color:var(--ink3)}
+.dsp-t.on{background:var(--ink);border-color:var(--ink);color:var(--card)}
+.dsp-f{display:flex;flex-direction:column;gap:8px}
+.dsp-in{display:block;width:100%;min-width:0;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--line2);background:var(--raised);color:var(--ink);font:inherit;font-size:13px}
+.dsp-in::placeholder{color:var(--ink3)}
+.dsp-in:focus-visible{border-radius:8px}
+.dsp-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dsp-row .dsp-sub{min-width:0}
+.dsp-row .btn{flex:none}
+.dsp-sub{font-size:12px;line-height:16px;color:var(--ink3)}
+.dsp-sub.m{margin:8px 0 12px}
+.dsp-msg{margin-top:0;font-size:12px;line-height:16px;color:var(--ink3);overflow-wrap:anywhere}
+.dsp-msg.err{color:var(--severe)}
+.dsp-msg:empty{display:none}
+.dsp-key+.dsp-msg{margin-top:8px}
+.dsp-h{margin:16px 0 4px;font-size:12px;line-height:16px;color:var(--ink3)}
+.dsp-fail{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--severe)}
+.dsp-r{display:grid;grid-template-columns:minmax(0,1fr) 24px;align-items:start;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.dsp-h+.dsp-r{border-top:0}
+.dsp-b{min-width:0}
+.dsp-l1{display:flex;align-items:baseline;gap:8px}
+.dsp-tm{font-size:12px;color:var(--ink3);white-space:nowrap}
+.dsp-ty{font-weight:500}
+.dsp-tx{color:var(--ink2);font-size:13px;overflow-wrap:anywhere}
+
 /* 지금 점검할 곳 */
 .ckh{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:12px;font-size:13px;color:var(--ink2)}
 .ckh .live{margin-left:auto;font-size:12px;color:var(--ink3)}
@@ -392,7 +423,8 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     timeline:'<path d="M12 6v6l4 2"/><path d="M16 21.16a10 10 0 1 1 5-13.516"/><path d="M20 11.5v6"/><path d="M20 21.5h.01"/>',
     report:'<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
     checklist:'<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
-    todo:'<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>'
+    todo:'<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
+    siren:'<path d="M7 18v-6a5 5 0 1 1 10 0v6"/><path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"/><path d="M21 12h1"/><path d="M18.5 4.5 18 5"/><path d="M2 12h1"/><path d="M12 2v1"/><path d="m4.929 4.929.707.707"/><path d="M12 12v6"/>'
   };
   function ic(k){ return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">'+(P[k]||'')+'</svg>'; }
   $('btnTheme').innerHTML = ic('contrast');
@@ -483,8 +515,11 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   function seg(key, cur, items){ return '<div class="seg">'+items.map(function(x){ return '<button data-o="'+key+'" data-v="'+x[0]+'" class="'+(String(x[0])===String(cur)?'on':'')+'">'+x[1]+'</button>'; }).join('')+'</div>'; }
 
   /* ── 상황 엔진 ── 화면은 사실과 기준 통과만 적는다. 판단·지시는 사람이 한다 ── */
-  var SIT = { sim: /[?&]sim=1(&|$)/.test(location.search), notes:null, notesFail:false, notesAt:0, notesBusy:false };
-  var DSP_URL = 'https://dispatch.visanu81.workers.dev/api/notes';
+  var SIT = { sim: /[?&]sim=1(&|$)/.test(location.search), notes:null, notesFail:false, notesAt:0, notesBusy:false, notesAgain:false };
+  var DSP_BASE = 'https://dispatch.visanu81.workers.dev';
+  var DSP_URL = DSP_BASE + '/api/notes';
+  /* 서버 사건 기록(D().events)이 있는가 — 모의 훈련에서는 예전 방식(이 화면이 본 것) 그대로 */
+  var hasSrv = function(){ return Array.isArray(D().events) && !SIT.sim; };
   function sk(b){ return b + (RC.key||'x') + (SIT.sim ? '.sim' : ''); }
   function p2(n){ return (n<10?'0':'') + n; }
   function kst(ts){ return new Date(ts + 32400000); }   /* getUTC* 로 읽으면 한국 시각 */
@@ -495,6 +530,13 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   function fYMD(ts){ var k=kst(ts); return k.getUTCFullYear()+'/'+p2(k.getUTCMonth()+1)+'/'+p2(k.getUTCDate()); }
   function fYMDH(ts){ var k=kst(ts); return String(k.getUTCFullYear())+p2(k.getUTCMonth()+1)+p2(k.getUTCDate())+p2(k.getUTCHours()); }
   function digTs(s){ s=String(s||''); if(!/^\d{10}(\d{2})?$/.test(s)) return null; return kstTs(+s.slice(0,4), +s.slice(4,6), +s.slice(6,8), +s.slice(8,10), s.length>=12 ? +s.slice(10,12) : 0); }
+  /* 서버 시각 'YYYY-MM-DD HH:MM(:SS)' (한국 시각) → ms. 읽을 수 없으면 null */
+  function srvTs(s){
+    var m=String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if(!m) return null;
+    var t=kstTs(+m[1], +m[2], +m[3], +m[4], +m[5]) + (m[6] ? +m[6]*1000 : 0);
+    return isNaN(t) ? null : t;
+  }
   function jget(k, def){ try{ var v=JSON.parse(storeGet(k)||'null'); return v==null ? def : v; }catch(e){ return def; } }
   function dayStart(ts){ var k=kst(ts); return kstTs(k.getUTCFullYear(), k.getUTCMonth()+1, k.getUTCDate(), 0, 0); }
   function fDur(ms){ var mn=Math.max(0, Math.floor(ms/60000)), hh=Math.floor(mn/60), mm=mn%60; return (hh ? hh+'시간 ' : '')+mm+'분'; }
@@ -524,8 +566,56 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   }
   function typeWord(title){ return String(title||'').replace(/\s*(발표|해제|변경).*$/, '').trim(); }
 
+  /* ── 서버 사건 기록과 이 화면이 본 것을 합칠 때 같은 일을 한 번만 보이게 (순수 함수 — 점검용으로 따로 떼어 시험한다) ── */
+  /*SRV-BEGIN*/
+  function srvWord(t){ return String(t||'').replace(/^\s+/, '').split(/\s+/)[0] || ''; }
+  /* srvEvs: 서버 사건(내부 모양), locEvs: 이 화면이 만든 사건(통보문 'b|'·하천 'r|' 등). 둘 다 남길 것만 돌려준다
+     · 특보: 같은 종류·같은 방향(발효↔발표, 해제↔해제)의 통보문이 ±60분 안에 있으면 서버 줄을 뺀다
+     · 하천: 같은 관측소·같은 문구의 서버 줄이 ±70분 안에 있으면 수위 기록에서 만든 줄을 뺀다 */
+  function srvDedup(srvEvs, locEvs){
+    var BUL=3600000, RIV=4200000;
+    var srv=srvEvs.filter(function(s){
+      if(s.kind!=='warn') return true;
+      var word=srvWord(s.text), dir=/해제/.test(s.text) ? '해제' : (/발효/.test(s.text) ? '발표' : '');
+      if(!word || !dir) return true;
+      return !locEvs.some(function(b){
+        var t=String(b.text||'');
+        return b.kind==='warn' && String(b.key||'').indexOf('b|')===0 && t.indexOf(word)===0 && t.indexOf(dir)>=0 && Math.abs(b.ts-s.ts)<=BUL;
+      });
+    });
+    var srvRiv=srvEvs.filter(function(s){ return s.kind==='river'; });
+    var loc=locEvs.filter(function(l){
+      if(l.kind!=='river' || String(l.key||'').indexOf('r|')!==0) return true;
+      return !srvRiv.some(function(s){ return String(s.code)===String(l.code) && s.text===l.text && Math.abs(s.ts-l.ts)<=RIV; });
+    });
+    return {srv:srv, loc:loc};
+  }
+  /* 이 화면이 적어 둔 강수 기준 통과 한 줄이 서버 줄과 같은가 — 문구가 같고 ±70분. 관서 별칭(일산)은 시 이름(고양)으로 바꿔 견준다 */
+  function srvRainDup(e, srvRain, sg){
+    var t=String(e.text||''), w=e.where && e.where[0];
+    if(w && t.indexOf(w)===0) t=sg(w)+t.slice(w.length);
+    return srvRain.some(function(s){ return s.text===t && Math.abs(s.ts-e.ts)<=4200000; });
+  }
+  /*SRV-END*/
+  /* 서버 사건 → 내부 모양. 시각을 읽을 수 없는 줄은 뺀다 */
+  SIT.srvList = function(){
+    if(!hasSrv()) return [];
+    var out=[];
+    (D().events||[]).forEach(function(e){
+      if(!e || typeof e!=='object') return;
+      var ts=srvTs(e.ts), text=String(e.text||''); if(ts==null || !text) return;
+      out.push({ts:ts, kind:e.kind, lv:e.lv, text:text, sub:e.sub || e.area || '', area:e.area, where:Array.isArray(e.where) ? e.where : undefined,
+        code:e.code, sigun:e.sigun, key:'s|'+(e.k!=null ? e.k : e.kind+'|'+e.ts+'|'+text),
+        tw:e.kind==='warn' ? srvWord(text) : undefined, up:e.kind==='river' ? /넘음/.test(text) : undefined});
+    });
+    return out;
+  };
+  /* 출처 말: 호우경보(08:40 발표) / (08:40부터) / (15:00 현황 기준) */
+  SIT.srcWord = function(src){ return src==='발표' ? ' 발표' : (src==='서버' ? '부터' : (src==='현황' ? ' 현황 기준' : '')); };
+
   /* 특보 시각 — 자료의 warnings[].time 은 '가장 최근 통보문 시각'이라 발효 시각이 아니다(통보문이 나올 때마다 앞으로 간다).
-     ① 통보문(warnings_full) 중 가장 최근 '발표' 시각(src '발표') ② 없으면 이 화면이 그 특보를 처음 본 시각(src '현황', 이 브라우저에 기억해 두고 뒤로 밀리지 않게) */
+     ① 통보문(warnings_full) 중 가장 최근 '발표' 시각(src '발표') ② 서버가 그 특보를 처음 본 시각 warnings[].since(src '서버')
+     ③ 없으면 이 화면이 그 특보를 처음 본 시각(src '현황', 이 브라우저에 기억해 두고 뒤로 밀리지 않게) */
   function warnSeenKey(){ return sk('ggDashWarnSeen.v1.'); }
   function warnId(w){ return w.type+'|'+(w.area||''); }
   SIT.warnTime = function(w, st){
@@ -539,6 +629,8 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
       if(best==null || ts>best) best=ts;
     });
     if(best!=null) return {ts:best, src:'발표'};
+    var sv=srvTs(w.since);
+    if(sv!=null && sv<=now+600000) return {ts:Math.min(sv, now), src:'서버'};
     var s0=jget(warnSeenKey(), {})[warnId(w)], c=SIT.parseWarnTime(w.time);
     if(c==null) c=now;
     return {ts:(s0!=null && s0<c) ? s0 : c, src:'현황'};
@@ -556,9 +648,10 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
 
   /* 지금 자료만으로 알 수 있는 일 */
   SIT.derived = function(){
-    var d=D(), out=[], buls=[];
+    var d=D(), out=[], buls=[], srv=hasSrv();
     (d.warnings||[]).forEach(function(w){
       var wt=SIT.warnTime(w, null); if(wt.src==='발표') return;   /* 발표 통보문 줄이 이미 있다 */
+      if(srv && srvTs(w.since)!=null) return;   /* 서버 줄(발효)·통보문 줄이 이미 있다 */
       out.push({ts:wt.ts, kind:'warn', lv:isBo(w)?'severe':'warn', text:w.type+' 발효 중', sub:w.area||'', area:w.area||'', key:'w|'+w.type+'|'+w.area, tw:w.type});
     });
     ((d.bulletins||{}).warnings_full||[]).forEach(function(b){
@@ -586,6 +679,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
       var ts=msgTs(m); if(ts==null) return;
       out.push({ts:ts, kind:'msg', lv:'info', text:'재난문자 · '+(m.sender||m.region||''), sub:m.text||'', region:m.region, key:'m|'+(m.sn||ts)});
     });
+    if(srv){ var mg=srvDedup(SIT.srvList(), out); out=mg.loc.concat(mg.srv); }
     return out;
   };
 
@@ -600,6 +694,14 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     var arr=SIT.logRead(), have={}; arr.forEach(function(e){ have[e.key]=1; });
     evs.forEach(function(e){ if(!have[e.key]){ have[e.key]=1; arr.push(e); } });
     SIT.logWrite(arr);
+  };
+  /* 보여 줄 기록 — 서버 기록이 있으면, 같은 강수 기준 통과를 서버 줄이 이미 알리는 옛 기록은 숨긴다(저장된 것은 그대로) */
+  SIT.logShown = function(){
+    var arr=SIT.logRead();
+    if(!hasSrv()) return arr;
+    var sr=SIT.srvList().filter(function(e){ return e.kind==='rain'; });
+    if(!sr.length) return arr;
+    return arr.filter(function(e){ return !(e && e.kind==='rain' && srvRainDup(e, sr, sigunOf)); });
   };
   SIT.addNote = function(text){
     text = String(text||'').trim(); if(!text) return;
@@ -620,38 +722,118 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
         else if(pb>=1 && nb===0){
           evs.push({ts:now, kind:'rain', lv:'clear', text:st+' 시간당 5mm 아래로', sub:sub, where:[st], key:'p|'+st+'|clear|'+hr}); }
       });
-      if(evs.length) SIT.logAdd(evs);
+      if(evs.length && !hasSrv()) SIT.logAdd(evs);   /* 서버 기록이 있으면 강수 기준 통과는 서버 줄을 쓴다 */
     }
     storeSet(pk, JSON.stringify(cur));
     try{ SIT.warnSeenUpdate(); }catch(e){ if(window.console) console.error(e); }
     try{ SIT.track(); }catch(e){ if(window.console) console.error(e); }
   };
 
-  /* 출동 메모 — 읽기만 한다 */
+  /* 출동 메모 저장소와 말하는 길 — 상황 기록(읽기)과 출동 메모 위젯(쓰기·지우기)이 함께 쓴다. 쉬운 화면과 같은 서비스·같은 열쇠(ggDspKey) */
+  var DSPX = { stat:null, statAt:0, statBusy:false, statQ:[], setupBusy:false };
+  DSPX.room = function(){ return (RC.key==='north'||RC.key==='south') ? 'all' : (RC.key||'all'); };
+  /* 요청 하나 — 15초 안에 답이 없으면 실패로 끝낸다. cb(ok, json, httpCode) 는 정확히 한 번, 던지지 않는다. body 가 있으면 POST */
+  DSPX.call = function(path, body, cb){
+    var fin=false, timer=null, code=0;
+    var done=function(j, ok){
+      if(fin) return; fin=true; clearTimeout(timer);
+      try{ cb(ok, j, code); }catch(e){ if(window.console) console.error(e); }
+    };
+    timer=setTimeout(function(){ done(null, false); }, 15000);
+    try{
+      var opt=body ? {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)} : {cache:'no-store'};
+      fetch(DSP_BASE+path, opt).then(function(r){ code=r.status; return r.json(); }).then(function(j){ done(j, true); }).catch(function(){ done(null, false); });
+    }catch(e){ done(null, false); }
+  };
+  /* 방 열쇠와 지금 열쇠를 실어 보낸다 */
+  DSPX.send = function(path, body, cb){
+    body.key=DSPX.room(); if(body.code===undefined) body.code=storeGet('ggDspKey') || '';
+    DSPX.call(path, body, cb);
+  };
+  /* 이 방에 열쇠가 정해져 있는가 — 5분 보관(읽지 못한 때는 1분 뒤 다시). cb(status|null) */
+  DSPX.fresh = function(){ return !!DSPX.statAt && Date.now()-DSPX.statAt < (DSPX.stat ? 300000 : 60000); };
+  DSPX.status = function(cb){
+    if(DSPX.fresh()){ if(cb) cb(DSPX.stat); return; }
+    if(cb) DSPX.statQ.push(cb);
+    if(DSPX.statBusy) return;
+    DSPX.statBusy=true;
+    DSPX.call('/api/status?key='+encodeURIComponent(DSPX.room()), null, function(ok, j){
+      DSPX.statBusy=false;
+      DSPX.stat=(ok && j && j.ok) ? j : null; DSPX.statAt=Date.now();
+      var q=DSPX.statQ; DSPX.statQ=[];
+      q.forEach(function(f){ try{ f(DSPX.stat); }catch(e){ if(window.console) console.error(e); } });
+    });
+  };
+  /* 열쇠 정하기·넣기 */
+  DSPX.setup = function(cb){
+    if(SIT.sim || DSPX.setupBusy) return;
+    if(storeGet('ggDspKey') && !SIT.notesFail) return;   /* 이미 연결돼 있다 */
+    DSPX.setupBusy=true;
+    var end=function(){ DSPX.setupBusy=false; };
+    var ok=function(){ end(); SIT.notesAt=0; SIT.notesFail=false; SIT.loadNotes(true); renderAll(); if(cb) cb(); };
+    DSPX.status(function(s){
+      if(!s){ end(); alert('연결하지 못했습니다'); return; }
+      var v;
+      if(s.locked===false){
+        v=prompt('출동 메모 열쇠를 새로 정합니다 (4자 이상, 관서에서 함께 쓸 암호)');
+        v=(v==null) ? '' : String(v).trim();
+        if(!v){ end(); return; }
+        if(v.length<4){ end(); alert('열쇠는 4자 이상으로 정해 주세요'); return; }
+        DSPX.send('/api/code', {code:'', next:v}, function(good, j){
+          if(good && j && j.ok){ storeSet('ggDspKey', v); DSPX.stat={ok:true, count:0, last:null, locked:true}; DSPX.statAt=Date.now(); ok(); }
+          else { end(); alert((good && j && j.why) ? j.why : '연결하지 못했습니다'); }
+        });
+      } else {
+        v=prompt('출동 메모 열쇠를 넣으세요 (관서에서 함께 쓰는 암호)');
+        v=(v==null) ? '' : String(v).trim();
+        if(!v){ end(); return; }
+        storeSet('ggDspKey', v);
+        DSPX.call('/api/notes?key='+encodeURIComponent(DSPX.room())+'&days=1&code='+encodeURIComponent(v), null, function(good, j){
+          if(good && j && j.ok){ ok(); return; }
+          storeDel('ggDspKey'); end();
+          alert(good ? '열쇠가 맞지 않습니다' : '연결하지 못했습니다');
+        });
+      }
+    });
+  };
+  /* 출동 메모에 함께 남기는 '지금 값' — 쉬운 화면과 같은 칸(rn60·rnday·river·warn·gust·updated). 이 화면에 값이 없는 칸은 뺀다 */
+  DSPX.wx = function(st){
+    var reg=regOf(st), aws=((reg||{}).detail||{}).aws||{}, r1=rain1h(reg), rd=rainDay(reg), wx={}, types=[];
+    if(r1!=null && !isNaN(r1)) wx.rn60=+r1.toFixed(1);
+    if(rd!=null && !isNaN(rd)) wx.rnday=+rd.toFixed(1);
+    var rv=riversOf(st).filter(function(r){ return r.danger && !riverBad(r) && r.value!=null && !isNaN(+r.value); }).sort(function(a,b){ return riverPctRaw(b)-riverPctRaw(a); })[0];
+    if(rv) wx.river=riverName(rv)+' '+num(rv.value,2)+'m('+Math.round(riverPctRaw(rv)*100)+'%)';
+    statusOf(st).warns.forEach(function(w){ if(w.type && types.indexOf(w.type)<0) types.push(w.type); });
+    if(types.length) wx.warn=types.join('·');
+    var gust=(aws.wind && aws.wind.wss!=null) ? aws.wind.wss : (aws.wss!=null ? aws.wss : null);
+    if(gust!=null && !isNaN(+gust)) wx.gust=+(+gust).toFixed(1);
+    if(D().updated) wx.updated=String(D().updated);
+    return wx;
+  };
+
+  /* 출동 메모 읽기 — 최근 7일, 이 방 전체(관서별로 거르는 건 보여 주는 쪽에서) */
   SIT.loadNotes = function(force){
     if(SIT.sim) return;
     var code=storeGet('ggDspKey');
     if(!code){ SIT.notes=null; SIT.notesFail=false; return; }
-    if(SIT.notesBusy || (!force && Date.now()-SIT.notesAt < 300000)) return;
+    if(SIT.notesBusy){ if(force) SIT.notesAgain=true; return; }   /* 받는 중이면 끝난 뒤 한 번 더 */
+    if(!force && Date.now()-SIT.notesAt < 300000) return;
     SIT.notesBusy=true; SIT.notesAt=Date.now();
-    var room=(RC.key==='north'||RC.key==='south') ? 'all' : (RC.key||'all');
+    var room=DSPX.room();
     var fin=false, timer=null;
-    var done=function(){ if(fin) return; fin=true; clearTimeout(timer); SIT.notesBusy=false; renderAll(); };
+    var again=function(){ if(SIT.notesAgain){ SIT.notesAgain=false; SIT.loadNotes(true); } };
+    var done=function(){ if(fin) return; fin=true; clearTimeout(timer); SIT.notesBusy=false; renderAll(); again(); };
     /* 응답이 15초 넘게 없으면 쉬는 표시를 풀어 다음 새로고침이 막히지 않게 한다. 그 뒤에 늦게 온 응답은 무시 */
-    timer=setTimeout(function(){ if(fin) return; fin=true; SIT.notesBusy=false; }, 15000);
+    timer=setTimeout(function(){ if(fin) return; fin=true; SIT.notesBusy=false; again(); }, 15000);
     try{
-      fetch(DSP_URL+'?key='+encodeURIComponent(room)+'&days=3&code='+encodeURIComponent(code)).then(function(r){ return r.json(); }).then(function(j){
+      fetch(DSP_URL+'?key='+encodeURIComponent(room)+'&days=7&code='+encodeURIComponent(code)).then(function(r){ return r.json(); }).then(function(j){
         if(fin) return;
         if(j && j.ok){ SIT.notes=j.notes||[]; SIT.notesFail=false; } else { SIT.notes=null; SIT.notesFail=true; }
         done();
       }).catch(function(){ done(); });
     }catch(e){ fin=true; clearTimeout(timer); SIT.notesBusy=false; }
   };
-  SIT.askKey = function(){
-    var v=prompt('출동 메모 열쇠를 넣으세요 (관서에서 함께 쓰는 암호)');
-    if(v==null) return; v=String(v).trim(); if(!v) return;
-    storeSet('ggDspKey', v); SIT.notesAt=0; SIT.loadNotes(true);
-  };
+  SIT.askKey = function(){ DSPX.setup(); };
   SIT.dispatchEvents = function(){
     return (SIT.notes||[]).map(function(n){
       return {ts:n.ts, kind:'dispatch', lv:'info', text:'출동 · '+n.type, sub:[n.station, n.place, n.memo].filter(Boolean).join(' · '), where:[n.station], dtype:n.type, place:n.place||'', key:'d|'+n.id};
@@ -669,7 +851,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   /* t0~t1 사이의 일(최신이 앞). stn 은 '내 관서' 판단에 쓸 관서(없으면 지금 고른 관서) */
   SIT.eventsBetween = function(scope, t0, t1, stn){
     var seen={};
-    return SIT.derived().concat(SIT.logRead(), SIT.dispatchEvents()).filter(function(e){
+    return SIT.derived().concat(SIT.logShown(), SIT.dispatchEvents()).filter(function(e){
       if(!e || e.ts==null || e.ts<t0 || e.ts>t1 || seen[e.key]) return false;
       seen[e.key]=1; return scope==='all' || mineHit(e, stn);
     }).sort(function(a,b){ return b.ts-a.ts; });
@@ -882,7 +1064,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
       L.push(bad.length ? '■ 상태: 주의 이상 '+bad.length+'개 관서 ('+bad.slice(0,5).map(function(n){ return n+' '+(statusOf(n).lv==='severe'?'경보':'주의'); }).join(', ')+(bad.length>5?' 외':'')+')' : '■ 상태: 전 관서 정상');
     }
     var ws=(d.warnings||[]).filter(function(w){ return !mine || areaHits(w.area, st); });
-    L.push(ws.length ? '■ 특보: '+ws.map(function(w){ var wt=SIT.warnTime(w, mine ? st : null); return w.type+'('+fT(wt.ts)+(wt.src==='발표' ? ' 발표' : ' 현황 기준')+') '+(w.area||''); }).join(' / ') : '■ 특보: 발효 없음');
+    L.push(ws.length ? '■ 특보: '+ws.map(function(w){ var wt=SIT.warnTime(w, mine ? st : null); return w.type+'('+fT(wt.ts)+SIT.srcWord(wt.src)+') '+(w.area||''); }).join(' / ') : '■ 특보: 발효 없음');
     if(mine){
       var reg=regOf(st), r1=rain1h(reg), rd=rainDay(reg);
       if(r1!=null) L.push('■ 강수: '+st+' 1시간 '+num(r1,1)+'mm'+(rd!=null ? ' · 오늘 누적 '+num(rd,1)+'mm' : ''));
@@ -954,7 +1136,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     lines=[];
     lines.push(' - 기간: '+fMDHM(rec.since)+' ~ '+(ongoing ? '진행 중 ('+fDur(now-rec.since)+'째)' : fMDHM(end)+' ('+fDur(end-rec.since)+')'));
     lines.push(' - 최고 단계: '+(rec.lvMax==='severe' ? '경보' : '주의'));
-    lines.push(' - 특보: '+(warns.length ? warns.map(function(w){ return w.type+'('+fR(w.ts)+(w.src==='발표' ? ' 발표' : (w.src==='현황' ? ' 현황 기준' : ''))+')'; }).join(' → ') : '없음'));
+    lines.push(' - 특보: '+(warns.length ? warns.map(function(w){ return w.type+'('+fR(w.ts)+SIT.srcWord(w.src)+')'; }).join(' → ') : '없음'));
     secs.push({t:'개요', l:lines});
     /* 2. 기상·수위 */
     lines=[];
@@ -1000,7 +1182,8 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     var tl=evs.filter(function(e){ return e.kind!=='msg' && e.kind!=='dispatch' && e.kind!=='note'; });
     warns.forEach(function(w){
       if(w.ts<rec.since-1800000 || w.ts>end) return;
-      if(!tl.some(function(e){ return e.kind==='warn' && e.tw===w.type && Math.abs(e.ts-w.ts)<=60000; })) tl.push({ts:w.ts, kind:'warn', text:w.type+(w.src==='발표' ? ' 발표' : ' 발효 중')});
+      var tol=w.src==='서버' ? 3600000 : 60000;   /* 서버가 처음 본 시각은 서버 발효 줄과 몇 분 어긋날 수 있다 */
+      if(!tl.some(function(e){ return e.kind==='warn' && e.tw===w.type && Math.abs(e.ts-w.ts)<=tol; })) tl.push({ts:w.ts, kind:'warn', text:w.type+(w.src==='발표' ? ' 발표' : (w.src==='서버' ? ' 발효' : ' 발효 중'))});
     });
     tl.sort(function(a,b){ return a.ts-b.ts; });
     lines=tl.slice(0,30).map(function(e){ return ' - '+fR(e.ts)+' '+e.text; });
@@ -1337,7 +1520,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
           (isNote?'<button class="tlx" data-k="'+esc(e.key)+'" aria-label="기록 지우기" title="기록 지우기">'+ic('x')+'</button>':'')+'</div>';
       });
     }
-    h+='<div class="legend"><span>강수 기준 통과는 이 화면이 열려 있던 동안만 기록됩니다</span>';
+    h+='<div class="legend"><span>'+(Array.isArray(D().events) ? '서버 기록 포함 · 최근 72시간' : '강수 기준 통과는 이 화면이 열려 있던 동안만 기록됩니다')+'</span>';
     if(!SIT.sim){
       if(!storeGet('ggDspKey')) h+='<button class="chip tl-key">출동 메모 연결</button>';
       else if(SIT.notesFail) h+='<span>출동 메모 열쇠가 맞지 않습니다</span><button class="chip tl-key">다시 넣기</button>';
@@ -1689,6 +1872,126 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     todoDraw(el, inst);
   }};
 
+  /* ── 출동 메모 ── 이 관서의 출동을 한 줄로 남기고 지운다. 읽기는 SIT 가 받아 둔 notes, 쓰기·지우기는 DSPX. 쉬운 화면과 같은 저장소·같은 열쇠 ── */
+  var DSP_TYPES = ['침수', '도로장애', '인명구조', '배수지원', '안전조치', '기타'];
+  var DSPD = {};   /* 위젯 id → 쓰던 글·고른 종류·알림 줄. 화면이 다시 그려져도 남는다 */
+  function dspDraft(id){ return DSPD[id] || (DSPD[id] = {type:'', place:'', memo:'', msg:'', err:false, ms:'', busy:false}); }
+  function dspBody(inst){ return document.querySelector('.grid-stack-item[gs-id="'+inst.id+'"] .wb'); }
+  function dspTrim(s){ return String(s == null ? '' : s).replace(/^\s+|\s+$/g, ''); }
+  /* 알림 줄 — 보이는 줄을 그 자리에서 바꾸고(입력 중이던 칸을 건드리지 않게) 다시 그릴 때를 위해 기억도 한다 */
+  function dspSay(d, inst, text, err){
+    d.msg = text; d.err = !!err; d.ms = storeGet('ggDspKey') ? 'k' : 'n';
+    var el = dspBody(inst), m = el && el.querySelector('.dsp-msg');
+    if(m){ m.textContent = text; m.className = 'dsp-msg' + (err ? ' err' : ''); }
+  }
+  function dspKeyBad(ok, j, code){ return code === 401 || !!(j && j.ok === false && /열쇠/.test(String(j.why || ''))); }
+  /* 열쇠가 맞지 않다고 답했다 — 저장된 열쇠를 지우고 '연결 안 됨' 상태로 */
+  function dspKeyLost(d, inst){
+    storeDel('ggDspKey'); SIT.notes = null; SIT.notesFail = false;
+    dspSay(d, inst, '열쇠가 맞지 않습니다', true);
+    var el = dspBody(inst); if(el) dspDraw(el, inst);
+    renderAll();
+  }
+  function dspSubmit(inst){
+    var d = dspDraft(inst.id), st = stationNow();
+    if(d.busy) return;
+    var place = dspTrim(d.place).slice(0, 40), memo = dspTrim(d.memo).slice(0, 60), typ = d.type;
+    if(!typ || (!place && !memo)){ dspSay(d, inst, '종류를 고르고 장소나 메모를 적어 주세요', true); return; }
+    d.busy = true; dspSay(d, inst, '', false);
+    var el0 = dspBody(inst), b0 = el0 && el0.querySelector('.dsp-add'); if(b0) b0.disabled = true;
+    DSPX.send('/api/note', {station:st, sigun:sigunOf(st), type:typ, place:place, memo:memo, wx:DSPX.wx(st)}, function(ok, j, code){
+      d.busy = false;
+      var el = dspBody(inst);
+      if(ok && j && j.ok){
+        d.type = ''; d.place = ''; d.memo = '';
+        dspSay(d, inst, '기록했습니다', false);
+        SIT.notes = SIT.notes || []; SIT.notesFail = false;
+        SIT.notes.unshift({id:j.id, ts:Date.now(), station:st, sigun:sigunOf(st), type:typ, place:place, memo:memo});   /* 새로 받아 오기 전에도 바로 보이게 */
+        SIT.notesAt = 0; SIT.loadNotes(true);
+        if(el) dspDraw(el, inst);
+        renderAll();
+      } else if(dspKeyBad(ok, j, code)){ dspKeyLost(d, inst); }
+      else {
+        dspSay(d, inst, (ok && j && j.why) ? j.why : '연결하지 못했습니다', true);
+        var b = el && el.querySelector('.dsp-add'); if(b) b.disabled = false;
+      }
+    });
+  }
+  function dspDelete(inst, n){
+    var d = dspDraft(inst.id);
+    if(!confirm('이 메모를 지울까요?')) return;
+    DSPX.send('/api/del', {id:n.id}, function(ok, j, code){
+      if(ok && j && j.ok){
+        SIT.notes = (SIT.notes || []).filter(function(x){ return String(x.id) !== String(n.id); });
+        SIT.notesAt = 0; SIT.loadNotes(true);
+        var el = dspBody(inst); if(el) dspDraw(el, inst);
+        renderAll();
+      } else if(dspKeyBad(ok, j, code)){ dspKeyLost(d, inst); }
+      else dspSay(d, inst, (ok && j && j.why) ? j.why : '연결하지 못했습니다', true);
+    });
+  }
+  function dspDraw(el, inst){
+    var d = dspDraft(inst.id), key = storeGet('ggDspKey'), st = stationNow(), h;
+    if(SIT.sim){ el.innerHTML = '<div class="calm">모의 훈련 중에는 출동 메모를 쓰지 않습니다</div>'; return; }
+    var msgOn = d.msg && d.ms === (key ? 'k' : 'n');
+    var msgH = '<div class="dsp-msg' + (msgOn && d.err ? ' err' : '') + '">' + (msgOn ? esc(d.msg) : '') + '</div>';
+    if(!key){
+      var s = DSPX.stat, lab = (s && s.locked === false) ? '열쇠 정하기' : '열쇠 넣기';
+      el.innerHTML = '<div class="calm">출동 메모가 아직 연결되지 않았습니다</div>'+
+        '<div class="dsp-sub m">관서에서 함께 쓰는 열쇠(암호)를 한 번 정하면 이 화면과 쉬운 화면에서 같이 씁니다</div>'+
+        '<button type="button" class="btn dsp-key">' + lab + '</button>' + msgH;
+      el.querySelector('.dsp-key').onclick = function(){ d.msg = ''; DSPX.setup(); };
+      /* 열쇠가 정해져 있는지 모르면 한 번 물어본다 — 답이 오면 이 줄만 다시 그린다(입력칸이 없는 상태라 안전) */
+      if(!DSPX.fresh()) DSPX.status(function(){ var b = dspBody(inst); if(b && !SIT.sim && !storeGet('ggDspKey')) dspDraw(b, inst); });
+      return;
+    }
+    h = '<div class="dsp-types">' + DSP_TYPES.map(function(t){
+      return '<button type="button" class="dsp-t' + (d.type === t ? ' on' : '') + '" data-t="' + esc(t) + '" aria-pressed="' + (d.type === t ? 'true' : 'false') + '">' + esc(t) + '</button>';
+    }).join('') + '</div>'+
+      '<div class="dsp-f">'+
+      '<input class="dsp-in dsp-place" type="text" maxlength="40" placeholder="장소 (예: 상패동 사거리)" aria-label="장소" autocomplete="off" value="' + esc(d.place) + '">'+
+      '<input class="dsp-in dsp-memo" type="text" maxlength="60" placeholder="한 줄 메모" aria-label="한 줄 메모" autocomplete="off" value="' + esc(d.memo) + '">'+
+      '<div class="dsp-row"><span class="dsp-sub">이름·연락처·동호수는 적지 않습니다</span><button type="button" class="btn dsp-add"' + (d.busy ? ' disabled' : '') + '>기록</button></div>'+
+      msgH + '</div>';
+    var notes = (SIT.notes || []).filter(function(n){ return n && n.station === st; }).sort(function(a, b){ return (+b.ts || 0) - (+a.ts || 0); });
+    if(SIT.notesFail){
+      h += '<div class="dsp-h">' + esc(st) + ' · 최근 7일</div><div class="dsp-fail"><span>열쇠가 맞지 않습니다</span><button type="button" class="btn dsp-rekey">열쇠 넣기</button></div>';
+    } else {
+      h += '<div class="dsp-h">' + esc(st) + ' · 최근 7일' + (SIT.notes ? ' ' + notes.length + '건' : '') + '</div>';
+      notes.slice(0, 8).forEach(function(n, i){
+        var tx = [n.place, n.memo].filter(Boolean).join(' · ');
+        h += '<div class="dsp-r"><div class="dsp-b"><div class="dsp-l1"><span class="dsp-tm">' + fMDHM(+n.ts) + '</span><span class="dsp-ty">' + esc(n.type) + '</span></div>'+
+          (tx ? '<div class="dsp-tx">' + esc(tx) + '</div>' : '') + '</div>'+
+          '<button type="button" class="tlx dsp-del" data-i="' + i + '" aria-label="메모 지우기" title="메모 지우기">' + ic('x') + '</button></div>';
+      });
+    }
+    el.innerHTML = h;
+    var q = function(sl){ return el.querySelector(sl); };
+    var quiet = function(){ var m = q('.dsp-msg'); if(d.msg){ d.msg = ''; if(m){ m.textContent = ''; m.className = 'dsp-msg'; } } };
+    var tb = el.querySelectorAll('.dsp-t');
+    Array.prototype.forEach.call(tb, function(b){ b.onclick = function(){
+      d.type = (d.type === b.getAttribute('data-t')) ? '' : b.getAttribute('data-t');
+      Array.prototype.forEach.call(tb, function(o){ var on = o.getAttribute('data-t') === d.type; o.className = 'dsp-t' + (on ? ' on' : ''); o.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+      quiet();
+    }; });
+    var enter = function(ev){ if(ev.key === 'Enter' && !ev.isComposing && ev.keyCode !== 229){ ev.preventDefault(); dspSubmit(inst); } };
+    var ip = q('.dsp-place'), im = q('.dsp-memo');
+    ip.oninput = function(){ d.place = ip.value; quiet(); };
+    im.oninput = function(){ d.memo = im.value; quiet(); };
+    ip.onkeydown = enter; im.onkeydown = enter;
+    q('.dsp-add').onclick = function(){ dspSubmit(inst); };
+    var rk = q('.dsp-rekey'); if(rk) rk.onclick = function(){ DSPX.setup(); };
+    Array.prototype.forEach.call(el.querySelectorAll('.dsp-del'), function(b){ b.onclick = function(){
+      var n = notes[+b.getAttribute('data-i')]; if(n) dspDelete(inst, n);
+    }; });
+  }
+  W.dispatch = { title:'출동 메모', w:3, h:7, icon:'siren', render:function(el, inst, force){
+    /* 글자 입력칸에 초점이 있으면(한글 입력 중일 수 있다) 자동 새로 그리기는 건너뛴다. 쓰던 글·고른 종류는 위젯마다 따로 기억해 둔다 */
+    var ae = document.activeElement;
+    if(!force && ae && ae.tagName === 'INPUT' && el.contains(ae)) return;
+    dspDraw(el, inst);
+  }};
+
   /* 위젯 안의 구간 버튼 — data-o(옵션 이름)·data-v(값)를 이 위젯 설정에 저장하고 다시 그린다 */
   function tabs(el, inst){
     el.querySelectorAll('.seg button[data-o]').forEach(function(b){ b.onclick=function(){
@@ -1700,7 +2003,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   /* ── 기본 배치 ── 12칸 격자, 한 칸 높이 64. 가운데 큰 지도를 중심으로 양옆에 목록 */
   var PRESETS = {
     incident:[['status',0,0,3,3],['kpi',3,0,9,3],['timeline',0,3,4,10],['map',4,3,5,10,{m:'r1'}],['report',9,3,3,10],
-             ['check',0,13,4,7],['rivers',4,13,5,7],['todo',9,13,3,7]],
+             ['check',0,13,4,7],['rivers',4,13,5,7],['todo',9,13,3,7],['dispatch',0,20,4,6]],
     normal: [['status',0,0,3,3],['kpi',3,0,9,3],
              ['warnings',0,3,3,3],['rain',0,6,3,4],['fire',0,10,3,3],['map',3,3,6,10],['image',9,3,3,6,{k:'radar'}],['fcst',9,9,3,4],
              ['rivers',0,13,6,8],['weather',6,13,3,8],['messages',9,13,3,8]],
