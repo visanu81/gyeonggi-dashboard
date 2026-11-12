@@ -16,7 +16,9 @@
      · 강수 기준 통과(5/20/30/50mm)는 이 화면이 열려 있는 동안만 기록(이 브라우저 저장). 서버 기록은 2차
      · ?sim=1 모의 훈련 — 특보·강수·하천 수위를 모의 자료로 바꿔 보여 준다(실제 기록과 저장 키를 분리, 출동 메모는 안 읽음)
      2026-11-12 지금 점검할 곳 — 위험구역 구글시트(관서 탭)를 지금 강수·하천 값과 겹쳐 먼저/다음/평소로 나눔
-     · 기준은 CHECK_RULES 한 곳, 확인 표시는 이 브라우저에만(24시간) -->
+     · 기준은 CHECK_RULES 한 곳, 확인 표시는 이 브라우저에만(24시간)
+     2026-11-12 대응 체크리스트: 평시·주의·경보 단계별 할 일, 항목은 화면에서 직접 편집(기본값은 '예시' 표시)
+     · 목록·체크는 이 브라우저에만 저장(목록 복사·붙여넣기로 다른 PC에 옮김), 체크하면 상황 기록·상황보고에 반영 -->
 <script src="region.js"></script>
 <script src="risk-zones.js"></script>
 <script src="map-geo.js"></script>
@@ -268,6 +270,34 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
 .ckw{margin-bottom:12px;font-size:12px;line-height:16px}
 .ckw.first{color:var(--severe)}.ckw.next{color:var(--warn)}
 
+/* 대응 체크리스트 */
+.tdh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.tdh .cur{display:flex;align-items:center;gap:8px;min-width:0}
+.tdh .lb{font-size:12px;color:var(--ink3)}
+.tdh b{font-size:14px;font-weight:500}
+.tdh .prog{font-size:12px;color:var(--ink3);white-space:nowrap}
+.tdex{margin-bottom:8px;font-size:12px;color:var(--ink3)}
+.tdl{display:flex;flex-direction:column}
+.tdr{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:8px;align-items:start;width:100%;margin:0;padding:8px 0;border:0;border-top:1px solid var(--line);background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.tdr:first-child{border-top:0}
+.tdbox{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;border:1px solid var(--line2);color:var(--card);transition:background-color .15s var(--ease),border-color .15s var(--ease)}
+.tdbox .ic{width:12px;height:12px}
+.tdr:hover .tdbox{border-color:var(--ink3)}
+.tdr.on .tdbox{background:var(--ink);border-color:var(--ink)}
+.tdt{min-width:0;font-size:13px;line-height:20px;overflow-wrap:anywhere}
+.tdr.on .tdt{color:var(--ink3)}
+.tdt .ex{margin-left:4px;font-size:12px;color:var(--ink3)}
+.tdtm{font-size:12px;line-height:20px;color:var(--ink3);white-space:nowrap}
+.tdf{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.tde{display:grid;grid-template-columns:minmax(0,1fr) 28px;gap:8px;align-items:center;margin-bottom:8px}
+.tda{display:flex;gap:8px}
+.tdin{flex:1;min-width:0;width:100%;height:32px;padding:0 8px;border-radius:8px;border:1px solid var(--line2);background:var(--raised);color:var(--ink);font:inherit;font-size:13px}
+.tdin::placeholder{color:var(--ink3)}
+.tdin:focus-visible{border-radius:8px}
+.tda .btn{flex:none}
+.tdx{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--ink3);cursor:pointer}
+.tdx:hover{background:var(--raised);color:var(--ink)}
+
 /* 휴대폰 */
 @media (max-width:760px){
   .sitbar{padding:8px 16px}
@@ -355,7 +385,8 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
     timeline:'<path d="M12 6v6l4 2"/><path d="M16 21.16a10 10 0 1 1 5-13.516"/><path d="M20 11.5v6"/><path d="M20 21.5h.01"/>',
     report:'<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
-    checklist:'<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>'
+    checklist:'<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
+    todo:'<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>'
   };
   function ic(k){ return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">'+(P[k]||'')+'</svg>'; }
   $('btnTheme').innerHTML = ic('contrast');
@@ -697,6 +728,12 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
           if(f1.length) L.push('■ 점검: 먼저 볼 곳 '+f1.length+'곳 중 '+f1.filter(function(z){ return z.ts; }).length+'곳 확인');
         }
       }catch(e){}
+      if(s.lv==='warn' || s.lv==='severe'){
+        try{
+          var tp=TODO.progress(s.lv);
+          if(tp && tp.n>0) L.push('■ 조치: '+(s.lv==='severe' ? '경보' : '주의')+' 단계 '+tp.n+'개 중 '+tp.m+'개 완료');
+        }catch(e){}
+      }
     }
     var uf=((d.ultra_fcst||{})[sg]||[]).slice(0,6);
     if(uf.length){
@@ -712,7 +749,8 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     var ms=SIT.events(scope, 48).filter(function(e){ return e.kind==='msg' && e.ts>=today0; });
     if(ms.length) L.push('■ 재난문자: 오늘 '+ms.length+'건 (마지막 '+fHM(ms[0].ts)+')');
     if(form==='full'){
-      var ev=SIT.events(scope, 24).filter(function(e){ return e.kind!=='msg'; }).slice(0,8).reverse();
+      /* 점검·조치 체크는 위의 ■ 점검 / ■ 조치 줄에 개수로 들어가 있다 — 경과에서는 빼서 특보·수위 같은 일이 밀려나지 않게 */
+      var ev=SIT.events(scope, 24).filter(function(e){ return e.kind!=='msg' && !(e.kind==='note' && /^(점검|조치) · /.test(e.text||'')); }).slice(0,8).reverse();
       if(ev.length){ L.push('■ 주요 경과'); ev.forEach(function(e){ L.push(' - '+fHM(e.ts)+' '+e.text); }); }
     }
     var u=String(d.updated||'').match(/\d{4}-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
@@ -1206,6 +1244,178 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     }; });
   }};
 
+  /* ── 대응 체크리스트 ── 단계(평시·주의·경보)별 할 일. 항목은 화면에서 고치고, 목록·체크는 이 브라우저에만 저장한다 ── */
+  var TODO_LAB = {safe:'평시', warn:'주의', severe:'경보'};
+  var TODO_DEF = [
+    ['safe','수방 장비·배수펌프 작동 점검'], ['safe','비상연락망 최신 여부 확인'], ['safe','위험구역 목록 갱신'],
+    ['warn','기상·하천 수위 감시 강화'], ['warn','수방 장비 적재 상태 확인'], ['warn','위험구역 순찰 계획 확인'], ['warn','비번 인력 연락 체계 확인'],
+    ['severe','비상근무 편성 보고'], ['severe','먼저 볼 곳 현장 확인'], ['severe','유관기관 연락 유지'], ['severe','상황보고 작성·전파']
+  ];
+  var TODO_EDIT = {};   /* 위젯 id → {draft} — 편집 중인 위젯. 화면 상태일 뿐이라 설정(inst.opt)에는 저장하지 않는다 */
+  var todoSeq = 0, todoMem = null;
+  function todoKey(){ return 'ggDashTodo.v1.' + (RC.key || 'x'); }
+  function todoChkKey(){ return 'ggDashTodoChk.v1.' + (RC.key || 'x') + (SIT.sim ? '.sim' : ''); }
+  function todoId(){ return 't' + Date.now().toString(36) + (todoSeq++); }
+  function todoDefaults(){
+    var cnt = {};
+    return TODO_DEF.map(function(p){ cnt[p[0]] = (cnt[p[0]] || 0) + 1; return {id:'ex-' + p[0] + '-' + cnt[p[0]], stage:p[0], text:p[1], ex:true}; });
+  }
+  /* 저장된 목록. 저장한 적이 없으면 기본 예시(저장은 처음 고칠 때) */
+  function todoItems(){
+    var raw = storeGet(todoKey());
+    if(raw == null) return todoMem ? todoMem.slice() : todoDefaults();
+    try{
+      var o = JSON.parse(raw);
+      if(o && Array.isArray(o.items)){
+        return o.items.filter(function(it){ return it && typeof it.id === 'string' && it.id && typeof it.text === 'string' && it.text && TODO_LAB[it.stage]; })
+          .map(function(it){ var r = {id:it.id, stage:it.stage, text:it.text.slice(0, 60)}; if(it.ex === true) r.ex = true; return r; });
+      }
+    }catch(e){}
+    return todoDefaults();
+  }
+  function todoWrite(items){ todoMem = items.slice(); storeSet(todoKey(), JSON.stringify({items:items})); }
+  function todoChkRead(){
+    var m = jget(todoChkKey(), {}), out = {}, cut = Date.now() - 86400000;
+    if(m && typeof m === 'object') Object.keys(m).forEach(function(k){ if(+m[k] >= cut) out[k] = +m[k]; });
+    return out;
+  }
+  function todoChkWrite(m){ storeSet(todoChkKey(), JSON.stringify(m)); }
+  /* 목록에 없는 항목의 체크 표시를 지운다 */
+  function todoChkPrune(items){
+    var have = {}, m = todoChkRead(), out = {};
+    items.forEach(function(it){ have[it.id] = 1; });
+    Object.keys(m).forEach(function(k){ if(have[k]) out[k] = m[k]; });
+    todoChkWrite(out);
+  }
+  function todoProgress(stage){
+    var chk = todoChkRead(), items = todoItems().filter(function(it){ return it.stage === stage; });
+    return {n:items.length, m:items.filter(function(it){ return chk[it.id]; }).length};
+  }
+  var TODO = { progress: todoProgress };   /* 상황보고(SIT.report)가 읽는다 */
+  /* 붙여넣은 글 → 목록. 형식이 맞지 않으면 null */
+  function todoParse(s){
+    try{
+      var o = JSON.parse(String(s || '')), out = [];
+      if(!o || typeof o !== 'object' || !Array.isArray(o.items) || o.items.length > 300) return null;
+      for(var i = 0; i < o.items.length; i++){
+        var it = o.items[i];
+        if(!it || typeof it.text !== 'string' || !it.text.replace(/^\s+|\s+$/g, '') || it.text.length > 60 || !TODO_LAB[it.stage]) return null;
+        var r = {id:todoId(), stage:it.stage, text:it.text.replace(/^\s+|\s+$/g, '')};
+        if(it.ex === true) r.ex = true;
+        out.push(r);
+      }
+      return out;
+    }catch(e){ return null; }
+  }
+  /* 다시 그린다 — 스크롤을 지키고, 다른 위젯(상황 기록·상황보고)도 새로 그린 뒤 눌렀던 곳으로 초점을 돌려 둔다 */
+  function todoRedraw(el, inst, focus){
+    var sc = el.scrollTop;
+    todoDraw(el, inst); renderAll(); el.scrollTop = sc;
+    var t = null, a, i;
+    if(focus === 'new') t = el.querySelector('.tdnew');
+    else if(focus === 'edit') t = el.querySelector('.td-edit');
+    else if(focus){ a = el.querySelectorAll('.tdr'); for(i = 0; i < a.length; i++){ if(a[i].getAttribute('data-id') === focus) t = a[i]; } }
+    if(t){ try{ t.focus(focus === 'new' ? undefined : {preventScroll:true}); }catch(e){ t.focus(); } }
+  }
+  function todoDraw(el, inst){
+    var o = inst.opt || {}, cur = statusOf(stationNow()).lv;
+    var sel = (o.stage === 'safe' || o.stage === 'warn' || o.stage === 'severe') ? o.stage : 'auto';
+    var view = sel === 'auto' ? cur : sel, ed = TODO_EDIT[inst.id] || null;
+    var all = todoItems(), items = all.filter(function(it){ return it.stage === view; }), chk = todoChkRead();
+    var n = items.length, m = items.filter(function(it){ return chk[it.id]; }).length, h;
+    h = '<div class="tdh"><span class="cur"><span class="lb">현재 단계</span><span class="dot '+cur+'"></span><b'+(cur === 'safe' ? '' : ' class="t-'+cur+'"')+'>'+TODO_LAB[cur]+'</b></span>'+
+      (n ? '<span class="prog">'+m+'/'+n+' 완료</span>' : '')+'</div>'+
+      seg('stage', sel, [['auto','지금 단계'],['safe','평시'],['warn','주의'],['severe','경보']]);
+    if(!ed){
+      if(items.some(function(it){ return it.ex; })) h += '<div class="tdex">예시 항목입니다 · 관서 지침에 맞게 고쳐 쓰세요</div>';
+      if(n){
+        h += '<div class="tdl">'+items.map(function(it){
+          var ts = chk[it.id];
+          return '<button type="button" class="tdr'+(ts ? ' on' : '')+'" aria-pressed="'+(ts ? 'true' : 'false')+'" data-id="'+esc(it.id)+'">'+
+            '<span class="tdbox">'+(ts ? ic('check') : '')+'</span>'+
+            '<span class="tdt">'+esc(it.text)+(it.ex ? '<span class="ex">예시</span>' : '')+'</span>'+
+            (ts ? '<span class="tdtm">'+fHM(ts)+'</span>' : '')+'</button>';
+        }).join('')+'</div>';
+      } else h += '<div class="calm">이 단계에 항목이 없습니다</div>';
+      h += '<div class="tdf"><button type="button" class="chip td-edit">항목 편집</button>'+(Object.keys(chk).length ? '<button type="button" class="chip td-reset">체크 초기화</button>' : '')+'</div>';
+    } else {
+      h += items.map(function(it){
+        return '<div class="tde"><input class="tdin" type="text" maxlength="60" value="'+esc(it.text)+'" data-id="'+esc(it.id)+'" aria-label="항목 내용">'+
+          '<button type="button" class="tdx" data-id="'+esc(it.id)+'" aria-label="항목 지우기" title="항목 지우기">'+ic('x')+'</button></div>';
+      }).join('');
+      h += '<div class="tda"><input class="tdin tdnew" type="text" maxlength="60" placeholder="새 항목" aria-label="새 항목" value="'+esc(ed.draft || '')+'"><button type="button" class="btn tdadd">추가</button></div>'+
+        '<div class="tdf">'+(all.some(function(it){ return it.ex; }) ? '<button type="button" class="chip td-exdel">예시 지우기</button>' : '')+
+        '<button type="button" class="chip td-copy">목록 복사</button><button type="button" class="chip td-paste">목록 붙여넣기</button><button type="button" class="chip td-done">편집 끝</button></div>';
+    }
+    el.innerHTML = h; tabs(el, inst);
+    var q = function(sl){ return el.querySelector(sl); };
+    if(!ed){
+      el.querySelectorAll('.tdr').forEach(function(b){ b.onclick = function(){
+        var id = b.getAttribute('data-id'), mk = todoChkRead(), it = null, on;
+        items.forEach(function(x){ if(x.id === id) it = x; });
+        if(!it) return;
+        on = !mk[id]; if(on) mk[id] = Date.now(); else delete mk[id];
+        todoChkWrite(mk);
+        if(on) SIT.addNote('조치 · '+it.text);
+        todoRedraw(el, inst, id);
+      }; });
+      q('.td-edit').onclick = function(){
+        TODO_EDIT[inst.id] = {draft:''}; todoDraw(el, inst);
+        var f = q('.tdin'); if(f) f.focus();
+      };
+      var rs = q('.td-reset');
+      if(rs) rs.onclick = function(){ if(!confirm('체크 표시를 모두 지울까요?')) return; todoChkWrite({}); todoRedraw(el, inst, 'edit'); };
+      return;
+    }
+    /* 편집 */
+    el.querySelectorAll('.tdin[data-id]').forEach(function(inp){
+      inp.onkeydown = function(ev){ if(ev.key === 'Enter'){ ev.preventDefault(); inp.blur(); } };
+      inp.onchange = function(){
+        var id = inp.getAttribute('data-id'), v = inp.value.replace(/^\s+|\s+$/g, ''), list = todoItems(), i;
+        for(i = 0; i < list.length; i++){ if(list[i].id === id) break; }
+        if(i >= list.length) return;
+        if(!v){ list.splice(i, 1); todoWrite(list); todoChkPrune(list); todoRedraw(el, inst); return; }
+        list[i].text = v.slice(0, 60); delete list[i].ex; todoWrite(list);
+      };
+    });
+    el.querySelectorAll('.tdx').forEach(function(b){ b.onclick = function(){
+      var id = b.getAttribute('data-id'), list = todoItems().filter(function(it){ return it.id !== id; });
+      todoWrite(list); todoChkPrune(list); todoRedraw(el, inst);
+    }; });
+    var nw = q('.tdnew');
+    nw.oninput = function(){ ed.draft = nw.value; };
+    var add = function(){
+      var v = nw.value.replace(/^\s+|\s+$/g, ''); if(!v) return;
+      var list = todoItems(); list.push({id:todoId(), stage:view, text:v.slice(0, 60)});
+      todoWrite(list); ed.draft = ''; todoRedraw(el, inst, 'new');
+    };
+    nw.onkeydown = function(ev){ if(ev.key === 'Enter'){ ev.preventDefault(); add(); } };
+    q('.tdadd').onclick = add;
+    var xd = q('.td-exdel');
+    if(xd) xd.onclick = function(){
+      if(!confirm('예시 항목을 모두 지울까요?')) return;
+      var list = todoItems().filter(function(it){ return !it.ex; });
+      todoWrite(list); todoChkPrune(list); todoRedraw(el, inst);
+    };
+    q('.td-copy').onclick = function(){
+      copyText(JSON.stringify({v:1, items:todoItems().map(function(it){ var r = {stage:it.stage, text:it.text}; if(it.ex) r.ex = true; return r; })}), this);
+    };
+    q('.td-paste').onclick = function(){
+      var s = prompt('다른 PC에서 복사한 목록을 붙여넣으세요'); if(s == null) return;
+      var list = todoParse(s);
+      if(!list){ alert('목록 형식이 아닙니다'); return; }
+      if(!confirm('지금 목록을 붙여넣은 목록으로 바꿀까요?')) return;
+      todoWrite(list); todoChkPrune(list); todoRedraw(el, inst);
+    };
+    q('.td-done').onclick = function(){ delete TODO_EDIT[inst.id]; todoRedraw(el, inst, 'edit'); };
+  }
+  W.todo = { title:'대응 체크리스트', w:3, h:7, icon:'todo', render:function(el, inst){
+    /* 편집 중 글자 입력칸에 초점이 있으면 60초 새로 그리기가 입력을 지우지 않도록 건너뛴다 */
+    var ae = document.activeElement;
+    if(TODO_EDIT[inst.id] && ae && ae.tagName === 'INPUT' && el.contains(ae)) return;
+    todoDraw(el, inst);
+  }};
+
   /* 위젯 안의 구간 버튼 — data-o(옵션 이름)·data-v(값)를 이 위젯 설정에 저장하고 다시 그린다 */
   function tabs(el, inst){
     el.querySelectorAll('.seg button[data-o]').forEach(function(b){ b.onclick=function(){
@@ -1217,7 +1427,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   /* ── 기본 배치 ── 12칸 격자, 한 칸 높이 64. 가운데 큰 지도를 중심으로 양옆에 목록 */
   var PRESETS = {
     incident:[['status',0,0,3,3],['kpi',3,0,9,3],['timeline',0,3,4,10],['map',4,3,5,10,{m:'r1'}],['report',9,3,3,10],
-             ['check',0,13,4,7],['rivers',4,13,5,7],['image',9,13,3,7,{k:'radar'}]],
+             ['check',0,13,4,7],['rivers',4,13,5,7],['todo',9,13,3,7]],
     normal: [['status',0,0,3,3],['kpi',3,0,9,3],
              ['warnings',0,3,3,3],['rain',0,6,3,4],['fire',0,10,3,3],['map',3,3,6,10],['image',9,3,3,6,{k:'radar'}],['fcst',9,9,3,4],
              ['rivers',0,13,6,8],['weather',6,13,3,8],['messages',9,13,3,8]],
