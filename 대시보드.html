@@ -14,8 +14,11 @@
      2026-11-12 상황 모드 — 상황 띠(특보·강한 비·하천 이상일 때만 위에 뜸) · 상황 기록(시간순 경과) · 상황보고(복사용 문구)
      · 판단은 사람이 한다 — 화면은 사실(발효·넘음)과 기준 통과만 적고, 권고·지시 문구는 쓰지 않는다
      · 강수 기준 통과(5/20/30/50mm)는 이 화면이 열려 있는 동안만 기록(이 브라우저 저장). 서버 기록은 2차
-     · ?sim=1 모의 훈련 — 특보·강수·하천 수위를 모의 자료로 바꿔 보여 준다(실제 기록과 저장 키를 분리, 출동 메모는 안 읽음) -->
+     · ?sim=1 모의 훈련 — 특보·강수·하천 수위를 모의 자료로 바꿔 보여 준다(실제 기록과 저장 키를 분리, 출동 메모는 안 읽음)
+     2026-11-12 지금 점검할 곳 — 위험구역 구글시트(관서 탭)를 지금 강수·하천 값과 겹쳐 먼저/다음/평소로 나눔
+     · 기준은 CHECK_RULES 한 곳, 확인 표시는 이 브라우저에만(24시간) -->
 <script src="region.js"></script>
+<script src="risk-zones.js"></script>
 <script src="map-geo.js"></script>
 <script src="data.js"></script>
 <script src="gridstack-all.js"></script>
@@ -242,6 +245,29 @@ table.tb{width:100%;border-collapse:collapse}
 .tlx:hover{background:var(--raised);color:var(--ink)}
 pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;line-height:20px;margin:0;padding:12px;border-radius:8px;background:var(--raised);color:var(--ink);user-select:text}
 
+/* 지금 점검할 곳 */
+.ckh{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:12px;font-size:13px;color:var(--ink2)}
+.ckh .live{margin-left:auto;font-size:12px;color:var(--ink3)}
+.cks{display:flex;align-items:center;gap:8px;margin:16px 0 4px;font-size:12px;line-height:16px;font-weight:500;color:var(--ink3)}
+.cks.n0{margin-top:0}
+.cks.first{color:var(--severe)}.cks.next{color:var(--warn)}
+.cks .btn{margin-left:auto}
+.ckr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.cks+.ckr{border-top:0}
+.ckr.c{padding:4px 0}
+.ckl{min-width:0}
+.ck1{min-width:0;color:var(--ink2);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ck1 .ckt{color:var(--ink);font-weight:500}
+.ck2{font-size:12px;line-height:16px;overflow-wrap:anywhere}
+.ck2.first{color:var(--severe)}.ck2.next{color:var(--warn)}
+.ckrt{display:flex;align-items:center;gap:8px}
+.btn.ckb{height:28px;padding:0 8px}
+.ckrt .done{font-size:12px;color:var(--ink3);white-space:nowrap}
+.ckmb{padding:4px 0 0}
+.ckh.w{margin-bottom:4px}
+.ckw{margin-bottom:12px;font-size:12px;line-height:16px}
+.ckw.first{color:var(--severe)}.ckw.next{color:var(--warn)}
+
 /* 휴대폰 */
 @media (max-width:760px){
   .sitbar{padding:8px 16px}
@@ -328,7 +354,8 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
     plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
     timeline:'<path d="M12 6v6l4 2"/><path d="M16 21.16a10 10 0 1 1 5-13.516"/><path d="M20 11.5v6"/><path d="M20 21.5h.01"/>',
-    report:'<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>'
+    report:'<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
+    checklist:'<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>'
   };
   function ic(k){ return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">'+(P[k]||'')+'</svg>'; }
   $('btnTheme').innerHTML = ic('contrast');
@@ -662,6 +689,15 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     rv.sort(function(a,b){ return riverPct(b)-riverPct(a); });
     L.push(rv.length ? '■ 하천: '+rv.slice(0,5).map(function(r){ var p=riverParts(r), nm=p.river+(p.site ? ' '+p.site.split(/\s+/).pop() : '');
       return nm+(riverLv(r)==='severe' ? ' 위험수위 넘음' : ' 주의수위 넘음')+'('+Math.round(riverPct(r)*100)+'%)'; }).join(' / ') : '■ 하천: 주의수위 넘은 곳 없음');
+    if(mine){
+      try{
+        var rk=RISKZ.peek(st);
+        if(rk && rk.state==='ok'){
+          var f1=checkZones(st, rk.items, checkLive(st)).filter(function(z){ return z.tier==='first'; });
+          if(f1.length) L.push('■ 점검: 먼저 볼 곳 '+f1.length+'곳 중 '+f1.filter(function(z){ return z.ts; }).length+'곳 확인');
+        }
+      }catch(e){}
+    }
     var uf=((d.ultra_fcst||{})[sg]||[]).slice(0,6);
     if(uf.length){
       var mx=null; uf.forEach(function(u){ var v=+u.rain_mm||0; if(v>0 && (mx==null || v>mx.v)) mx={v:v, h:String(u.time||'').slice(0,2)}; });
@@ -694,11 +730,14 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
       {type:'호우경보', area:[me].concat(nb).map(sigunOf).join(', '), level:'severe', time:fHM(now-70*60000)},
       {type:'호우주의보', area:WIDE, level:'warning', time:fHM(now-160*60000)}
     ];
-    var rainSet=function(st, h1, day){
+    var rainSet=function(st, h1, day, cum){
       var g=(data.regions||[]).filter(function(r){ return r.name===sigunOf(st); })[0]; if(!g) return;
       g.detail=g.detail||{}; g.detail.aws=g.detail.aws||{}; g.detail.aws.rn60=h1; g.detail.aws.rnday=day;
+      g.detail.rain_cumul=cum;
     };
-    rainSet(me, 32, 96); if(nb[0]) rainSet(nb[0], 24, 70); if(nb[1]) rainSet(nb[1], 18, 55);
+    rainSet(me, 32, 96, {'1h':32,'3h':70,'6h':88,'12h':96});
+    if(nb[0]) rainSet(nb[0], 24, 70, {'1h':24,'3h':52,'6h':64,'12h':70});
+    if(nb[1]) rainSet(nb[1], 18, 55, {'1h':18,'3h':40,'6h':50,'12h':55});
     var ramp=function(r, cnt, from, to, base){
       var h=r.history=r.history||[];
       if(h.length<cnt){ h=r.history=[]; var top=Math.floor(now/3600000)*3600000; for(var q=cnt-1; q>=0; q--) h.push({time:fYMDH(top-q*3600000), value:0}); }
@@ -713,6 +752,105 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     data.messages=(data.messages||[]).filter(function(m){ return m.sn!=='sim1'; });
     data.messages.unshift({sender:'모의 훈련', region:sigunOf(me), date:fYMD(now), time:fHM(now-40*60000), text:'[모의 훈련] 호우경보 발효 중. 하천변 접근을 삼가 주세요', sn:'sim1'});
   };
+
+  /* ── 위험구역 시트 읽기 ── 구글시트(관서마다 탭 하나)를 읽기만 한다. 지금 보는 관서만, 탭은 차례로(429 방지), 30분 보관 ── */
+  var RISKZ = { cache:{} };
+  function csvRows(text){
+    var rows=[], row=[], cur='', q=false, n=text.length, i, c;
+    text = String(text||'').replace(/^﻿/, '');
+    n = text.length;
+    for(i=0; i<n; i++){
+      c = text.charAt(i);
+      if(q){
+        if(c==='"'){ if(text.charAt(i+1)==='"'){ cur+='"'; i++; } else q=false; }
+        else cur+=c;
+      } else if(c==='"') q=true;
+      else if(c===','){ row.push(cur); cur=''; }
+      else if(c==='\n' || c==='\r'){ if(c==='\r' && text.charAt(i+1)==='\n') i++; row.push(cur); cur=''; rows.push(row); row=[]; }
+      else cur+=c;
+    }
+    if(cur!=='' || row.length){ row.push(cur); rows.push(row); }
+    return rows;
+  }
+  function csvIsHead(row){ return row.some(function(c){ c=String(c); return c.indexOf('주소')>=0 || c.indexOf('유형')>=0; }); }
+  function csvCol(row, key){ for(var i=0; i<row.length; i++){ if(String(row[i]).indexOf(key)>=0) return i; } return -1; }
+  function csvCoord(v, lim){ var x=parseFloat(String(v==null?'':v).trim()); return (isNaN(x) || Math.abs(x)>lim) ? null : x; }
+  /* filt=true: 기본 탭 — 지역 칸이 이 관서인 줄만. false: 이 관서 탭 — 모든 줄 */
+  RISKZ.parse = function(text, st, filt){
+    var rows=csvRows(text), hi=-1, out=[], admin=(RC.admin&&RC.admin[st])||'', r;
+    for(r=0; r<rows.length && r<5; r++){ if(csvIsHead(rows[r])){ hi=r; break; } }
+    if(hi<0) return out;
+    var h=rows[hi], iA=csvCol(h,'지역'), iD=csvCol(h,'주소'), iT=csvCol(h,'유형'), iLa=csvCol(h,'위도'), iLn=csvCol(h,'경도');
+    if(iD<0 && iT<0) return out;
+    var cell=function(row, i){ return i>=0 && i<row.length ? String(row[i]).replace(/^\s+|\s+$/g,'') : ''; };
+    for(r=hi+1; r<rows.length; r++){
+      var row=rows[r], area=cell(row,iA), type=cell(row,iT), name=cell(row,iD);
+      if(!type && !name) continue;
+      if(filt && !(area && (area===st || area===admin || area.indexOf(st)===0))) continue;
+      out.push({id:st+'|'+name+'|'+type, type:type, name:name, lat:csvCoord(cell(row,iLa),90), lng:csvCoord(cell(row,iLn),180)});
+    }
+    return out;
+  };
+  RISKZ.url = function(tab){
+    var b=window.RISK_SHEET_URL; if(!b) return null;
+    return tab==null ? b : b + (b.indexOf('?')<0 ? '?' : '&') + 'sheet=' + encodeURIComponent(tab);
+  };
+  RISKZ.fetchText = function(url){
+    return fetch(url, {cache:'no-store'}).then(function(r){ if(!r.ok) throw new Error('http '+r.status); return r.text(); }).then(function(t){
+      if(/^\s*</.test(t) || t.indexOf('setResponse')>=0) throw new Error('bad response');
+      return t;
+    });
+  };
+  RISKZ.load = function(st){
+    var c={t:Date.now(), state:'loading', items:[]}; RISKZ.cache[st]=c;
+    if(!window.RISK_SHEET_URL){ c.state='none'; return; }
+    var admin=(RC.admin&&RC.admin[st])||'', tabs=[st], items=[], seen={}, soft=false, defText=null;
+    if(admin && admin!==st) tabs.push(admin);
+    var add=function(list){ list.forEach(function(z){ if(!seen[z.id]){ seen[z.id]=1; items.push(z); } }); };
+    var finish=function(state){
+      var res={t:Date.now(), state:state, items:state==='ok' ? items : []};
+      RISKZ.cache[st]=res;
+      if(state!=='fail'){ try{ sessionStorage.setItem('ggRiskZ.v1.'+st, JSON.stringify(res)); }catch(e){} }
+      try{ renderAll(); }catch(e){ if(window.console) console.error(e); }
+    };
+    var step=function(i){
+      if(i>=tabs.length){ finish(items.length ? 'ok' : (soft ? 'fail' : 'none')); return; }
+      RISKZ.fetchText(RISKZ.url(tabs[i])).then(function(t){
+        if(t!==defText) add(RISKZ.parse(t, st, false));   /* 없는 탭을 부르면 첫 탭이 그대로 온다 → 기본 탭과 같으면 없는 탭 */
+        step(i+1);
+      }, function(){ soft=true; step(i+1); });
+    };
+    try{
+      RISKZ.fetchText(RISKZ.url(null)).then(function(t){ defText=t; add(RISKZ.parse(t, st, true)); step(0); }, function(){ finish('fail'); });
+    }catch(e){ finish('fail'); }
+  };
+  /* 보관된 결과(없으면 null). 읽기 실패는 5분 뒤, 나머지는 30분 뒤 다시 읽는다 */
+  RISKZ.real = function(st){
+    var c=RISKZ.cache[st], now=Date.now();
+    if(c && now-c.t < (c.state==='loading' ? 60000 : (c.state==='fail' ? 300000 : 1800000))) return c;
+    try{
+      var s=JSON.parse(sessionStorage.getItem('ggRiskZ.v1.'+st)||'null');
+      if(s && s.t && now-s.t < 1800000 && (s.state==='ok' || s.state==='none') && Array.isArray(s.items)){ RISKZ.cache[st]={t:s.t, state:s.state, items:s.items}; return RISKZ.cache[st]; }
+    }catch(e){}
+    return null;
+  };
+  RISKZ.sample = function(){
+    return [['지하차도','[모의] 중앙로 지하차도'], ['반지하 주택가','[모의] 역전길 일대'], ['침수위험','[모의] 하천변 둔치주차장'],
+      ['산사태취약지구','[모의] 뒷산 산12-1 일원'], ['급경사지','[모의] 고갯길 절개지'], ['야영장','[모의] 계곡 야영장']].map(function(p){
+      return {id:'sim|'+p[1]+'|'+p[0], type:p[0], name:p[1], lat:null, lng:null};
+    });
+  };
+  RISKZ.view = function(r){
+    if(r && SIT.sim && (r.state==='none' || r.state==='fail')) return {state:'ok', items:RISKZ.sample()};
+    return r;
+  };
+  RISKZ.peek = function(st){ return RISKZ.view(RISKZ.real(st)); };
+  RISKZ.get = function(st){
+    var r=RISKZ.real(st);
+    if(!r){ RISKZ.load(st); r=RISKZ.cache[st]; }
+    return RISKZ.view(r) || {state:'loading', items:[]};
+  };
+  RISKZ.clear = function(st){ delete RISKZ.cache[st]; try{ sessionStorage.removeItem('ggRiskZ.v1.'+st); }catch(e){} };
 
   /* ── 위젯 정의 ── 새 위젯은 여기에 하나 추가하면 '위젯 추가'에 저절로 뜬다. meta = 제목 줄 오른쪽 작은 글씨 */
   var W = {};
@@ -926,6 +1064,148 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     el.querySelector('.rep-copy').onclick=function(){ copyText(text, this); };
   }};
 
+  /* ── 지금 점검할 곳 ── 위험구역 시트의 곳을 지금 강수·특보·하천 값과 겹쳐 먼저/다음/평소로 나눈다. 화면은 사실과 기준만 적는다 ── */
+  /* 기준은 여기 한 곳. first = 먼저 볼 곳, next = 다음 볼 곳. 값이 기준 이상이면 해당 */
+  var CHECK_RULES = {
+    flood: { first:{r1:20, r3:60}, next:{r1:5, f6:20} },     /* 침수형: 시간당·3시간 강수, 6시간 예보 최대 */
+    slope: { first:{r12:110, r3:60}, next:{r12:55, r3:30} }  /* 사면형: 누적 강수 (호우주의보 기준 3시간 60mm·12시간 110mm) */
+  };
+  var CHECK_LAB = {r1:'시간당', r3:'3시간', r12:'12시간', f6:'6시간 예보 최대'};
+  var CHECK_GROUPS = [   /* 앞에서부터 맞는 첫 묶음. 사면 → 물놀이 → 침수 순으로 좁은 것부터 */
+    ['slope', /산사태|급경사|사면|옹벽|축대|태양광|절개/],
+    ['water', /야영|캠핑|계곡|유원지|물놀이/],
+    ['flood', /침수|지하차도|반지하|저지대|하천|세월교|둔치|배수|도로/]
+  ];
+  var CHECK_GORDER = {flood:0, water:1, slope:2, etc:3};
+  var CHECK_TORDER = {first:0, next:1, rest:2};
+  function checkGroup(type){
+    for(var i=0; i<CHECK_GROUPS.length; i++){ if(CHECK_GROUPS[i][1].test(type||'')) return CHECK_GROUPS[i][0]; }
+    return 'etc';
+  }
+  function checkNum(v){ return (v==null || v==='' || isNaN(+v)) ? null : +v; }
+  /* 이 관서의 지금 값. 없는 값은 null (그 검사는 건너뜀) */
+  function checkLive(st){
+    var reg=regOf(st), cum=((reg||{}).detail||{}).rain_cumul||{}, rd=rainDay(reg), c12=checkNum(cum['12h']);
+    var L={ r1:rain1h(reg), r3:checkNum(cum['3h']), r12:null, f6:null, wBo:false, wJu:false, sv:[], wn:[] };
+    rd = checkNum(rd);
+    if(c12!=null || rd!=null) L.r12 = Math.max(c12==null ? -1 : c12, rd==null ? -1 : rd);
+    var uf=((D().ultra_fcst||{})[sigunOf(st)]||[]).slice(0,6);
+    if(uf.length) L.f6 = Math.max.apply(null, uf.map(function(u){ return +u.rain_mm||0; }));
+    (D().warnings||[]).filter(function(w){ return areaHits(w.area, st) && String(w.type||'').indexOf('호우')>=0; }).forEach(function(w){ if(isBo(w)) L.wBo=true; else L.wJu=true; });
+    riversOf(st).forEach(function(r){ var l=riverLv(r); if(l==='severe') L.sv.push(riverName(r)); else if(l==='warn') L.wn.push(riverName(r)); });
+    return L;
+  }
+  function checkHits(rule, L){
+    var out=[];
+    Object.keys(rule).forEach(function(k){ var v=L[k]; if(v!=null && v>=rule[k]) out.push(CHECK_LAB[k]+' '+num(v,1)+'mm (기준 '+rule[k]+')'); });
+    return out;
+  }
+  function checkTierOf(grp, L){
+    var R=CHECK_RULES[grp==='slope' ? 'slope' : 'flood'], river=grp!=='slope', f=checkHits(R.first, L), n;
+    if(river) L.sv.slice(0,2).forEach(function(nm){ f.push(nm+' 위험수위 넘음'); });
+    if(f.length) return {tier:'first', reasons:f};
+    n=checkHits(R.next, L);
+    if(river) L.wn.slice(0,2).forEach(function(nm){ n.push(nm+' 주의수위 넘음'); });
+    return n.length ? {tier:'next', reasons:n} : {tier:'rest', reasons:[]};
+  }
+  /* 확인 표시 — 이 브라우저에만, 24시간 */
+  function chkKey(){ return 'ggDashChk.v1.'+(RC.key||'x')+(SIT.sim ? '.sim' : ''); }
+  function chkRead(){
+    var m=jget(chkKey(), {}), out={}, cut=Date.now()-86400000;
+    if(m && typeof m==='object') Object.keys(m).forEach(function(k){ if(+m[k]>=cut) out[k]=+m[k]; });
+    return out;
+  }
+  function chkWrite(m){ storeSet(chkKey(), JSON.stringify(m)); }
+  /* 보이는 이름만 다듬는다(id 는 원래 이름 기준 그대로): 앞의 시도명·관서 공식 이름을 빼고, 맨 앞에서 되풀이되는 낱말은 하나로 */
+  function checkName(st, name){
+    var raw=String(name||'').replace(/^\s+|\s+$/g, ''), s=raw, ad=(RC.admin && RC.admin[st]) || '', lab=RC.label || '', t, i;
+    var cut=function(p){ if(p && s.indexOf(p+' ')===0){ s=s.slice(p.length+1).replace(/^\s+/, ''); return true; } return false; };
+    if(lab && !cut(lab) && !/도$/.test(lab)) cut(lab+'도');
+    cut(ad);
+    t=s.split(/\s+/);
+    if(ad){ t=t.filter(function(w){ return w!==ad; }); }
+    while(t.length>1 && t[0]===t[1]) t.shift();
+    s=t.join(' ');
+    return s || raw;
+  }
+  /* 구역마다 묶음·단계·이유를 붙여 정렬: 단계 → 확인한 것은 단계 맨 아래 → 묶음 → 시트 순서 */
+  function checkZones(st, items, L){
+    var chk=chkRead();
+    var zs=(items||[]).map(function(it, idx){
+      var g=checkGroup(it.type), t=checkTierOf(g, L);
+      return {it:it, id:it.id, name:checkName(st, it.name), grp:g, tier:t.tier, reasons:t.reasons, idx:idx, ts:(t.tier!=='rest' && chk[it.id]) ? chk[it.id] : 0};
+    });
+    zs.sort(function(a,b){ return (CHECK_TORDER[a.tier]-CHECK_TORDER[b.tier]) || ((a.ts?1:0)-(b.ts?1:0)) || (CHECK_GORDER[a.grp]-CHECK_GORDER[b.grp]) || (a.idx-b.idx); });
+    return zs;
+  }
+  W.check = { title:'지금 점검할 곳', w:4, h:8, icon:'checklist', render:function(el, inst){
+    var st=stationNow(), rz=RISKZ.get(st), adm=(RC.admin && RC.admin[st]) || st;
+    if(rz.state==='loading'){ el.innerHTML='<div class="calm">위험구역 불러오는 중</div>'; return; }
+    if(rz.state==='none'){
+      el.innerHTML='<div class="calm">위험구역 시트에 '+esc(st)+' 자료가 없습니다</div><div class="legend">구글시트에 '+esc(adm)+' 탭을 만들고 지역·도로명주소·유형·위도·경도를 채우면 여기에 나옵니다</div>';
+      return;
+    }
+    if(rz.state==='fail'){
+      el.innerHTML='<div class="calm">위험구역 시트를 읽지 못했습니다</div><div style="margin-top:12px"><button class="chip ck-retry">다시 읽기</button></div>';
+      el.querySelector('.ck-retry').onclick=function(){ RISKZ.clear(st); renderAll(); };
+      return;
+    }
+    var o=inst.opt||{}, L=checkLive(st), zs=checkZones(st, rz.items, L), by={first:[], next:[], rest:[]}, shown=[], secN=0, h='';
+    zs.forEach(function(z){ by[z.tier].push(z); });
+    var hm=function(ts){ return fHM(ts); };
+    var live=[]; if(L.r1!=null) live.push('1시간 '+num(L.r1,1)); if(L.r3!=null) live.push('3시간 '+num(L.r3,1)); if(L.r12!=null) live.push('12시간 '+num(L.r12,1));
+    var wTxt=L.wBo ? '호우경보 발효 중' : (L.wJu ? '호우주의보 발효 중' : '');
+    h+='<div class="ckh'+(wTxt ? ' w' : '')+'"><span>'+esc(st)+' · 위험구역 '+zs.length+'곳</span>'+(live.length ? '<span class="live">'+live.join(' · ')+' mm</span>' : '')+'</div>';
+    if(wTxt) h+='<div class="ckw '+(L.wBo ? 'first' : 'next')+'">'+wTxt+'</div>';
+    var title=function(cls, label, n, btn, done){
+      var s='<div class="cks '+cls+(secN===0 ? ' n0' : '')+'"><span>'+label+' · '+n+'곳'+(done ? ' · 확인 '+done : '')+'</span>'+(btn||'')+'</div>'; secN++; return s;
+    };
+    var rowHtml=function(z, compact, i){
+      var it=z.it, nm=z.name, sn=nm.slice(0,24), r;
+      var l1='<div class="ck1">'+(it.type ? '<span class="ckt">'+esc(it.type)+'</span>' : '')+(it.type && nm ? ' · ' : '')+(nm ? esc(nm) : '')+'</div>';
+      var rt='';
+      if(it.lat!=null && it.lng!=null){
+        rt+='<a class="btn ckb" target="_blank" rel="noopener" href="'+esc('https://map.kakao.com/link/map/'+encodeURIComponent(it.type+' '+sn)+','+it.lat+','+it.lng)+'">지도</a>';
+      }
+      if(!compact){
+        if(z.ts) rt+='<span class="done">'+hm(z.ts)+' 확인</span><button class="btn quiet ckb" data-a="undo" data-i="'+i+'">취소</button>';
+        else rt+='<button class="btn ckb" data-a="ok" data-i="'+i+'">확인</button>';
+      }
+      r='<div class="ckr'+(compact ? ' c' : '')+'"><div class="ckl">'+l1+(compact ? '' : '<div class="ck2 '+z.tier+'">'+esc(z.reasons.join(' · '))+'</div>')+'</div><div class="ckrt">'+rt+'</div></div>';
+      return r;
+    };
+    ['first','next'].forEach(function(k){
+      var all=by[k], mk=k==='first' ? 'more1' : 'more2', more=o[mk]===true, take=more ? all : all.slice(0, 8);
+      if(!all.length) return;
+      h+=title(k, k==='first' ? '먼저 볼 곳' : '다음 볼 곳', all.length, '', all.filter(function(z){ return z.ts; }).length);
+      take.forEach(function(z){ shown.push(z); h+=rowHtml(z, false, shown.length-1); });
+      if(all.length>8) h+='<div class="ckmb"><button class="btn quiet ckb ck-more" data-m="'+mk+'" aria-expanded="'+(more ? 'true' : 'false')+'">'+(more ? '접기' : (all.length-8)+'곳 더 보기')+'</button></div>';
+    });
+    if(!by.first.length && !by.next.length){ h+='<div class="calm"><span class="dot"></span>지금 기준을 넘은 곳 없음</div>'; secN++; }
+    if(by.rest.length){
+      var open=o.rest===true;
+      h+=title('rest', '평소 관리', by.rest.length, '<button class="btn quiet ckb ck-tog" aria-expanded="'+(open ? 'true' : 'false')+'">'+(open ? '접기' : '펼치기')+'</button>');
+      if(open) by.rest.forEach(function(z){ h+=rowHtml(z, true, 0); });
+    }
+    var F=CHECK_RULES.flood.first, S=CHECK_RULES.slope.first;
+    h+='<div class="legend"><span>기준 · 침수형 시간당 '+F.r1+'mm·3시간 '+F.r3+'mm · 사면형 3시간 '+S.r3+'mm·12시간 '+S.r12+'mm (호우주의보 기준) · 화면 참고값이며 판단은 현장에서</span></div>';
+    el.innerHTML=h;
+    var tg=el.querySelector('.ck-tog');
+    if(tg) tg.onclick=function(){ inst.opt=inst.opt||{}; inst.opt.rest=!inst.opt.rest; save(); W.check.render(el, inst); };
+    el.querySelectorAll('.ck-more').forEach(function(b){ b.onclick=function(){
+      var mk=b.getAttribute('data-m'); inst.opt=inst.opt||{}; inst.opt[mk]=!inst.opt[mk]; save(); W.check.render(el, inst);
+    }; });
+    el.querySelectorAll('[data-a]').forEach(function(b){ b.onclick=function(){
+      var z=shown[+b.getAttribute('data-i')]; if(!z) return;
+      var m=chkRead();
+      if(b.getAttribute('data-a')==='ok'){
+        m[z.id]=Date.now(); chkWrite(m);
+        SIT.addNote(('점검 · '+z.it.type+' '+z.name.slice(0,24)).replace(/\s+$/, ''));
+      } else { delete m[z.id]; chkWrite(m); }
+      var sc=el.scrollTop; renderAll(); el.scrollTop=sc;
+    }; });
+  }};
+
   /* 위젯 안의 구간 버튼 — data-o(옵션 이름)·data-v(값)를 이 위젯 설정에 저장하고 다시 그린다 */
   function tabs(el, inst){
     el.querySelectorAll('.seg button[data-o]').forEach(function(b){ b.onclick=function(){
@@ -937,7 +1217,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   /* ── 기본 배치 ── 12칸 격자, 한 칸 높이 64. 가운데 큰 지도를 중심으로 양옆에 목록 */
   var PRESETS = {
     incident:[['status',0,0,3,3],['kpi',3,0,9,3],['timeline',0,3,4,10],['map',4,3,5,10,{m:'r1'}],['report',9,3,3,10],
-             ['rivers',0,13,6,7],['rain',6,13,3,7],['image',9,13,3,7,{k:'radar'}]],
+             ['check',0,13,4,7],['rivers',4,13,5,7],['image',9,13,3,7,{k:'radar'}]],
     normal: [['status',0,0,3,3],['kpi',3,0,9,3],
              ['warnings',0,3,3,3],['rain',0,6,3,4],['fire',0,10,3,3],['map',3,3,6,10],['image',9,3,3,6,{k:'radar'}],['fcst',9,9,3,4],
              ['rivers',0,13,6,8],['weather',6,13,3,8],['messages',9,13,3,8]],
@@ -969,7 +1249,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     ['x','y','w','h'].forEach(function(k){ if(it[k]!=null) el.setAttribute('gs-'+k, it[k]); });
     if(it.x==null) el.setAttribute('gs-auto-position','true');
     el.setAttribute('gs-id', inst.id); el.setAttribute('gs-min-w', 2); el.setAttribute('gs-min-h', 2); el.setAttribute('data-t', inst.type);
-    el.innerHTML='<div class="grid-stack-item-content"><div class="wh">'+ic(inst.type)+'<span class="t">'+esc(def.title)+'</span><span class="meta"></span><button class="x" aria-label="'+esc(def.title)+' 빼기" title="빼기">'+ic('x')+'</button></div><div class="wb"></div></div>';
+    el.innerHTML='<div class="grid-stack-item-content"><div class="wh">'+ic(def.icon || inst.type)+'<span class="t">'+esc(def.title)+'</span><span class="meta"></span><button class="x" aria-label="'+esc(def.title)+' 빼기" title="빼기">'+ic('x')+'</button></div><div class="wb"></div></div>';
     $('grid').appendChild(el); grid.makeWidget(el);
     el.querySelector('.x').onclick=function(){ grid.removeWidget(el); delete INST[inst.id]; save(); };
     renderOne(inst);
@@ -1005,7 +1285,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   function setEditing(on){ document.body.classList.toggle('editing', on); grid.setStatic(!on); $('btnEdit').classList.toggle('on', on); $('btnEdit').innerHTML = on ? ic('check')+'완료' : ic('pencil')+'꾸미기'; }
   setEditing(false);
   $('btnEdit').onclick=function(){ if(isMobile()) return; setEditing(!document.body.classList.contains('editing')); };
-  $('addList').innerHTML = Object.keys(W).map(function(t){ return '<button class="chip" data-t="'+t+'">'+ic(t)+esc(W[t].title)+'</button>'; }).join('');
+  $('addList').innerHTML = Object.keys(W).map(function(t){ return '<button class="chip" data-t="'+t+'">'+ic(W[t].icon || t)+esc(W[t].title)+'</button>'; }).join('');
   $('addList').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ var t=b.getAttribute('data-t'); addInst({type:t, w:W[t].w, h:W[t].h}); save();
     var last=document.querySelector('.grid-stack-item[gs-id]:last-child'); if(last && last.scrollIntoView) last.scrollIntoView({behavior:'smooth', block:'center'}); }; });
   $('btnReset').onclick=function(){ if(confirm('처음 배치(평상시)로 되돌릴까요? 지금 꾸민 배치는 사라집니다')) load(fromPreset('normal')); };
