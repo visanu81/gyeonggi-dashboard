@@ -55,6 +55,10 @@ now = int(time.time() * 1000)
 tag = str(now)[-6:]
 A, Bst = '시험가' + tag[-2:], '시험나' + tag[-2:]
 
+post('/api/board/set', {'station': Bst, 'kind': 'note', 'id': 'n1', 'text': '첫 줄'})   # 빈 방이면 mark 가 0 — 0 은 '전체 받기'로 친다
+s0, d0 = get('')
+mark0 = d0.get('mark', 0)
+check('목록 응답에 mark 가 있다', isinstance(mark0, int), d0)
 s, d = post('/api/board/set', {'station': A, 'kind': 'todo', 'id': 't1', 'text': '비상근무 편성 보고', 'extra': 'severe', 'ts': now - 5000})
 check('set → ok·applied·ts 는 보낸 시각', s == 200 and d.get('ok') and d.get('applied') is True and d.get('ts') == now - 5000, d)
 s, d = post('/api/board/set', {'station': A, 'kind': 'todo', 'id': 't1', 'text': 'OLD', 'ts': now - 60000})
@@ -66,9 +70,9 @@ check('그대로 남은 글', r and r['text'] == '비상근무 편성 보고' an
 s, d = post('/api/board/del', {'station': A, 'kind': 'todo', 'id': 't1', 'ts': now - 1000})
 check('del → applied', s == 200 and d.get('applied') is True, d)
 check('전체 목록에는 지운 줄이 안 나온다', find(rows(), A, 'todo', 't1') is None)
-rs = rows('&since=' + str(now - 3000))
+rs = rows('&since=' + str(mark0))
 r = find(rs, A, 'todo', 't1')
-check('since 목록에는 지움 표시(del:1)가 나온다', r is not None and r['del'] == 1, rs)
+check('since(mark) 목록에는 지움 표시(del:1)가 나온다', r is not None and r['del'] == 1, rs)
 s, d = post('/api/board/set', {'station': A, 'kind': 'todo', 'id': 't1', 'text': '늦게 온 옛 체크', 'ts': now - 4000})
 check('지운 뒤 도착한 옛 체크는 되살아나지 않는다', d.get('applied') is False and find(rows(), A, 'todo', 't1') is None, d)
 s, d = post('/api/board/set', {'station': A, 'kind': 'todo', 'id': 't1', 'text': '다시 체크', 'ts': now})
@@ -94,15 +98,32 @@ rs = rows('&cfg=' + urllib.parse.quote(A))
 check('전체 목록 — 두 관서 beat, cfg 는 청한 관서 것만',
       sum(1 for r in rs if r['kind'] == 'beat' and r['station'] in (A, Bst)) == 2
       and [r['station'] for r in rs if r['kind'] == 'cfg'] == [A], [(r['station'], r['kind']) for r in rs])
-t1 = int(time.time() * 1000) + 50
-time.sleep(0.2)
-check('since — 바뀐 게 없으면 비어 있다', rows('&since=' + str(t1) + '&cfg=' + urllib.parse.quote(A)) == [])
+m1 = get('')[1]['mark']
+check('since(mark) — 바뀐 게 없으면 비어 있다', rows('&since=' + str(m1) + '&cfg=' + urllib.parse.quote(A)) == [])
+# 늦게 도착한 옛 시각의 줄(장애 동안 눌러 둔 것)도 '도착 차례'로는 새것 — 놓치지 않는다
+post('/api/board/set', {'station': Bst, 'kind': 'note', 'id': 'late', 'text': '20분 전에 눌러 둔 기록', 'ts': now - 20 * 60000})
+rs = rows('&since=' + str(m1))
+check('늦게 도착한 옛 시각의 줄이 since 목록에 나온다', find(rs, Bst, 'note', 'late') is not None, rs)
+rs = rows('&since=' + str(m1) + '&station=' + urllib.parse.quote(A))
+check('since + station= 은 그 관서 것만', rs == [], rs)
+m2 = get('')[1]['mark']
+post('/api/board/set', {'station': A, 'kind': 'beat', 'id': 'now', 'extra': {'lv': 'safe'}})
+rs = rows('&since=' + str(m2))
+check('beat 도 since 목록에 나온다', find(rs, A, 'beat', 'now') is not None, rs)
+check('mark 는 쓸 때마다 커진다', get('')[1]['mark'] > m2)
 
 # 체크 초기화
 post('/api/board/set', {'station': A, 'kind': 'todo', 'id': 't2', 'text': '둘째'})
 s, d = post('/api/board/clear', {'station': A, 'kind': 'todo'})
 check('clear — 그 관서 todo 를 모두 지움 표시', s == 200 and d.get('n') == 2 and not any(r['kind'] == 'todo' and r['station'] == A for r in rows()), d)
 check('clear — 다른 관서·다른 종류는 그대로', find(rows(), Bst, 'chk', 'z1') is not None and find(rows(), A, 'note', 'n1') is not None)
+# 초기화보다 먼저 눌러 둔 체크가 나중에 도착 — 되살아나면 안 된다
+s, d = post('/api/board/set', {'station': A, 'kind': 'todo', 'id': 't9', 'text': '초기화 전에 눌러 둔 것', 'ts': now - 30000})
+check('초기화 전에 누른 체크는 적용 안 됨', d.get('applied') is False and find(rows(), A, 'todo', 't9') is None, d)
+s, d = post('/api/board/set', {'station': A, 'kind': 'todo', 'id': 't9', 'text': '초기화 뒤에 누른 것', 'ts': int(time.time() * 1000)})
+check('초기화 뒤에 누른 체크는 적용', d.get('applied') is True and find(rows(), A, 'todo', 't9') is not None, d)
+s, d = post('/api/board/set', {'station': Bst, 'kind': 'todo', 'id': 't9', 'text': '다른 관서는 영향 없음', 'ts': now - 30000})
+check('초기화는 그 관서·그 종류에만', d.get('applied') is True, d)
 s, d = post('/api/board/clear', {'station': A, 'kind': 'note'})
 check('clear 는 chk·todo 만', s == 400, d)
 
@@ -142,6 +163,7 @@ for st in (A, Bst):
     post('/api/board/clear', {'station': st, 'kind': 'todo'})
     post('/api/board/clear', {'station': st, 'kind': 'chk'})
     post('/api/board/del', {'station': st, 'kind': 'note', 'id': 'n1'})
+    post('/api/board/del', {'station': st, 'kind': 'note', 'id': 'late'})
     post('/api/board/del', {'station': st, 'kind': 'beat', 'id': 'now'})
     post('/api/board/del', {'station': st, 'kind': 'cfg', 'id': 'todo'})
 

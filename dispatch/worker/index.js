@@ -27,8 +27,8 @@
  *   POST /api/board/set               한 줄 올리기/고치기     (열쇠 필요)  → {ok, ts, applied}
  *   POST /api/board/del               한 줄 지움 표시         (열쇠 필요)  → {ok, ts, applied}
  *   POST /api/board/clear             그 관서의 chk 또는 todo 를 모두 지움 표시(체크 초기화)
- *   GET  /api/board?key=all&hours=48  줄 목록 (열쇠 필요). station= 그 관서 것만(관서 화면) · since= 그 뒤 바뀐 것만
- *                                     (지움 표시 del:1 포함) · cfg= 그 관서의 목록 설정도
+ *   GET  /api/board?key=all&hours=48  줄 목록 (열쇠 필요) → {ok, now, mark, rows}. station= 그 관서 것만(관서 화면)
+ *                                     · since=<앞서 받은 mark> 그 뒤 도착한 것만(지움 표시 del:1 포함) · cfg= 그 관서의 목록 설정도
  *     같은 줄은 '더 나중 시각의 것'이 남는다(지움도 같은 규칙). applied:false 면 서버에 더 새 값이 있다는 뜻.
  *     줄 하나 = (관서, 종류, id). 종류: chk 위험구역 점검 확인 · todo 체크리스트 체크 · note 한 줄 기록
  *     · beat 관서 요약(상태·진행·접속 시각, 관서마다 1줄) · cfg 관서의 체크리스트 목록(관서마다 1줄)
@@ -92,33 +92,57 @@ export class Log extends DurableObject {
       place TEXT, lat REAL, lng REAL, memo TEXT, wx TEXT, who TEXT)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS i_ts ON notes(ts)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT)`);
-    /* board2 — del=1 은 '지운 자리 표시'. 지울 때 줄을 없애면, 늦게 도착한 옛 요청이 그 줄을 되살린다
-       (PC A 의 실패한 체크가 PC B 의 해제 뒤에 재전송되는 경우). 지운 시각을 남겨 같은 '더 나중 것이 이긴다' 규칙을 쓴다. */
-    this.sql.exec(`CREATE TABLE IF NOT EXISTS board2(
-      station TEXT, kind TEXT, id TEXT, ts INTEGER, text TEXT, extra TEXT, del INTEGER DEFAULT 0,
+    this.sql.exec(`CREATE INDEX IF NOT EXISTS i_st_ts ON notes(station, ts)`);
+    /* board3 — 관서 현황판의 줄.
+       del=1 은 '지운 자리 표시'. 지울 때 줄을 없애면, 늦게 도착한 옛 요청이 그 줄을 되살린다
+       (PC A 의 실패한 체크가 PC B 의 해제 뒤에 재전송되는 경우). 지운 시각을 남겨 같은 '더 나중 것이 이긴다' 규칙을 쓴다.
+       ts = 사용자가 누른 때(어느 쪽이 이기는지 정한다) · up = 서버에 도착한 차례(바뀐 것만 받을 때 쓴다).
+       둘을 나눈 이유: 장애 동안 눌러 둔 것이 20분 뒤에 올라오면 ts 는 20분 전이라, 'ts 로 바뀐 것만' 받는 화면은
+       그 줄을 놓친다(다음 전체 받기까지 최대 30분). 도착 차례로 물으면 놓치지 않는다. */
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS board3(
+      station TEXT, kind TEXT, id TEXT, ts INTEGER, up INTEGER, text TEXT, extra TEXT, del INTEGER DEFAULT 0,
       PRIMARY KEY(station, kind, id))`);
-    this.sql.exec(`CREATE INDEX IF NOT EXISTS i_b2_ts ON board2(ts)`);
-    this.sql.exec(`CREATE INDEX IF NOT EXISTS i_b2_kind ON board2(kind, ts)`);
-    this.sql.exec(`DROP TABLE IF EXISTS board`);   // 2026-11-13 오전 몇 시간만 쓰인 첫 판(시험 줄뿐)
+    this.sql.exec(`CREATE INDEX IF NOT EXISTS i_b3_up ON board3(up)`);
+    this.sql.exec(`CREATE INDEX IF NOT EXISTS i_b3_st_up ON board3(station, up)`);
+    this.sql.exec(`CREATE INDEX IF NOT EXISTS i_b3_kind ON board3(kind, ts)`);
+    this.sql.exec(`DROP TABLE IF EXISTS board`);    // 2026-11-13 하루 동안의 앞선 두 판(시험 줄뿐)
+    this.sql.exec(`DROP TABLE IF EXISTS board2`);
+    this._up = null;
   }
+
+  /* 도착 차례 — 늘 커지는 수. 저장소가 잠들었다 깨어도 표에서 다시 읽는다. */
+  _mark() {
+    if (this._up == null) this._up = [...this.sql.exec('SELECT MAX(up) AS m FROM board3')][0].m || 0;
+    return this._up;
+  }
+  _nextUp(now) { this._up = Math.max(now, this._mark() + 1); return this._up; }
 
   /* ── 관서 현황판 ── 열쇠 확인까지 한 번의 호출로 끝낸다(요청마다 저장소 호출 1회 — 무료 한도) */
   async board(op, code, a) {
     if (!(await this.ok(code))) return { ok: false, why: '열쇠가 필요합니다', status: 401 };
     const now = Date.now();
-    if (op === 'list') return { ok: true, now, rows: this._boardList(now, a) };
+    if (op === 'list') return { ok: true, now, mark: this._mark(), rows: this._boardList(now, a) };
     if (op === 'clear') {
-      /* 그 관서의 한 종류를 모두 지움 표시(체크 초기화) — 화면이 아직 못 받은 줄까지 */
-      const n = [...this.sql.exec('SELECT COUNT(*) AS c FROM board2 WHERE station=? AND kind=? AND del=0', a.station, a.kind)][0].c;
-      this.sql.exec(`UPDATE board2 SET del=1, ts=?, text='', extra='' WHERE station=? AND kind=? AND del=0`, now, a.station, a.kind);
+      /* 그 관서의 한 종류를 모두 지움 표시(체크 초기화) — 화면이 아직 못 받은 줄까지.
+         초기화한 때도 적어 둔다: 그 전에 눌러 두고 아직 못 올린 체크가 나중에 도착해 되살아나지 않게. */
+      const n = [...this.sql.exec('SELECT COUNT(*) AS c FROM board3 WHERE station=? AND kind=? AND del=0', a.station, a.kind)][0].c;
+      this.sql.exec(`UPDATE board3 SET del=1, ts=?, up=?, text='', extra='' WHERE station=? AND kind=? AND del=0`,
+        now, this._nextUp(now), a.station, a.kind);
+      this._setMeta('clr|' + a.station + '|' + a.kind, String(now));
       return { ok: true, n, ts: now };
     }
-    /* set / del — 같은 줄은 더 나중 시각의 것이 남는다. 시각이 같으면 나중에 도착한 것 */
-    this.sql.exec(`INSERT INTO board2(station,kind,id,ts,text,extra,del) VALUES(?,?,?,?,?,?,?)
-      ON CONFLICT(station,kind,id) DO UPDATE SET ts=excluded.ts, text=excluded.text, extra=excluded.extra, del=excluded.del
-      WHERE excluded.ts >= board2.ts`, a.station, a.kind, a.id, a.ts, a.text, a.extra, op === 'del' ? 1 : 0);
-    const cur = [...this.sql.exec('SELECT ts, del FROM board2 WHERE station=? AND kind=? AND id=?', a.station, a.kind, a.id)][0];
-    const applied = !!cur && cur.ts === a.ts && cur.del === (op === 'del' ? 1 : 0);
+    if (op === 'set' && (a.kind === 'chk' || a.kind === 'todo')) {
+      const clr = +this._meta('clr|' + a.station + '|' + a.kind) || 0;
+      if (a.ts <= clr) return { ok: true, ts: clr, applied: false };     // 초기화보다 먼저 누른 것
+    }
+    /* set / del — 같은 줄은 더 나중에 누른 것이 남는다. 누른 때가 같으면 나중에 도착한 것 */
+    const del = op === 'del' ? 1 : 0;
+    const up = this._nextUp(now);
+    this.sql.exec(`INSERT INTO board3(station,kind,id,ts,up,text,extra,del) VALUES(?,?,?,?,?,?,?,?)
+      ON CONFLICT(station,kind,id) DO UPDATE SET ts=excluded.ts, up=excluded.up, text=excluded.text, extra=excluded.extra, del=excluded.del
+      WHERE excluded.ts >= board3.ts`, a.station, a.kind, a.id, a.ts, up, a.text, a.extra, del);
+    const cur = [...this.sql.exec('SELECT ts, up FROM board3 WHERE station=? AND kind=? AND id=?', a.station, a.kind, a.id)][0];
+    const applied = !!cur && cur.up === up;
     this._boardPrune(now);
     return { ok: true, ts: cur ? cur.ts : a.ts, applied };     // applied=false → 서버에 더 새 값이 있다
   }
@@ -127,38 +151,42 @@ export class Log extends DurableObject {
   _boardPrune(now) {
     if (now - (+this._meta('board_pruned') || 0) < 3600000) return;
     this._setMeta('board_pruned', String(now));
-    this.sql.exec(`DELETE FROM board2 WHERE kind<>'cfg' AND ts < ?`, now - BOARD_KEEP_DAYS * 86400000);
-    const n = [...this.sql.exec('SELECT COUNT(*) AS c FROM board2')][0].c;
-    if (n > BOARD_MAX_ROWS) this.sql.exec(`DELETE FROM board2 WHERE rowid IN
-      (SELECT rowid FROM board2 WHERE kind<>'cfg' ORDER BY ts ASC LIMIT ?)`, n - BOARD_MAX_ROWS);
+    this.sql.exec(`DELETE FROM board3 WHERE kind<>'cfg' AND ts < ?`, now - BOARD_KEEP_DAYS * 86400000);
+    this.sql.exec(`DELETE FROM meta WHERE k LIKE 'clr|%' AND CAST(v AS INTEGER) < ?`, now - BOARD_KEEP_DAYS * 86400000);
+    const n = [...this.sql.exec('SELECT COUNT(*) AS c FROM board3')][0].c;
+    if (n > BOARD_MAX_ROWS) this.sql.exec(`DELETE FROM board3 WHERE rowid IN
+      (SELECT rowid FROM board3 WHERE kind<>'cfg' ORDER BY ts ASC LIMIT ?)`, n - BOARD_MAX_ROWS);
   }
 
   /* 줄 목록.
      a.station 이 있으면 그 관서 것만(관서 화면) — 없으면 모든 관서(본부 화면).
-     a.since 가 있으면 그 뒤에 바뀐 것만, 지움 표시(del=1)까지 함께 — 없으면 최근 a.hours 시간의 살아 있는 줄 전부.
+     a.since(앞서 받은 mark)가 있으면 그 뒤에 '도착한' 것만, 지움 표시(del=1)까지 함께
+       — 없으면 최근 a.hours 시간의 살아 있는 줄 전부.
      beat(관서 요약)는 기간과 상관없이 준다(마지막 접속 시각을 보여 주려고). cfg(목록)는 a.cfg 관서 것만(크다).
      종류마다 따로 묻는다 — 한 질의에 묶어 LIMIT 을 걸면 줄이 많은 날 beat·cfg 가 잘려 나간다. */
   _boardList(now, a) {
     const cols = 'station,kind,id,ts,text,extra,del';
-    const from = a.since ? a.since : now - a.hours * 3600000;
-    const liveOnly = a.since ? '' : ' AND del=0';
-    const cmp = a.since ? 'ts > ?' : 'ts >= ?';
     let rows;
+    if (a.since) {
+      rows = a.station
+        ? [...this.sql.exec(`SELECT ${cols} FROM board3 WHERE station=? AND up > ? AND kind<>'cfg' ORDER BY up LIMIT 2000`, a.station, a.since)]
+        : [...this.sql.exec(`SELECT ${cols} FROM board3 WHERE up > ? AND kind<>'cfg' ORDER BY up LIMIT 4000`, a.since)];
+      if (a.cfg) rows = rows.concat([...this.sql.exec(
+        `SELECT ${cols} FROM board3 WHERE station=? AND kind='cfg' AND id='todo' AND del=0 AND up > ?`, a.cfg, a.since)]);
+      return rows;
+    }
+    const from = now - a.hours * 3600000;
     if (a.station) {
-      rows = [...this.sql.exec(`SELECT ${cols} FROM board2 WHERE station=? AND kind IN ('chk','todo','note') AND ${cmp}${liveOnly}
+      rows = [...this.sql.exec(`SELECT ${cols} FROM board3 WHERE station=? AND kind IN ('chk','todo','note') AND ts >= ? AND del=0
         ORDER BY ts DESC LIMIT 2000`, a.station, from)];
-      rows = rows.concat([...this.sql.exec(`SELECT ${cols} FROM board2 WHERE station=? AND kind='beat' AND id='now'`, a.station)]);
+      rows = rows.concat([...this.sql.exec(`SELECT ${cols} FROM board3 WHERE station=? AND kind='beat' AND id='now' AND del=0`, a.station)]);
     } else {
-      rows = [...this.sql.exec(`SELECT ${cols} FROM board2 WHERE kind IN ('chk','todo','note') AND ${cmp}${liveOnly}
+      rows = [...this.sql.exec(`SELECT ${cols} FROM board3 WHERE kind IN ('chk','todo','note') AND ts >= ? AND del=0
         ORDER BY ts DESC LIMIT 4000`, from)];
-      rows = rows.concat(a.since
-        ? [...this.sql.exec(`SELECT ${cols} FROM board2 WHERE kind='beat' AND ts > ?`, a.since)]
-        : [...this.sql.exec(`SELECT ${cols} FROM board2 WHERE kind='beat'`)]);
+      rows = rows.concat([...this.sql.exec(`SELECT ${cols} FROM board3 WHERE kind='beat' AND del=0`)]);
     }
-    if (a.cfg) {
-      const c = [...this.sql.exec(`SELECT ${cols} FROM board2 WHERE station=? AND kind='cfg' AND id='todo' AND del=0`, a.cfg)];
-      if (c.length && (!a.since || c[0].ts > a.since)) rows.push(c[0]);
-    }
+    if (a.cfg) rows = rows.concat([...this.sql.exec(
+      `SELECT ${cols} FROM board3 WHERE station=? AND kind='cfg' AND id='todo' AND del=0`, a.cfg)]);
     return rows;
   }
 
