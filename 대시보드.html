@@ -22,7 +22,11 @@
      2026-11-12 사후 보고: 상황이 진행되는 동안 최고 단계·최대 강수·최고 수위·조치 진행을 기록해 두었다가(run record) 정상으로 돌아오면 '끝난 상황'으로 7일 보관, 상황보고 위젯 '사후' 양식과 '상황 종료' 띠에서 초안 복사
      · 화면이 열려 있던 동안의 기록이라는 한계를 문구에 적는다
      · 서버 사건 기록(2026-11-13): 자료에 events·warnings[].since 가 있으면 그것을 우선 쓰고(화면이 닫혀 있던 동안의 강수·수위·특보 변화가 채워짐), 없으면 예전처럼 화면이 본 것만
-     · 출동 메모 위젯: 열쇠 정하기/넣기, 기록·삭제 — 쉬운 화면과 같은 저장소·같은 열쇠 -->
+     · 출동 메모 위젯: 열쇠 정하기/넣기, 기록·삭제 — 쉬운 화면과 같은 저장소·같은 열쇠
+     · 관서 현황 공유(2026-11-13): 점검 확인·체크리스트 체크·한 줄 기록·체크리스트 목록을 출동 메모 저장소(/api/board)에 줄 단위로 올린다(같은 열쇠).
+     · 같은 관서의 여러 화면이 같은 체크를 보고, 본부는 '관서 현황' 위젯·'본부 통합' 배치·전체 상황 기록/보고로 모아 본다. 열쇠가 없거나 연결이 안 되면 예전처럼 이 브라우저 것만 쓴다.
+     · 관서 화면은 자기 관서 것만·바뀐 것만 받는다(본부 화면만 전체 — 본부 화면은 '본부 통합' 배치나 관서 현황 위젯의 '본부 화면으로 쓰기'로 고른다). 보내지 못한 입력은 이 브라우저에 보관했다가 같은 시각으로 다시 보내고, 지운 것도 지운 시각을 서버에 남겨 옛 요청이 되살리지 못하게 한다.
+     · 빈칸은 '입력 없음'이지 '이상 없음'이 아니다 — 접속 시각을 함께 보여 준다. 접속 = 최근 20분 안에 요약이 올라온 관서 -->
 
 <script src="region.js"></script>
 <script src="risk-zones.js"></script>
@@ -334,6 +338,28 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
 .tda .btn{flex:none}
 .tdx{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--ink3);cursor:pointer}
 .tdx:hover{background:var(--raised);color:var(--ink)}
+.tdcf{margin-bottom:12px;padding:12px;border-radius:8px;background:var(--raised);font-size:13px;color:var(--ink2)}
+.tdcf .tdf{margin-top:8px}
+
+/* 관서 현황 (본부) */
+.stsum{margin:0 0 12px;font-size:13px;color:var(--ink2)}
+.stnote{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px;font-size:12px;line-height:16px;color:var(--ink3)}
+.stb th,.stb td{white-space:nowrap}
+.stb th.l,.stb td.l{text-align:left}
+.stb th.c6{width:40%}
+.stb td.c6{max-width:0;width:40%;overflow:hidden;text-overflow:ellipsis;color:var(--ink2)}
+.stb td.c6 .tm{margin-right:8px;font-size:12px;color:var(--ink3)}
+.stb tbody tr{cursor:pointer}
+.stb tr[aria-selected="true"] td{background:var(--raised)}
+.stb tr[aria-selected="true"] td:first-child{box-shadow:inset 2px 0 0 var(--accent)}
+.stc{display:inline-flex;align-items:center;gap:8px}
+.stdet{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
+.stdh{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-bottom:4px}
+.stdh b{font-weight:500}
+.stdw{margin-bottom:8px;font-size:13px;color:var(--ink2);overflow-wrap:anywhere}
+.stdr{display:grid;grid-template-columns:80px minmax(0,1fr);gap:8px;padding:4px 0}
+.stdr .tm{font-size:12px;color:var(--ink3)}
+.stdr .tx{color:var(--ink2);overflow-wrap:anywhere}
 
 /* 휴대폰 */
 @media (max-width:760px){
@@ -352,6 +378,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   #grid>.grid-stack-item>.ui-resizable-handle{display:none!important}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:16px}
   .kpi:nth-child(3){border-left:0;padding-left:0}
+  .stb .c5,.stb .c6{display:none}
 }
 @media (prefers-reduced-motion: reduce){ *{transition:none!important} }
 </style>
@@ -367,6 +394,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     <option value="">기본 배치</option>
     <option value="normal">평상시</option>
     <option value="incident">상황 대응</option>
+    <option value="hq">본부 통합</option>
     <option value="rain">호우 대응</option>
     <option value="river">하천 감시</option>
     <option value="all">전부 보기</option>
@@ -424,7 +452,8 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     report:'<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
     checklist:'<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
     todo:'<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
-    siren:'<path d="M7 18v-6a5 5 0 1 1 10 0v6"/><path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"/><path d="M21 12h1"/><path d="M18.5 4.5 18 5"/><path d="M2 12h1"/><path d="M12 2v1"/><path d="m4.929 4.929.707.707"/><path d="M12 12v6"/>'
+    siren:'<path d="M7 18v-6a5 5 0 1 1 10 0v6"/><path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z"/><path d="M21 12h1"/><path d="M18.5 4.5 18 5"/><path d="M2 12h1"/><path d="M12 2v1"/><path d="m4.929 4.929.707.707"/><path d="M12 12v6"/>',
+    building:'<rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>'
   };
   function ic(k){ return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">'+(P[k]||'')+'</svg>'; }
   $('btnTheme').innerHTML = ic('contrast');
@@ -448,7 +477,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   }
   function sigunOf(st){ return ALIAS[st] || st; }
   function regOf(st){ var n=sigunOf(st); return (D().regions||[]).filter(function(r){ return r.name===n; })[0] || null; }
-  function setStation(st){ memStation=st; storeSet('ggMyStation', st); $('selStation').value=st; renderAll(); }
+  function setStation(st){ memStation=st; storeSet('ggMyStation', st); $('selStation').value=st; renderAll(); BOARD.stationChanged(); }
   function fillSelects(){
     var s=$('selStation'), cur=stationNow(); s.innerHTML='';
     ORDER.forEach(function(n){ var o=document.createElement('option'); o.value=n; o.textContent=n; if(n===cur) o.selected=true; s.appendChild(o); });
@@ -698,6 +727,24 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   /* 보여 줄 기록 — 서버 기록이 있으면, 같은 강수 기준 통과를 서버 줄이 이미 알리는 옛 기록은 숨긴다(저장된 것은 그대로) */
   SIT.logShown = function(){
     var arr=SIT.logRead();
+    if(BOARD.use()){
+      /* 서버 줄(SIT.boardEvents)이 대신 보여 주는 것만 숨긴다 — 점검·조치 자동 기록은 같은 관서의 같은 글이 ±2분 안에 서버에 있을 때,
+         올려 둔 한 줄 기록은 같은 id 의 서버 줄이 있을 때. 서버에 없는 것은 이 브라우저 기록 그대로 보인다 */
+      var have={}, auto={}, me=stationNow();
+      BOARD.view().forEach(function(r){
+        if(r.kind==='note') have[r.station+'|'+r.id]=1;
+        else if(r.kind==='chk' || r.kind==='todo'){ var ak=r.station+'|'+r.kind+'|'+r.text; (auto[ak]=auto[ak] || []).push(r.ts); }
+      });
+      arr=arr.filter(function(e){
+        if(!e || e.kind!=='note') return true;
+        var st=(e.where && e.where[0]) || me, m=/^(점검|조치) · ([\s\S]*)$/.exec(e.text||'');
+        if(m){
+          var ts=(auto[st+'|'+(m[1]==='점검' ? 'chk' : 'todo')+'|'+m[2]] || []);
+          return !ts.some(function(t){ return Math.abs(t-(e.ts+BOARD.offset))<=120000; });
+        }
+        return !have[st+'|'+e.key];
+      });
+    }
     if(!hasSrv()) return arr;
     var sr=SIT.srvList().filter(function(e){ return e.kind==='rain'; });
     if(!sr.length) return arr;
@@ -706,8 +753,21 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   SIT.addNote = function(text){
     text = String(text||'').trim(); if(!text) return;
     var ts=Date.now(); SIT.logAdd([{ts:ts, kind:'note', lv:'info', text:text, where:[stationNow()], key:'n|'+ts}]);
+    /* 사람이 쓴 한 줄 기록은 서버에도 올린다. 점검·조치 자동 기록은 chk/todo 줄이 이미 있어 올리지 않는다 */
+    if(!/^(점검|조치) · /.test(text)) BOARD.set('note', 'n|'+ts, text, '', BOARD.now());
   };
-  SIT.delNote = function(key){ SIT.logWrite(SIT.logRead().filter(function(e){ return e.key!==key; })); };
+  SIT.delNote = function(key){
+    key=String(key||'');
+    if(key.indexOf('b|')===0){   /* 서버 줄 — 내 관서의 한 줄 기록만 지운다(올린 줄과 이 브라우저에 남은 같은 기록) */
+      var p=key.split('|');
+      if(p[2]!=='note' || p[1]!==stationNow()) return;
+      key=p.slice(3).join('|'); BOARD.del('note', key);
+    } else if(key.indexOf('n|')===0){
+      var le=SIT.logRead().filter(function(e){ return e && e.key===key; })[0];
+      if(le && (!le.where || le.where[0]===stationNow())) BOARD.del('note', key);
+    }
+    SIT.logWrite(SIT.logRead().filter(function(e){ return e.key!==key; }));
+  };
   var RAIN_BANDS=[5,20,30,50];
   function bandOf(v){ var b=0; RAIN_BANDS.forEach(function(t,i){ if(v!=null && v>=t) b=i+1; }); return b; }
   SIT.observe = function(){
@@ -770,7 +830,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     if(storeGet('ggDspKey') && !SIT.notesFail) return;   /* 이미 연결돼 있다 */
     DSPX.setupBusy=true;
     var end=function(){ DSPX.setupBusy=false; };
-    var ok=function(){ end(); SIT.notesAt=0; SIT.notesFail=false; SIT.loadNotes(true); renderAll(); if(cb) cb(); };
+    var ok=function(){ end(); SIT.notesAt=0; SIT.notesFail=false; SIT.loadNotes(true); BOARD.rekey(); BOARD.pull(true); renderAll(); if(cb) cb(); };
     DSPX.status(function(s){
       if(!s){ end(); alert('연결하지 못했습니다'); return; }
       var v;
@@ -811,13 +871,399 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     return wx;
   };
 
+  /* ── 관서 현황 공유 ── 점검 확인(chk)·체크리스트 체크(todo)·한 줄 기록(note)·체크리스트 목록(cfg)을 출동 메모 저장소(/api/board)에 줄 단위로 올리고,
+     관서 화면은 자기 관서 것만·바뀐 것만, 본부 화면('관서 현황' 위젯이 있는 화면)만 모든 관서 것을 받아 온다.
+     열쇠(ggDspKey)가 없거나 모의 훈련이면 아무것도 보내지 않고 예전처럼 이 브라우저 것만 쓴다.
+     쓰기는 보관함(outbox, 이 브라우저 저장) — 누르자마자 보관함에 넣어 화면에 반영하고, 서버가 답할 때까지(또는 영구히 거절할 때까지) 같은 시각으로 다시 보낸다.
+     지운 것은 서버에 '지운 시각'을 남긴다(늦게 도착한 옛 요청이 되살리지 못하게). 접속 요약(beat)은 관서 화면만, 몇 분에 한 번 보낸다 ── */
+  var BOARD = { rows:[], q:[], done:[], offset:0, okAt:0, pulled:false, failed:false, badKey:null, busy:false, again:false, due:false, full:true,
+    last:0, lastFull:0, markAt:0, rowsFor:'', confirmed:{}, ver:0, flushing:false, flushAgain:false, beatT:0, beatFor:'', lastBeat:0, selAt:Date.now(), fullT:0, chT:0,
+    seeded:{}, cfgRej:0, vc:null, vcv:-1, bc:null, bcv:-1 };
+  BOARD.KINDS = {chk:1, todo:1, note:1, beat:1, cfg:1};
+  BOARD.LIVE_MS = 20 * 60000;   /* '접속' 기준 — 최근 20분 안에 요약(10분마다 보내고 본부는 몇 분 늦게 안다)이 올라온 관서. 접속을 가르는 곳은 모두 이 값 하나 */
+  /* 보관함에 넣을 수 있는가 — 열쇠가 있고 모의 훈련이 아닐 때(열쇠가 맞지 않다는 답을 받은 동안에도 입력은 보관한다) */
+  BOARD.keyed = function(){ return !!storeGet('ggDspKey') && !SIT.sim; };
+  /* 통신해도 되는가 — 위에 더해, 열쇠가 맞지 않다는 답을 받은 그 열쇠가 아닐 때 */
+  BOARD.on = function(){ var k=storeGet('ggDspKey'); return !!k && !SIT.sim && BOARD.badKey!==k; };
+  /* 이 화면의 종류 — 본부(사용자가 고른 것: '본부 통합' 배치 또는 관서 현황 위젯의 '본부 화면으로 쓰기')·관서·꺼짐 */
+  function hqKey(){ return 'ggDashHq.v1.'+(RC.key||'x'); }
+  BOARD.hqFlag = function(){ return storeGet(hqKey())==='1'; };
+  BOARD.mode = function(){ return !BOARD.on() ? 'off' : (BOARD.hqFlag() ? 'hq' : 'station'); };
+  /* 본부 화면으로 쓰기/관서 화면으로 쓰기. 바뀌었으면 바로 전부 받아 온다 */
+  BOARD.setHq = function(on){
+    if(BOARD.hqFlag()===!!on) return;
+    if(on) storeSet(hqKey(), '1'); else storeDel(hqKey());
+    BOARD.full=true; BOARD.ver++;
+    BOARD.pull(true);
+    try{ renderAll(); }catch(e){ if(window.console) console.error(e); }
+  };
+  /* 받아 온 줄이 지금 관서를 덮는가 — 본부 화면은 모든 관서, 관서 화면은 그 관서 것만 받는다 */
+  BOARD.covers = function(){ return BOARD.rowsFor==='*' || BOARD.rowsFor===stationNow(); };
+  /* 이번에 열린 동안 한 번이라도 받아 왔는가 — 그때부터 표시(체크·점검)는 서버 줄 + 보관함을 따른다. 그 전(과 열쇠 없음·모의 훈련)에는 이 브라우저 저장값 */
+  BOARD.use = function(){ return BOARD.pulled && BOARD.on() && BOARD.covers(); };
+  BOARD.now = function(){ return Date.now()+BOARD.offset; };   /* 서버 시각에 맞춘 지금 */
+  BOARD.queue = function(){ return BOARD.q.map(function(e){ return {station:e.station, kind:e.kind, id:e.id, op:e.op, ts:e.ts, text:e.text, extra:e.extra, tries:e.tries}; }); };
+  BOARD.rekey = function(){
+    BOARD.badKey=null; BOARD.failed=false; BOARD.full=true; BOARD.last=0;
+    BOARD.q.forEach(function(e){ e.tries=0; }); BOARD.ver++;
+  };
+  BOARD.keyLost = function(){
+    BOARD.badKey=storeGet('ggDspKey'); BOARD.pulled=false; BOARD.flushing=false; BOARD.ver++;
+    SIT.notes=null; SIT.notesFail=true;   /* 출동 메모와 같은 길 — '열쇠가 맞지 않습니다' */
+    try{ renderAll(); }catch(e){ if(window.console) console.error(e); }
+  };
+
+  /* ── 보관함(outbox) — 이 브라우저 저장. 서버가 답하기 전의 입력이 화면을 닫아도 남는다 ── */
+  BOARD.qKey = function(){ return 'ggDashBoardQ.v1.'+DSPX.room(); };
+  BOARD.qRead = function(){
+    var a=jget(BOARD.qKey(), []), out=[], cut=Date.now()-86400000, has=Object.prototype.hasOwnProperty;
+    if(!Array.isArray(a)) a=[];
+    a.forEach(function(x){
+      if(!x || typeof x!=='object' || !x.station || !has.call(BOARD.KINDS, x.kind) || x.kind==='beat' || !(x.op==='set' || x.op==='del' || x.op==='clear') || !(+x.ts>cut)) return;
+      out.push({station:String(x.station), kind:x.kind, id:String(x.id==null ? '' : x.id), op:x.op, ts:+x.ts, text:String(x.text==null ? '' : x.text), extra:String(x.extra==null ? '' : x.extra), tries:+x.tries||0});
+    });
+    return out;
+  };
+  /* 줄 키 — (관서, 종류, id). clear 는 (관서, 종류, 'clear') */
+  function qRowKey(e){ return e.station+'|'+e.kind+'|'+(e.op==='clear' ? 'clear' : e.id); }
+  /* 저장된 보관함과 이 화면의 보관함을 합친다 — 같은 줄은 더 새 시각 것(같으면 이 화면 것), 이 화면이 방금 서버에서 답을 받은 것은 뺀다.
+     다른 창이 같은 저장소를 쓰므로, 저장할 때마다 먼저 이렇게 합쳐서 서로의 보관함을 지우지 않게 한다 */
+  BOARD.qMerge = function(stored){
+    var m={}, cut=Date.now()-86400000, list=[], clr={};
+    var add=function(e){ var k=qRowKey(e), c=BOARD.confirmed[k]; if(e.ts<cut || (c!=null && e.ts<=c)) return; if(!m[k] || e.ts>m[k].ts) m[k]=e; };
+    BOARD.q.forEach(add); stored.forEach(add);
+    Object.keys(m).forEach(function(k){ var e=m[k]; list.push(e); if(e.op==='clear') clr[e.station+'|'+e.kind]=e.ts; });
+    /* 그 관서·종류의 clear 보다 오래된 set/del 은 버린다 */
+    list=list.filter(function(e){ return e.op==='clear' || clr[e.station+'|'+e.kind]==null || e.ts>clr[e.station+'|'+e.kind]; });
+    list.sort(function(a, b){ return a.ts-b.ts; });
+    return list.slice(-300);
+  };
+  BOARD.qLoad = function(){ BOARD.q=BOARD.qMerge(BOARD.qRead()); };
+  BOARD.qSave = function(){
+    BOARD.q=BOARD.qMerge(BOARD.qRead());
+    storeSet(BOARD.qKey(), JSON.stringify(BOARD.queue()));
+  };
+  BOARD.drop = function(e){
+    var k=qRowKey(e);
+    if(BOARD.confirmed[k]==null || BOARD.confirmed[k]<e.ts) BOARD.confirmed[k]=e.ts;   /* 서버가 답한 입력 — 합칠 때 되살리지 않게 기억 */
+    var ks=Object.keys(BOARD.confirmed);
+    if(ks.length>500){ var cut=Date.now()-86400000; ks.forEach(function(x){ if(BOARD.confirmed[x]<cut) delete BOARD.confirmed[x]; }); }
+    BOARD.q=BOARD.q.filter(function(x){ return x!==e; }); BOARD.qSave(); BOARD.ver++;
+  };
+  /* 입력 하나를 보관함에 넣고 곧 보낸다. 같은 줄의 더 오래된 입력은 대신한다. clear 는 그 관서·종류의 더 오래된 입력을 모두 대신한다 */
+  BOARD.enqueue = function(op, kind, id, text, extra, ts, quiet){
+    if(!BOARD.keyed()) return null;
+    var e={station:stationNow(), kind:kind, id:(op==='clear' ? '' : String(id)), op:op, ts:ts || BOARD.now(),
+      text:String(text==null ? '' : text).slice(0, 80), extra:(extra==null || extra==='') ? '' : (typeof extra==='string' ? extra : JSON.stringify(extra)), tries:0};
+    BOARD.q=BOARD.q.filter(function(x){
+      if(x.station!==e.station || x.kind!==e.kind) return true;
+      if(op==='clear') return x.ts>e.ts;
+      return !(x.op!=='clear' && x.id===e.id && x.ts<=e.ts);
+    });
+    BOARD.q.push(e);
+    if(BOARD.q.length>300) BOARD.q=BOARD.q.slice(BOARD.q.length-300);
+    BOARD.qSave(); BOARD.ver++;
+    if(!quiet && e.station===stationNow()) BOARD.beatSoon();
+    BOARD.flush();
+    return e;
+  };
+  BOARD.set = function(kind, id, text, extra, ts){ BOARD.enqueue('set', kind, id, text, extra, ts); };
+  BOARD.del = function(kind, id){ BOARD.enqueue('del', kind, id); };
+  BOARD.clear = function(kind){ BOARD.enqueue('clear', kind, ''); };
+
+  /* 한 입력을 줄 모음(m: 'station|kind|id' → 줄)에 적용. 서버와 같은 규칙 — 더 나중 시각이 이긴다 */
+  BOARD.applyOp = function(m, e){
+    var k=e.station+'|'+e.kind+'|'+e.id, r;
+    if(e.op==='clear'){ Object.keys(m).forEach(function(x){ r=m[x]; if(r.station===e.station && r.kind===e.kind && r.ts<=e.ts) delete m[x]; }); return; }
+    r=m[k];
+    if(e.op==='del'){ if(r && r.ts<=e.ts) delete m[k]; return; }
+    if(!r || r.ts<=e.ts) m[k]={station:e.station, kind:e.kind, id:e.id, ts:e.ts, text:e.text||'', extra:e.extra||''};
+  };
+  /* 받아 온 줄 + 방금 서버가 받아 준 것(done, 받아 오는 중이던 옛 답에 지워지지 않게) + 아직 못 보낸 보관함 */
+  BOARD.view = function(){
+    if(BOARD.vc && BOARD.vcv===BOARD.ver) return BOARD.vc;
+    var m={}, out=[], ops=[];
+    BOARD.rows.forEach(function(r){ m[r.station+'|'+r.kind+'|'+r.id]=r; });
+    BOARD.done.forEach(function(d){ ops.push(d.e); });
+    BOARD.q.forEach(function(e){ ops.push(e); });
+    ops.map(function(e, i){ return {e:e, i:i}; }).sort(function(a, b){ return (a.e.ts-b.e.ts) || (a.i-b.i); }).forEach(function(x){ BOARD.applyOp(m, x.e); });
+    Object.keys(m).forEach(function(k){ out.push(m[k]); });
+    BOARD.vc=out; BOARD.vcv=BOARD.ver;
+    return out;
+  };
+  BOARD.mine = function(kind){ var st=stationNow(); return BOARD.view().filter(function(r){ return r.station===st && r.kind===kind; }); };
+  /* 관서별 접속 요약(beat) — {관서:{ts, d}} */
+  BOARD.beats = function(){
+    if(BOARD.bc && BOARD.bcv===BOARD.ver) return BOARD.bc;
+    var m={};
+    BOARD.view().forEach(function(r){
+      if(r.kind!=='beat' || r.id!=='now') return;
+      var d=null; try{ d=JSON.parse(r.extra||'null'); }catch(e){}
+      m[r.station]={ts:r.ts, d:(d && typeof d==='object') ? d : {}};
+    });
+    BOARD.bc=m; BOARD.bcv=BOARD.ver;
+    return m;
+  };
+
+  /* ── 보내기 — 보관함을 앞에서부터 하나씩. 서버가 답하면(ok) 지우고, 일시 실패면 멈췄다가 다음 받아 오기 때 같은 시각으로 다시 보낸다 ── */
+  BOARD.flush = function(){
+    if(!BOARD.on() || !BOARD.q.length) return;
+    if(BOARD.flushing){ BOARD.flushAgain=true; return; }
+    BOARD.flushing=true; BOARD.flushAgain=false;
+    BOARD.q.forEach(function(e){ e.tried=false; });
+    BOARD.step();
+  };
+  BOARD.step = function(){
+    var e=null, i;
+    for(i=0; i<BOARD.q.length; i++){ if(!BOARD.q[i].tried){ e=BOARD.q[i]; break; } }
+    if(!e || !BOARD.on()){ BOARD.flushing=false; return; }
+    e.tried=true;
+    var body={station:e.station, kind:e.kind};
+    if(e.op!=='clear'){ body.id=String(e.id).slice(0, 120); body.ts=e.ts; }
+    if(e.op==='set'){ body.text=e.text; body.extra=e.extra; }
+    DSPX.send('/api/board/'+e.op, body, function(ok, j, code){
+      var inq=BOARD.q.indexOf(e)>=0;
+      if(ok && j && j.ok){ if(inq) BOARD.drop(e); BOARD.confirm(e, j); BOARD.step(); return; }
+      if(dspKeyBad(ok, j, code)){ BOARD.flushing=false; BOARD.keyLost(); return; }
+      if(code===400){   /* 서버가 영구히 받지 않겠다고 했다 */
+        if(inq) BOARD.drop(e);
+        if(e.kind==='cfg') BOARD.cfgRej=Math.max(BOARD.cfgRej, e.ts);
+        try{ alert(((j && j.why) ? j.why : '받지 않았습니다')+' — 본부에는 올라가지 않았습니다'); }catch(x){}
+        BOARD.step(); return;
+      }
+      e.tries=(e.tries||0)+1; if(inq) BOARD.qSave();   /* 일시 실패 — 보관함에 그대로 두고 멈춘다 */
+      BOARD.flushing=false;
+      if(BOARD.flushAgain){ BOARD.flushAgain=false; BOARD.flush(); }
+    });
+  };
+  /* 서버가 답한 입력 처리. applied:false = 서버에 이미 더 새 값이 있다(내 쓰기가 졌다 — 오류 아님) */
+  BOARD.confirm = function(e, j){
+    if(j.applied===false){
+      if(e.op==='set' && (e.kind==='chk' || e.kind==='todo')) BOARD.dropLocalMark(e);
+      BOARD.schedFull();
+      try{ renderAll(); }catch(x){ if(window.console) console.error(x); }
+      return;
+    }
+    var c={station:e.station, kind:e.kind, id:e.id, op:e.op, ts:(e.op==='set' && +j.ts>0) ? +j.ts : e.ts, text:e.text, extra:e.extra};
+    BOARD.done.push({e:c, doneAt:Date.now()});
+    var m={};
+    BOARD.rows.forEach(function(r){ m[r.station+'|'+r.kind+'|'+r.id]=r; });
+    BOARD.applyOp(m, c);
+    BOARD.rows=Object.keys(m).map(function(k){ return m[k]; });
+    BOARD.ver++;
+  };
+  /* 서버가 되살리지 않은 표시는 이 브라우저에서도 지운다 */
+  BOARD.dropLocalMark = function(e){
+    if(e.kind==='chk'){
+      var m=jget(chkKey(), {}), ch=false;
+      Object.keys(m).forEach(function(k){ if(k.indexOf(e.station+'|')===0 && zoneKey(k)===e.id){ delete m[k]; ch=true; } });
+      if(ch) chkWrite(m);
+    } else if(e.kind==='todo' && e.station===stationNow()){
+      var t=jget(todoChkKey(), {});
+      if(t && t[e.id]!=null){ delete t[e.id]; todoChkWrite(t); }
+    }
+  };
+  /* 서버에 더 새 값이 있다고 하면 2초 안에 처음부터 다시 받아 온다 */
+  BOARD.schedFull = function(){
+    if(BOARD.fullT) return;
+    BOARD.fullT=setTimeout(function(){ BOARD.fullT=0; BOARD.full=true; BOARD.pull(true); }, 2000);
+  };
+
+  /* ── 받아 오기 ── 관서 화면: 자기 관서 것만, 2분(상황 중)·5분(평시). 본부 화면: 모든 관서, 1분(주의 이상 있음)·3분. 숨은 탭은 받지 않는다.
+     처음·30분마다·관서를 바꾼 뒤·화면 종류가 바뀐 뒤·열쇠를 다시 넣은 뒤에는 전부, 그 밖에는 지난번 이후 바뀐 것(지움 표시 포함)만 ── */
+  BOARD.interval = function(){
+    if(BOARD.mode()==='hq') return ORDER.some(function(n){ return statusOf(n).lv!=='safe'; }) ? 60000 : 180000;
+    return statusOf(stationNow()).lv!=='safe' ? 120000 : 300000;
+  };
+  BOARD.tick = function(){ try{ BOARD.pull(false); }catch(e){ if(window.console) console.error(e); } };
+  BOARD.pull = function(force){
+    if(!BOARD.on()) return;
+    if(document.hidden){ if(force) BOARD.due=true; return; }
+    if(BOARD.busy){ if(force) BOARD.again=true; return; }
+    var t0=Date.now();
+    if(!force && !BOARD.due && t0-BOARD.last<BOARD.interval()) return;
+    BOARD.due=false; BOARD.busy=true; BOARD.last=t0;
+    try{ BOARD.flush(); }catch(e){ if(window.console) console.error(e); }
+    var st=stationNow(), hq=BOARD.mode()==='hq', want=hq ? '*' : st;
+    var full=BOARD.full || !BOARD.pulled || BOARD.rowsFor!==want || !(BOARD.markAt>0) || (t0-BOARD.lastFull>=1800000);
+    var url='/api/board?key='+encodeURIComponent(DSPX.room())+'&code='+encodeURIComponent(storeGet('ggDspKey') || '')+'&hours=48'+
+      (hq ? '' : '&station='+encodeURIComponent(st))+'&cfg='+encodeURIComponent(st)+(full ? '' : '&since='+Math.floor(BOARD.markAt));
+    DSPX.call(url, null, function(ok, j, http){
+      BOARD.busy=false;
+      if(!BOARD.on()) return;
+      if(ok && j && j.ok && Array.isArray(j.rows)){
+        try{ BOARD.got(j, t0, full, want); }catch(e){ if(window.console) console.error(e); }
+      } else if(dspKeyBad(ok, j, http)){ BOARD.keyLost(); }
+      else { BOARD.failed=true; BOARD.ver++; try{ renderAll(); }catch(e){ if(window.console) console.error(e); } }
+      if(BOARD.again){ BOARD.again=false; BOARD.pull(true); }
+    });
+  };
+  BOARD.got = function(j, t0, full, want){
+    var has=Object.prototype.hasOwnProperty, m={};
+    if(!full) BOARD.rows.forEach(function(r){ m[r.station+'|'+r.kind+'|'+r.id]=r; });
+    j.rows.forEach(function(r){
+      if(!r || !has.call(BOARD.KINDS, r.kind) || !r.station || r.id==null || !(+r.ts>0)) return;
+      var k=String(r.station)+'|'+r.kind+'|'+String(r.id);
+      if(+r.del===1){ delete m[k]; return; }   /* 지움 표시 */
+      m[k]={station:String(r.station), kind:r.kind, id:String(r.id), ts:+r.ts, text:String(r.text==null ? '' : r.text), extra:String(r.extra==null ? '' : r.extra)};
+    });
+    /* 이 받아 오기가 시작된 뒤에 서버가 받아 준 내 입력은 방금 받은 줄에 아직 없을 수 있다 — 먼저 얹은 뒤에 버린다 */
+    BOARD.done.forEach(function(d){ if(d.doneAt>=t0) BOARD.applyOp(m, d.e); });
+    BOARD.rows=Object.keys(m).map(function(k){ return m[k]; });
+    BOARD.rowsFor=want;
+    BOARD.offset=(+j.now>0 ? +j.now : Date.now())-Date.now();
+    BOARD.markAt=+j.mark>0 ? Math.floor(+j.mark) : 0;   /* 서버가 받은 순서 표 — 다음 변경분 요청의 since (0 이면 다음에도 전부) */
+    BOARD.okAt=Date.now(); BOARD.failed=false; BOARD.pulled=true;
+    if(full){ BOARD.lastFull=Date.now(); if(want===(BOARD.mode()==='hq' ? '*' : stationNow())) BOARD.full=false; }
+    /* 이번 받아 오기가 시작되기 전에 서버가 받아 준 것은 받아 온 줄에 이미 들어 있다 */
+    BOARD.done=BOARD.done.filter(function(d){ return d.doneAt>=t0; });
+    BOARD.ver++;
+    try{ BOARD.cfgSync(); }catch(e){ if(window.console) console.error(e); }
+    try{ BOARD.seed(); }catch(e){ if(window.console) console.error(e); }
+    renderAll();
+  };
+  /* 관서를 바꿨다 — 접속 요약 대기 시간을 처음부터 세고, 새 관서의 줄을 전부 받아 온다(본부 화면은 연속 클릭을 모아 한 번만) */
+  BOARD.stationChanged = function(){
+    BOARD.selAt=Date.now(); BOARD.full=true;
+    if(BOARD.mode()==='hq'){ clearTimeout(BOARD.chT); BOARD.chT=setTimeout(function(){ BOARD.chT=0; BOARD.pull(true); }, 1500); }
+    else BOARD.pull(true);
+  };
+  /* 이 브라우저에서 한 점검 확인·체크가 서버에 없으면(열쇠를 넣기 전에 했거나 아직 못 올렸을 때) 그 관서를 처음 받아 온 때 한 번 보관함에 넣는다.
+     시각은 누른 때 그대로. 다른 PC 가 그 뒤에 지웠다면 서버가 '지움 표시'로 거절하고(applied:false), 그때 이 브라우저의 표시도 지워진다 */
+  BOARD.seed = function(){
+    var st=stationNow();
+    if(!BOARD.use() || BOARD.seeded[st]) return;
+    BOARD.seeded[st]=1;
+    var have={}, now=Date.now(), off=BOARD.offset, n=0, meta=todoMeta();
+    BOARD.view().forEach(function(r){ if(r.station===st) have[r.kind+'|'+r.id]=1; });
+    var cm=jget(chkKey(), {});
+    Object.keys(cm).forEach(function(k){
+      var t=+cm[k]; if(n>=100 || k.indexOf(st+'|')!==0 || !(t>=now-86400000 && markLive(t))) return;
+      var id=zoneKey(k); if(have['chk|'+id]) return;
+      var p=k.split('|'), type=p.length>=3 ? p[p.length-1] : '', name=p.slice(1, Math.max(1, p.length-1)).join('|');
+      BOARD.enqueue('set', 'chk', id, (type+' '+checkName(st, name).slice(0, 24)).replace(/\s+$/, ''), '', t+off, true); n++;
+    });
+    if(meta.st===st || !meta.has){   /* 체크는 목록에 딸려 있다 — 다른 관서용 목록의 체크는 올리지 않는다 */
+      var tm=jget(todoChkKey(), {});
+      todoItems().forEach(function(it){
+        var t=+tm[it.id]; if(n>=200 || !(t>=now-86400000 && markLive(t)) || have['todo|'+it.id]) return;
+        BOARD.enqueue('set', 'todo', it.id, it.text, it.stage, t+off, true); n++;
+      });
+    }
+  };
+
+  /* ── 체크리스트 목록(cfg) ── */
+  BOARD.pushCfg = function(items, t, quiet){
+    BOARD.enqueue('set', 'cfg', 'todo', '', {v:1, items:items.map(function(it){ var r={id:it.id, stage:it.stage, text:it.text}; if(it.ex) r.ex=true; return r; })}, t, quiet);
+  };
+  /* 목록을 고치는 중(고치는 칸에 초점)이면 서버 목록을 끼워 넣지 않는다 */
+  function todoTyping(){
+    var ae=document.activeElement, any=false;
+    if(!ae || ae.tagName!=='INPUT') return false;
+    Object.keys(TODO_EDIT).forEach(function(id){ var b=dspBody({id:id}); if(b && b.contains(ae)) any=true; });
+    return any;
+  }
+  BOARD.cfgRow = function(){
+    var st=stationNow(), row=null;
+    BOARD.view().forEach(function(r){ if(r.kind==='cfg' && r.id==='todo' && r.station===st) row=r; });
+    return row;
+  };
+  function cfgSig(items){ return items.map(function(it){ return it.stage+'|'+it.text; }).join('\n'); }
+  /* 목록 맞추기. 저장된 목록이 없으면(기본 예시) 서버 목록을 조용히 받고 기본 예시는 올리지 않는다.
+     이 관서용으로 저장한 목록(st 가 같음)은 새 쪽을 따른다. 다른 관서용이거나 st 를 모르는 목록은 절대 저절로 바꾸거나 올리지 않는다 — W.todo 가 알림을 띄우고 사용자가 고른다 */
+  BOARD.cfgSync = function(){
+    if(!BOARD.use()) return;
+    var st=stationNow(), meta=todoMeta(), row=BOARD.cfgRow(), items;
+    if(!meta.has){
+      if(row && !todoTyping() && (items=cfgParse(row.extra))){ todoWrite(items, row.ts); todoChkPrune(items); }
+      return;
+    }
+    if(meta.st!==st) return;
+    if(row && row.ts>meta.t){
+      if(!todoTyping() && (items=cfgParse(row.extra))){ todoWrite(items, row.ts); todoChkPrune(items); }
+      return;
+    }
+    if((!row || row.ts<meta.t) && meta.t>BOARD.cfgRej && !BOARD.q.some(function(x){ return x.kind==='cfg' && x.station===st && x.op==='set'; })) BOARD.pushCfg(todoItems(), meta.t, true);
+  };
+  /* 알림이 필요한가 — 다른 관서용(또는 출처를 모르는) 목록이 있고, 이 관서의 서버 목록이 그것과 다를 때 */
+  BOARD.cfgConflict = function(){
+    if(!BOARD.use()) return null;
+    var meta=todoMeta(), row=BOARD.cfgRow(), items;
+    if(!meta.has || meta.st===stationNow() || !row) return null;
+    items=cfgParse(row.extra); if(!items) return null;
+    return cfgSig(items)===cfgSig(todoItems()) ? null : {items:items, ts:row.ts};
+  };
+
+  /* ── 접속 요약(beat) ── 관서 화면만. 그 관서를 3분 넘게 계속 보고 있을 때 10분마다, 그리고 내가 그 관서에 쓰거나 지운 직후(2초 모아서) 한 번.
+     본부 화면은 보내지 않는다. 지도에서 다른 관서를 눌러도 그 관서의 요약은 만들어지지 않는다. 서버가 자기 시각으로 적는다 ── */
+  BOARD.beatSoon = function(){
+    BOARD.beatFor=stationNow();
+    if(BOARD.beatT) return;
+    BOARD.beatT=setTimeout(function(){ BOARD.beatT=0; if(BOARD.beatFor===stationNow()) BOARD.beat(); }, 2000);
+  };
+  BOARD.beatTick = function(){
+    if(!BOARD.on() || BOARD.mode()!=='station' || document.hidden) return;
+    var now=Date.now();
+    if(now-BOARD.selAt<180000 || now-BOARD.lastBeat<600000) return;
+    BOARD.beat();
+  };
+  BOARD.beat = function(){
+    if(!BOARD.on() || BOARD.mode()!=='station' || document.hidden) return;
+    try{
+      var st=stationNow(), s=statusOf(st), ex={lv:s.lv}, why=s.why.slice(0, 2).join(' · ').slice(0, 60), tp, pz=null, run, prev=BOARD.beats()[st];
+      if(why) ex.why=why;
+      try{ tp=TODO.progress(s.lv); if(tp && tp.n>0) ex.todo={stage:s.lv, n:tp.n, m:tp.m}; }catch(e){}
+      try{ pz=RISKZ.peek(st); }catch(e){}
+      if(pz && pz.state==='ok'){
+        try{
+          var f1=checkZones(st, pz.items, checkLive(st)).filter(function(z){ return z.tier==='first'; });
+          ex.chk={n:f1.length, m:f1.filter(function(z){ return z.ts; }).length};
+        }catch(e){}
+      } else if(prev && prev.d && prev.d.chk) ex.chk=prev.d.chk;   /* 위험구역 시트를 아직 못 읽었으면 지난번 값을 이어 둔다(지우지 않게) */
+      run=SIT.run('mine'); ex.since=run ? run.since : null;
+      BOARD.lastBeat=Date.now();
+      DSPX.send('/api/board/set', {station:st, kind:'beat', id:'now', ts:BOARD.now(), text:'', extra:JSON.stringify(ex)}, function(ok, j, code){
+        if(dspKeyBad(ok, j, code)) BOARD.keyLost();
+      });
+    }catch(e){ if(window.console) console.error(e); }
+  };
+
+  /* 전체 상황보고에 넣는 줄 — 접속한 관서 수, 주의 이상 관서의 조치·점검·출동·접속 */
+  BOARD.reportLines = function(){
+    var out=[], bt=BOARD.beats(), now=BOARD.now(), conn=0, dsp=stnDsp();
+    ORDER.forEach(function(n){ var b=bt[n]; if(b && now-b.ts<=BOARD.LIVE_MS) conn++; });
+    out.push('■ 관서 접속: '+conn+'/'+ORDER.length+'개 관서');
+    var bad=ORDER.map(function(n, i){ return {n:n, i:i, lv:statusOf(n).lv}; }).filter(function(x){ return x.lv!=='safe'; });
+    bad.sort(function(a, b){ return (RANK[b.lv]-RANK[a.lv]) || (a.i-b.i); });
+    bad.slice(0, 8).forEach(function(x){
+      var b=bt[x.n], p=[], age=b ? Math.max(0, now-b.ts) : 0;
+      if(!b || age>86400000) p.push('입력 없음');
+      else {
+        var d=b.d;
+        if(d.todo && +d.todo.n>0) p.push('조치 '+(+d.todo.m||0)+'/'+(+d.todo.n));
+        if(d.chk && +d.chk.n>0) p.push('점검 '+(+d.chk.m||0)+'/'+(+d.chk.n));
+        if(dsp.loaded && dsp.by[x.n]) p.push('출동 '+dsp.by[x.n]+'건');
+        if(age>BOARD.LIVE_MS) p.push('접속 '+(age<3600000 ? Math.floor(age/60000)+'분 전' : Math.floor(age/3600000)+'시간 전'));
+      }
+      out.push(' - '+x.n+' '+(x.lv==='severe' ? '경보' : '주의')+(p.length ? ' · '+p.join(' · ') : ''));
+    });
+    return out;
+  };
+  if(!SIT.sim) BOARD.qLoad();
+  /* 같은 브라우저의 다른 창이 보관함을 바꾸면 합쳐서 받는다(보내지는 않는다 — 그 창이 보낸다) */
+  window.addEventListener('storage', function(ev){
+    if(SIT.sim || ev.key!==BOARD.qKey()) return;
+    BOARD.q=BOARD.qMerge(BOARD.qRead()); BOARD.ver++;
+    try{ renderAll(); }catch(e){ if(window.console) console.error(e); }
+  });
+
   /* 출동 메모 읽기 — 최근 7일, 이 방 전체(관서별로 거르는 건 보여 주는 쪽에서) */
   SIT.loadNotes = function(force){
-    if(SIT.sim) return;
+    if(SIT.sim || document.hidden) return;   /* 숨은 탭은 받지 않는다 */
     var code=storeGet('ggDspKey');
     if(!code){ SIT.notes=null; SIT.notesFail=false; return; }
     if(SIT.notesBusy){ if(force) SIT.notesAgain=true; return; }   /* 받는 중이면 끝난 뒤 한 번 더 */
-    if(!force && Date.now()-SIT.notesAt < 300000) return;
+    if(!force && Date.now()-SIT.notesAt < (BOARD.mode()==='hq' ? 300000 : 900000)) return;   /* 본부 화면 5분, 관서 화면 15분 */
     SIT.notesBusy=true; SIT.notesAt=Date.now();
     var room=DSPX.room();
     var fin=false, timer=null;
@@ -849,11 +1295,29 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     return false;
   }
   /* t0~t1 사이의 일(최신이 앞). stn 은 '내 관서' 판단에 쓸 관서(없으면 지금 고른 관서) */
+  /* 다른 관서가 올린 점검·조치·한 줄 기록 — 상황 기록에 사건처럼 넣는다(받아 온 적이 있을 때만). raw = 앞말 없는 글, pfx = 관서 이름 앞말 */
+  SIT.boardEvents = function(){
+    if(!BOARD.use()) return [];
+    var out=[], me=stationNow();
+    BOARD.view().forEach(function(r){
+      if(r.kind!=='chk' && r.kind!=='todo' && r.kind!=='note') return;
+      var tx=(r.kind==='chk' ? '점검 · ' : (r.kind==='todo' ? '조치 · ' : ''))+r.text;
+      out.push({ts:r.ts, kind:'note', lv:'info', text:tx, raw:tx, where:[r.station], station:r.station, bk:r.kind,
+        key:'b|'+r.station+'|'+r.kind+'|'+r.id, nodel:!(r.kind==='note' && r.station===me)});
+    });
+    return out;
+  };
+  function evRaw(e){ return e.raw!=null ? e.raw : (e.text||''); }
   SIT.eventsBetween = function(scope, t0, t1, stn){
-    var seen={};
-    return SIT.derived().concat(SIT.logShown(), SIT.dispatchEvents()).filter(function(e){
+    var seen={}, cur=stn||stationNow();
+    return SIT.derived().concat(SIT.logShown(), SIT.dispatchEvents(), SIT.boardEvents()).filter(function(e){
       if(!e || e.ts==null || e.ts<t0 || e.ts>t1 || seen[e.key]) return false;
       seen[e.key]=1; return scope==='all' || mineHit(e, stn);
+    }).map(function(e){
+      if(scope!=='all' || !e.bk || e.station===cur) return e;
+      var c={}; Object.keys(e).forEach(function(k){ c[k]=e[k]; });
+      c.pfx=e.station+' · '; c.text=c.pfx+e.text;
+      return c;
     }).sort(function(a,b){ return b.ts-a.ts; });
   };
   SIT.events = function(scope, hours){ return SIT.eventsBetween(scope, Date.now()-hours*3600000, Infinity); };
@@ -1062,6 +1526,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     } else {
       var bad=ORDER.filter(function(n){ return statusOf(n).lv!=='safe'; });
       L.push(bad.length ? '■ 상태: 주의 이상 '+bad.length+'개 관서 ('+bad.slice(0,5).map(function(n){ return n+' '+(statusOf(n).lv==='severe'?'경보':'주의'); }).join(', ')+(bad.length>5?' 외':'')+')' : '■ 상태: 전 관서 정상');
+      if(BOARD.use() && BOARD.mode()==='hq'){ try{ BOARD.reportLines().forEach(function(x){ L.push(x); }); }catch(e){ if(window.console) console.error(e); } }
     }
     var ws=(d.warnings||[]).filter(function(w){ return !mine || areaHits(w.area, st); });
     L.push(ws.length ? '■ 특보: '+ws.map(function(w){ var wt=SIT.warnTime(w, mine ? st : null); return w.type+'('+fT(wt.ts)+SIT.srcWord(wt.src)+') '+(w.area||''); }).join(' / ') : '■ 특보: 발효 없음');
@@ -1111,7 +1576,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     if(ms.length) L.push('■ 재난문자: 오늘 '+ms.length+'건 (마지막 '+fHM(ms[0].ts)+')');
     if(form==='full'){
       /* 점검·조치 체크는 위의 ■ 점검 / ■ 조치 줄에 개수로 들어가 있다 — 경과에서는 빼서 특보·수위 같은 일이 밀려나지 않게 */
-      var ev=SIT.events(scope, 24).filter(function(e){ return e.kind!=='msg' && !(e.kind==='note' && /^(점검|조치) · /.test(e.text||'')); }).slice(0,8).reverse();
+      var ev=SIT.events(scope, 24).filter(function(e){ return e.kind!=='msg' && !(e.kind==='note' && (e.bk==='chk' || e.bk==='todo' || /^(점검|조치) · /.test(evRaw(e)))); }).slice(0,8).reverse();
       if(ev.length){ L.push('■ 주요 경과'); ev.forEach(function(e){ L.push(' - '+fHM(e.ts)+' '+e.text); }); }
     }
     var u=String(d.updated||'').match(/\d{4}-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
@@ -1150,14 +1615,14 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     /* 이 기간의 기록 */
     var evs=SIT.eventsBetween(scope, rec.since-1800000, end, stn).slice().reverse();   /* 오래된 것부터 */
     var noteLines=function(list, strip){
-      var out=list.slice(0,12).map(function(e){ return '   · '+fR(e.ts)+' '+(strip ? String(e.text||'').replace(strip, '') : e.text); });
+      var out=list.slice(0,12).map(function(e){ var t=evRaw(e); return '   · '+fR(e.ts)+' '+(e.pfx||'')+(strip ? String(t).replace(strip, '') : t); });
       if(list.length>12) out.push('   · 그 밖에 '+(list.length-12)+'건');
       return out;
     };
     var notes=evs.filter(function(e){ return e.kind==='note'; });
-    var doneN=notes.filter(function(e){ return /^조치 · /.test(e.text||''); });
-    var chkN=notes.filter(function(e){ return /^점검 · /.test(e.text||''); });
-    var otherN=notes.filter(function(e){ return !/^(점검|조치) · /.test(e.text||''); });
+    var doneN=notes.filter(function(e){ return /^조치 · /.test(evRaw(e)); });
+    var chkN=notes.filter(function(e){ return /^점검 · /.test(evRaw(e)); });
+    var otherN=notes.filter(function(e){ return !/^(점검|조치) · /.test(evRaw(e)); });
     /* 3. 조치 */
     lines=[];
     if(rec.todo && rec.todo.n>0) lines.push(' - 대응 체크리스트: '+(TODO_LAB[rec.todo.stage]||'')+' 단계 '+rec.todo.n+'개 중 '+rec.todo.m+'개 완료');
@@ -1514,7 +1979,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
         var ds=dayStart(e.ts);
         if(ds!==lastDay){ lastDay=ds; h+='<div class="tlday">'+fMD(e.ts)+' ('+days[kst(e.ts).getUTCDay()]+')</div>'; }
         var dc=e.lv==='severe'?' severe':e.lv==='warn'?' warn':e.lv==='clear'?' safe':'', strong=(e.lv==='severe'||e.lv==='warn');
-        var isNote=e.kind==='note';
+        var isNote=e.kind==='note' && !e.nodel;   /* 다른 관서의 줄·점검/조치 표시는 여기서 지우지 않는다 */
         h+='<div class="tlrow'+(isNote?' hasx':'')+'"><span class="tm">'+fHM(e.ts)+'</span><span class="tld"><span class="dot'+dc+'"></span></span>'+
           '<div><div class="t1'+(strong?' st':'')+'">'+esc(e.text)+'</div>'+(e.sub?'<div class="t2">'+esc(e.sub)+'</div>':'')+'</div>'+
           (isNote?'<button class="tlx" data-k="'+esc(e.key)+'" aria-label="기록 지우기" title="기록 지우기">'+ic('x')+'</button>':'')+'</div>';
@@ -1610,6 +2075,27 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     return out;
   }
   function chkWrite(m){ storeSet(chkKey(), JSON.stringify(m)); }
+  /* 서버에 올리는 구역 id — 120자를 넘지 않게. 100자를 넘으면 앞 100자 + 32비트 해시(36진수) */
+  function zoneKey(id){
+    id=String(id==null ? '' : id);
+    if(id.length<=100) return id;
+    var h=5381, i;
+    for(i=0; i<id.length; i++) h=((h<<5)+h+id.charCodeAt(i))|0;
+    return id.slice(0, 100)+(h>>>0).toString(36);
+  }
+  /* 표시·세기에 쓰는 확인/체크 표시(id → 시각). 서버 줄을 한 번이라도 받아 왔으면 이 관서의 서버 줄, 아니면 이 브라우저 저장값.
+     어느 쪽이든 markLive(이번 상황 것만, 아니면 24시간)가 위에 얹힌다. 쓰는 쪽(chkRead/todoChkRead raw)은 이 브라우저 저장값 그대로 */
+  function markSet(kind, local, keyOf){
+    var out={}, cut=Date.now()-86400000, fl=markFloor();
+    if(BOARD.use()){
+      BOARD.mine(kind).forEach(function(r){ var t=+r.ts; if(t>=cut && markLive(t, fl)) out[r.id]=t; });
+      return out;
+    }
+    if(local && typeof local==='object') Object.keys(local).forEach(function(k){ var t=+local[k]; if(t>=cut && markLive(t, fl)) out[keyOf(k)]=t; });
+    return out;
+  }
+  function chkMarks(){ return markSet('chk', jget(chkKey(), {}), zoneKey); }
+  function todoMarks(){ return markSet('todo', jget(todoChkKey(), {}), function(k){ return k; }); }
   /* 보이는 이름만 다듬는다(id 는 원래 이름 기준 그대로): 앞의 시도명·관서 공식 이름을 빼고, 맨 앞에서 되풀이되는 낱말은 하나로 */
   function checkName(st, name){
     var raw=String(name||'').replace(/^\s+|\s+$/g, ''), s=raw, ad=(RC.admin && RC.admin[st]) || '', lab=RC.label || '', t, i;
@@ -1624,10 +2110,10 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   }
   /* 구역마다 묶음·단계·이유를 붙여 정렬: 단계 → 확인한 것은 단계 맨 아래 → 묶음 → 시트 순서 */
   function checkZones(st, items, L){
-    var chk=chkRead();
+    var chk=chkMarks();
     var zs=(items||[]).map(function(it, idx){
-      var g=checkGroup(it.type), t=checkTierOf(g, L);
-      return {it:it, id:it.id, name:checkName(st, it.name), grp:g, tier:t.tier, reasons:t.reasons, idx:idx, ts:(t.tier!=='rest' && chk[it.id]) ? chk[it.id] : 0};
+      var g=checkGroup(it.type), t=checkTierOf(g, L), mk=chk[zoneKey(it.id)];
+      return {it:it, id:it.id, name:checkName(st, it.name), grp:g, tier:t.tier, reasons:t.reasons, idx:idx, ts:(t.tier!=='rest' && mk) ? mk : 0};
     });
     zs.sort(function(a,b){ return (CHECK_TORDER[a.tier]-CHECK_TORDER[b.tier]) || ((a.ts?1:0)-(b.ts?1:0)) || (CHECK_GORDER[a.grp]-CHECK_GORDER[b.grp]) || (a.idx-b.idx); });
     return zs;
@@ -1691,11 +2177,13 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     }; });
     el.querySelectorAll('[data-a]').forEach(function(b){ b.onclick=function(){
       var z=shown[+b.getAttribute('data-i')]; if(!z) return;
-      var m=chkRead(true);
+      var m=chkRead(true), zk=zoneKey(z.id);
       if(b.getAttribute('data-a')==='ok'){
-        m[z.id]=Date.now(); chkWrite(m);
-        SIT.addNote(('점검 · '+z.it.type+' '+z.name.slice(0,24)).replace(/\s+$/, ''));
-      } else { delete m[z.id]; chkWrite(m); }
+        var now=BOARD.now(), tx=(z.it.type+' '+z.name.slice(0,24)).replace(/\s+$/, '');
+        m[z.id]=now; chkWrite(m);
+        SIT.addNote('점검 · '+tx);
+        BOARD.set('chk', zk, tx, '', now);
+      } else { delete m[z.id]; chkWrite(m); BOARD.del('chk', zk); }
       var sc=el.scrollTop; renderAll(); el.scrollTop=sc;
     }; });
   }};
@@ -1729,7 +2217,42 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     }catch(e){}
     return todoDefaults();
   }
-  function todoWrite(items){ todoMem = items.slice(); storeSet(todoKey(), JSON.stringify({items:items})); }
+  /* 목록 저장 — 고친 시각(t, 서버 시각에 맞춘 것)과 어느 관서용인지(st)를 같이 적어 둔다.
+     사용자가 고치면 이 관서 것이 되고(st 가 지금 관서로) 서버 보관함에 올린다. adopt 가 있으면 서버 목록을 받아 적는 것(그 시각을 그대로, 다시 올리지 않음) */
+  function todoWrite(items, adopt){
+    var adopted = adopt != null, t = adopted ? adopt : BOARD.now();
+    todoMem = items.slice();
+    storeSet(todoKey(), JSON.stringify({items:items, t:t, st:stationNow()}));
+    if(!adopted) BOARD.pushCfg(items, t);
+  }
+  /* 저장된 목록의 내력. has=false 면 고친 적 없는 기본 예시. st 가 없으면(예전에 저장한 목록) 어느 관서용인지 모른다 */
+  function todoMeta(){
+    var raw = storeGet(todoKey());
+    if(raw == null) return {has:false, t:0, st:''};
+    try{
+      var o = JSON.parse(raw);
+      if(o && Array.isArray(o.items)) return {has:true, t:(+o.t > 0 ? +o.t : 1), st:(typeof o.st === 'string' ? o.st : '')};
+    }catch(e){}
+    return {has:false, t:0, st:''};
+  }
+  /* 서버의 체크리스트 목록(cfg) → 목록. 형식이 맞지 않으면 null (id 는 서버 것을 그대로 — 체크가 id 로 이어진다) */
+  function cfgParse(s){
+    try{
+      var o = JSON.parse(String(s || '')), out = [], seen = {};
+      if(!o || typeof o !== 'object' || !Array.isArray(o.items) || o.items.length > 300) return null;
+      for(var i = 0; i < o.items.length; i++){
+        var it = o.items[i];
+        if(!it || typeof it.id !== 'string' || !it.id || it.id.length > 60 || seen[it.id] || typeof it.text !== 'string' || !TODO_LAB[it.stage]) return null;
+        var tx = it.text.replace(/^\s+|\s+$/g, '');
+        if(!tx || tx.length > 60) return null;
+        seen[it.id] = 1;
+        var r = {id:it.id, stage:it.stage, text:tx};
+        if(it.ex === true) r.ex = true;
+        out.push(r);
+      }
+      return out;
+    }catch(e){ return null; }
+  }
   function todoChkRead(raw){
     var m = jget(todoChkKey(), {}), out = {}, cut = Date.now() - 86400000, fl = raw ? cut : markFloor();
     if(m && typeof m === 'object') Object.keys(m).forEach(function(k){ if(+m[k] >= cut && markLive(+m[k], fl)) out[k] = +m[k]; });
@@ -1744,7 +2267,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     todoChkWrite(out);
   }
   function todoProgress(stage){
-    var chk = todoChkRead(), items = todoItems().filter(function(it){ return it.stage === stage; });
+    var chk = todoMarks(), items = todoItems().filter(function(it){ return it.stage === stage; });
     return {n:items.length, m:items.filter(function(it){ return chk[it.id]; }).length};
   }
   var TODO = { progress: todoProgress };   /* 상황보고(SIT.report)가 읽는다 */
@@ -1777,12 +2300,14 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     var o = inst.opt || {}, cur = statusOf(stationNow()).lv;
     var sel = (o.stage === 'safe' || o.stage === 'warn' || o.stage === 'severe') ? o.stage : 'auto';
     var view = sel === 'auto' ? cur : sel, ed = TODO_EDIT[inst.id] || null;
-    var all = todoItems(), items = all.filter(function(it){ return it.stage === view; }), chk = todoChkRead();
+    var all = todoItems(), items = all.filter(function(it){ return it.stage === view; }), chk = todoMarks();
     var n = items.length, m = items.filter(function(it){ return chk[it.id]; }).length, h;
     h = '<div class="tdh"><span class="cur"><span class="lb">현재 단계</span><span class="dot '+cur+'"></span><b'+(cur === 'safe' ? '' : ' class="t-'+cur+'"')+'>'+TODO_LAB[cur]+'</b></span>'+
       (n ? '<span class="prog">'+m+'/'+n+' 완료</span>' : '')+'</div>'+
       seg('stage', sel, [['auto','지금 단계'],['safe','평시'],['warn','주의'],['severe','경보']]);
+    var cf = ed ? null : BOARD.cfgConflict();
     if(!ed){
+      if(cf) h += '<div class="tdcf"><div>다른 화면에서 저장한 이 관서의 목록이 있습니다</div><div class="tdf"><button type="button" class="chip td-cfuse">그 목록 쓰기</button><button type="button" class="chip td-cfkeep">이 목록 유지</button></div></div>';
       if(items.some(function(it){ return it.ex; })) h += '<div class="tdex">예시 항목입니다 · 관서 지침에 맞게 고쳐 쓰세요</div>';
       if(n){
         h += '<div class="tdl">'+items.map(function(it){
@@ -1807,20 +2332,30 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     var q = function(sl){ return el.querySelector(sl); };
     if(!ed){
       el.querySelectorAll('.tdr').forEach(function(b){ b.onclick = function(){
-        var id = b.getAttribute('data-id'), mk = todoChkRead(true), it = null, on;
+        var id = b.getAttribute('data-id'), mk = todoChkRead(true), shown = todoMarks(), it = null, on, ts = BOARD.now();
         items.forEach(function(x){ if(x.id === id) it = x; });
         if(!it) return;
-        on = !mk[id]; if(on) mk[id] = Date.now(); else delete mk[id];
+        on = !shown[id];   /* 지금 화면에 보이는 상태를 뒤집는다(다른 PC 가 한 체크도 이 PC 에서 풀 수 있게) */
+        if(on) mk[id] = ts; else delete mk[id];
         todoChkWrite(mk);
-        if(on) SIT.addNote('조치 · '+it.text);
+        if(on){ SIT.addNote('조치 · '+it.text); BOARD.set('todo', id, it.text, it.stage, ts); }
+        else BOARD.del('todo', id);
         todoRedraw(el, inst, id);
       }; });
+      var cu = q('.td-cfuse'), ck = q('.td-cfkeep');
+      if(cu) cu.onclick = function(){ todoWrite(cf.items, cf.ts); todoChkPrune(cf.items); todoRedraw(el, inst); };   /* 서버 목록을 받는다(체크는 남아 있는 항목 것만) */
+      if(ck) ck.onclick = function(){ todoWrite(todoItems()); todoRedraw(el, inst); };   /* 이 목록을 이 관서 것으로 하고 서버에 올린다 */
       q('.td-edit').onclick = function(){
         TODO_EDIT[inst.id] = {draft:''}; todoDraw(el, inst);
         var f = q('.tdin'); if(f) f.focus();
       };
       var rs = q('.td-reset');
-      if(rs) rs.onclick = function(){ if(!confirm('체크 표시를 모두 지울까요?')) return; todoChkWrite({}); todoRedraw(el, inst, 'edit'); };
+      if(rs) rs.onclick = function(){
+        if(!confirm('체크 표시를 모두 지울까요?')) return;
+        todoChkWrite({});
+        BOARD.clear('todo');   /* 이 관서의 체크를 서버에서도 한꺼번에 지움 표시(아직 받아 오지 못한 줄까지) */
+        todoRedraw(el, inst, 'edit');
+      };
       return;
     }
     /* 편집 */
@@ -1863,7 +2398,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
       if(!confirm('지금 목록을 붙여넣은 목록으로 바꿀까요?')) return;
       todoWrite(list); todoChkPrune(list); todoRedraw(el, inst);
     };
-    q('.td-done').onclick = function(){ delete TODO_EDIT[inst.id]; todoRedraw(el, inst, 'edit'); };
+    q('.td-done').onclick = function(){ delete TODO_EDIT[inst.id]; BOARD.cfgSync(); todoRedraw(el, inst, 'edit'); };
   }
   W.todo = { title:'대응 체크리스트', w:3, h:7, icon:'todo', render:function(el, inst){
     /* 편집 중 글자 입력칸에 초점이 있으면 60초 새로 그리기가 입력을 지우지 않도록 건너뛴다 */
@@ -1992,6 +2527,109 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
     dspDraw(el, inst);
   }};
 
+  /* ── 관서 현황 (본부) ── 관서마다 한 줄: 상태(자료로 계산)·조치·점검(그 관서 화면이 올린 요약)·오늘 출동·마지막 기록·접속.
+     비어 있는 칸은 '입력 없음'이지 '이상 없음'이 아니다 ── */
+  /* 출동 메모: 읽어 왔는가, 오늘 건수(관서별·전체) */
+  function stnDsp(){
+    var out = {loaded:false, by:{}, total:0};
+    if(SIT.sim || !SIT.notes) return out;
+    out.loaded = true;
+    var d0 = dayStart(Date.now());
+    SIT.notes.forEach(function(n){ if(n && n.station && +n.ts >= d0){ out.by[n.station] = (out.by[n.station] || 0) + 1; out.total++; } });
+    return out;
+  }
+  /* 관서별 기록(최신이 앞) — 서버 줄(점검·조치·한 줄 기록)과 출동 메모를 합쳐 */
+  function stnRecs(){
+    var by = {};
+    var add = function(n, ts, text){ (by[n] = by[n] || []).push({ts:+ts, text:text}); };
+    if(BOARD.use()) BOARD.view().forEach(function(r){
+      if(r.kind === 'chk') add(r.station, r.ts, '점검 · '+r.text);
+      else if(r.kind === 'todo') add(r.station, r.ts, '조치 · '+r.text);
+      else if(r.kind === 'note') add(r.station, r.ts, r.text);
+    });
+    if(!SIT.sim && SIT.notes) SIT.notes.forEach(function(n){
+      if(!n || !n.station) return;
+      var tx = [n.place, n.memo].filter(Boolean).join(' ');
+      add(n.station, n.ts, '출동 · '+n.type+(tx ? ' · '+tx : ''));
+    });
+    Object.keys(by).forEach(function(k){ by[k].sort(function(a, b){ return b.ts-a.ts; }); });
+    return by;
+  }
+  function stnFmtT(ts){ return dayStart(ts) === dayStart(Date.now()) ? fHM(ts) : fMDHM(ts); }
+  function stnAgo(ts){
+    var mn = Math.floor(Math.max(0, BOARD.now()-ts)/60000);
+    if(mn < 2) return '방금';
+    if(mn < 60) return mn+'분 전';
+    if(mn < 1440) return Math.floor(mn/60)+'시간 전';
+    return fMD(ts);
+  }
+  W.stations = { title:'관서 현황', w:7, h:10, icon:'building', render:function(el, inst){
+    var o = inst.opt || {}, sel = (o.sel && ORDER.indexOf(o.sel) >= 0) ? o.sel : '', me = stationNow(), sc = el.scrollTop;
+    var ae = document.activeElement, fst = (ae && ae.getAttribute && el.contains(ae)) ? ae.getAttribute('data-st') : null;
+    var hasKey = !!storeGet('ggDspKey'), sim = SIT.sim, keyBad = hasKey && !sim && !BOARD.on();
+    var compact = !sim && (!hasKey || keyBad), ready = BOARD.use();
+    var bt = ready ? BOARD.beats() : {}, dsp = stnDsp(), got = ready || dsp.loaded, recs = got ? stnRecs() : {}, now = BOARD.now();
+    var wordOf = {safe:'정상', warn:'주의', severe:'경보'}, info = {};
+    var list = ORDER.map(function(n, i){ var s = statusOf(n); info[n] = s; return {n:n, i:i, lv:s.lv}; });
+    list.sort(function(a, b){ return (RANK[b.lv]-RANK[a.lv]) || (a.i-b.i); });
+    var badN = list.filter(function(x){ return x.lv !== 'safe'; }).length, conn = 0;
+    ORDER.forEach(function(n){ var b = bt[n]; if(b && now-b.ts <= BOARD.LIVE_MS) conn++; });
+    var sum = ['주의 이상 '+badN+'개 관서'];
+    var hq = BOARD.mode() === 'hq';
+    if(ready && hq) sum.push('접속 '+conn+'/'+ORDER.length);   /* 관서 화면은 다른 관서의 접속을 받지 않는다 */
+    if(dsp.loaded) sum.push('오늘 출동 '+dsp.total+'건');
+    var dash = '<span class="muted">—</span>';
+    var h = '<div class="stsum">'+esc(sum.join(' · '))+'</div>';
+    if(BOARD.on()) h += '<div class="stnote"><span>'+(hq ? '본부 화면 · 모든 관서의 입력을 불러옵니다 · 이 화면은 접속 표시를 보내지 않습니다' : '이 화면은 관서 화면입니다 · 다른 관서의 입력은 불러오지 않습니다')+'</span><button type="button" class="chip stn-mode">'+(hq ? '관서 화면으로 쓰기' : '본부 화면으로 쓰기')+'</button></div>';
+    if(sim) h += '<div class="stnote">모의 훈련 중에는 관서 입력을 불러오지 않습니다</div>';
+    else if(compact) h += '<div class="stnote"><span>'+(keyBad ? '열쇠가 맞지 않습니다' : '열쇠를 넣으면 관서별 조치·점검·출동이 함께 보입니다')+'</span><button type="button" class="chip stn-key">열쇠 넣기</button></div>';
+    else if(BOARD.failed) h += '<div class="stnote">관서 입력을 불러오지 못했습니다'+(BOARD.okAt ? ' · 마지막 '+fHM(BOARD.okAt) : '')+'</div>';
+    h += '<table class="tb stb"><thead><tr><th>관서</th><th class="l">상태</th>'+
+      (compact ? '' : '<th>조치</th><th>점검</th><th class="c5">출동</th><th class="l c6">마지막 기록</th><th>접속</th>')+'</tr></thead><tbody>';
+    list.forEach(function(x){
+      var n = x.n, b = bt[n], d = b ? b.d : null, fresh = !!b && (now-b.ts) <= 86400000;
+      h += '<tr data-st="'+esc(n)+'" tabindex="0" aria-selected="'+(sel === n ? 'true' : 'false')+'"'+(n === me ? ' class="me"' : '')+'>'+
+        '<td>'+esc(n)+'</td><td class="l"><span class="stc"><span class="dot '+x.lv+'"></span><span'+(x.lv === 'safe' ? '' : ' class="t-'+x.lv+'"')+'>'+wordOf[x.lv]+'</span></span></td>';
+      if(!compact){
+        var td = (fresh && d && d.todo && +d.todo.n > 0) ? d.todo : null, ck = (fresh && d && d.chk && +d.chk.n > 0) ? d.chk : null;
+        var rc = got ? (recs[n] || [])[0] : null, dn = dsp.by[n];
+        h += '<td'+(td ? ' title="'+esc((TODO_LAB[td.stage] || '')+' 단계')+'"' : '')+'>'+(td ? (+td.m || 0)+'/'+(+td.n) : dash)+'</td>'+
+          '<td>'+(ck ? (+ck.m || 0)+'/'+(+ck.n) : dash)+'</td>'+
+          '<td class="c5">'+(dsp.loaded ? (dn ? dn : '') : dash)+'</td>'+
+          '<td class="l c6"'+(rc ? ' title="'+esc(stnFmtT(rc.ts)+' '+rc.text)+'"' : '')+'>'+(got ? (rc ? '<span class="tm">'+stnFmtT(rc.ts)+'</span>'+esc(rc.text) : '') : dash)+'</td>'+
+          '<td'+((b && now-b.ts > BOARD.LIVE_MS) ? ' class="muted"' : '')+'>'+(b ? stnAgo(b.ts) : dash)+'</td>';
+      }
+      h += '</tr>';
+    });
+    h += '</tbody></table>';
+    if(sel){
+      var s = info[sel], bb = bt[sel], why = s.why.length ? s.why.join(' · ') : ((bb && bb.d && bb.d.why) ? String(bb.d.why) : '');
+      if(!why && s.lv === 'safe') why = '특보·강한 비·하천 이상 없음';
+      h += '<div class="stdet"><div class="stdh"><b>'+esc(sel)+'</b><span class="stc"><span class="dot '+s.lv+'"></span><span'+(s.lv === 'safe' ? '' : ' class="t-'+s.lv+'"')+'>'+wordOf[s.lv]+'</span></span></div>'+
+        (why ? '<div class="stdw">'+esc(why)+'</div>' : '');
+      if(got){
+        var rs = (recs[sel] || []).slice(0, 8);
+        if(rs.length) h += rs.map(function(r){ return '<div class="stdr"><span class="tm">'+stnFmtT(r.ts)+'</span><span class="tx">'+esc(r.text)+'</span></div>'; }).join('');
+        else h += '<div class="stdw muted">입력 없음</div>';
+      }
+      h += '</div>';
+    }
+    if(!compact) h += '<div class="legend"><span>접속 — 그 관서 화면이 마지막으로 열려 있던 때 · 비어 있는 칸은 입력이 없다는 뜻이며 이상 없음을 뜻하지 않습니다</span></div>';
+    el.innerHTML = h;
+    var pick = function(n){ inst.opt = inst.opt || {}; inst.opt.sel = (inst.opt.sel === n) ? '' : n; save(); W.stations.render(el, inst); };
+    Array.prototype.forEach.call(el.querySelectorAll('tr[data-st]'), function(r){
+      r.onclick = function(){ pick(r.getAttribute('data-st')); };
+      r.onkeydown = function(ev){ if(ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Spacebar'){ ev.preventDefault(); pick(r.getAttribute('data-st')); } };
+    });
+    var kb = el.querySelector('.stn-key'); if(kb) kb.onclick = function(){ DSPX.setup(); };
+    var mb = el.querySelector('.stn-mode'); if(mb) mb.onclick = function(){ BOARD.setHq(!hq); };
+    el.scrollTop = sc;
+    if(fst){
+      var rows = el.querySelectorAll('tr[data-st]'), i;
+      for(i = 0; i < rows.length; i++){ if(rows[i].getAttribute('data-st') === fst){ try{ rows[i].focus({preventScroll:true}); }catch(e){ rows[i].focus(); } break; } }
+    }
+  }};
+
   /* 위젯 안의 구간 버튼 — data-o(옵션 이름)·data-v(값)를 이 위젯 설정에 저장하고 다시 그린다 */
   function tabs(el, inst){
     el.querySelectorAll('.seg button[data-o]').forEach(function(b){ b.onclick=function(){
@@ -2004,6 +2642,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   var PRESETS = {
     incident:[['status',0,0,3,3],['kpi',3,0,9,3],['timeline',0,3,4,10],['map',4,3,5,10,{m:'r1'}],['report',9,3,3,10],
              ['check',0,13,4,7],['rivers',4,13,5,7],['todo',9,13,3,7],['dispatch',0,20,4,6]],
+    hq:     [['kpi',0,0,12,3],['stations',0,3,7,10],['map',7,3,5,10],['timeline',0,13,5,8,{scope:'all'}],['report',5,13,4,8,{scope:'all'}],['rivers',9,13,3,8]],
     normal: [['status',0,0,3,3],['kpi',3,0,9,3],
              ['warnings',0,3,3,3],['rain',0,6,3,4],['fire',0,10,3,3],['map',3,3,6,10],['image',9,3,3,6,{k:'radar'}],['fcst',9,9,3,4],
              ['rivers',0,13,6,8],['weather',6,13,3,8],['messages',9,13,3,8]],
@@ -2087,9 +2726,9 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   $('addList').innerHTML = Object.keys(W).map(function(t){ return '<button class="chip" data-t="'+t+'">'+ic(W[t].icon || t)+esc(W[t].title)+'</button>'; }).join('');
   $('addList').querySelectorAll('button').forEach(function(b){ b.onclick=function(){ var t=b.getAttribute('data-t'); addInst({type:t, w:W[t].w, h:W[t].h}); save();
     var last=document.querySelector('.grid-stack-item[gs-id]:last-child'); if(last && last.scrollIntoView) last.scrollIntoView({behavior:'smooth', block:'center'}); }; });
-  $('btnReset').onclick=function(){ if(confirm('처음 배치(평상시)로 되돌릴까요? 지금 꾸민 배치는 사라집니다')) load(fromPreset('normal')); };
+  $('btnReset').onclick=function(){ if(confirm('처음 배치(평상시)로 되돌릴까요? 지금 꾸민 배치는 사라집니다')){ load(fromPreset('normal')); BOARD.setHq(false); } };
   $('selPreset').onchange=function(){ var v=this.value, nm=this.options[this.selectedIndex].text; this.value=''; if(!v) return;
-    if(confirm('기본 배치 "'+nm+'"를 불러올까요? 지금 꾸민 배치는 사라집니다')) load(fromPreset(v)); };
+    if(confirm('기본 배치 "'+nm+'"를 불러올까요? 지금 꾸민 배치는 사라집니다')){ load(fromPreset(v)); BOARD.setHq(v==='hq'); } };
 
   /* ── 갱신 ── 60초마다 새 데이터. 자료 신선도 점: 40분 넘게 안 바뀌면 주황 */
   function updStamp(){
@@ -2106,7 +2745,7 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
           window.DASHBOARD_DATA = JSON.parse(t.slice(i,j+1));
           try{ if(SIT.sim) SIT.applySim(window.DASHBOARD_DATA); }catch(e){ if(window.console) console.error(e); }
           try{ SIT.observe(); }catch(e){ if(window.console) console.error(e); }
-          renderAll(); SIT.loadNotes();
+          renderAll(); SIT.loadNotes(); BOARD.tick();
         }catch(e){ if(window.console) console.error(e); }
       }).catch(function(){});
     }catch(e){}
@@ -2114,13 +2753,15 @@ pre.rep{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;
   fillSelects();
   try{ if(SIT.sim) SIT.applySim(D()); }catch(e){ if(window.console) console.error(e); }
   try{ SIT.observe(); }catch(e){ if(window.console) console.error(e); }
-  renderAll(); SIT.loadNotes();
+  renderAll(); SIT.loadNotes(); BOARD.pull(true);
   setInterval(function(){ try{ SIT.renderBar(); }catch(e){} }, 30000);
+  setInterval(BOARD.tick, 15000);   /* 이 브라우저 안의 시계 — 보낼 때인지만 본다(간격은 BOARD.interval) */
+  setInterval(function(){ try{ BOARD.beatTick(); }catch(e){ if(window.console) console.error(e); } }, 30000);
   setInterval(poll, 60000); setInterval(updStamp, 30000);
-  document.addEventListener('visibilitychange', function(){ if(!document.hidden) poll(); });
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden){ poll(); BOARD.tick(); } });
   window.addEventListener('resize', function(){ clearTimeout(window._rz); window._rz=setTimeout(renderAll, 200); });
   try{ if(RC.sidoList && RC.sidoCurrent){ var me=RC.sidoList.filter(function(x){ return x.label===RC.sidoCurrent; })[0]; if(me) storeSet('ggSido', me.base); } }catch(e){}
-  window.DASHW = { W:W, grid:grid, INST:INST, render:renderAll, load:load, preset:fromPreset, SIT:SIT,   /* 점검용 */
+  window.DASHW = { W:W, grid:grid, INST:INST, render:renderAll, load:load, preset:fromPreset, SIT:SIT, BOARD:BOARD,   /* 점검용 */
     sim:function(on){
       try{ sessionStorage.removeItem('ggDashSimEnd'); }catch(e){}
       if(on) clearSimKeys();   /* 새 모의 훈련은 처음부터 */
