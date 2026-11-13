@@ -24,9 +24,12 @@
  *   GET  /api/stats?key=all&days=90   관서·유형·장소별 집계    (열쇠 필요)
  *
  *   ── 관서 현황판 (2026-11-13) — 각 관서 화면의 체크·점검·한 줄 기록을 본부가 모아 본다 ──
- *   POST /api/board/set               한 줄 올리기/고치기     (열쇠 필요)
- *   POST /api/board/del               한 줄 지우기           (열쇠 필요)
- *   GET  /api/board?key=all&hours=48  모든 관서의 줄(cfg= 로 그 관서의 목록 설정도) (열쇠 필요)
+ *   POST /api/board/set               한 줄 올리기/고치기     (열쇠 필요)  → {ok, ts, applied}
+ *   POST /api/board/del               한 줄 지움 표시         (열쇠 필요)  → {ok, ts, applied}
+ *   POST /api/board/clear             그 관서의 chk 또는 todo 를 모두 지움 표시(체크 초기화)
+ *   GET  /api/board?key=all&hours=48  줄 목록 (열쇠 필요). station= 그 관서 것만(관서 화면) · since= 그 뒤 바뀐 것만
+ *                                     (지움 표시 del:1 포함) · cfg= 그 관서의 목록 설정도
+ *     같은 줄은 '더 나중 시각의 것'이 남는다(지움도 같은 규칙). applied:false 면 서버에 더 새 값이 있다는 뜻.
  *     줄 하나 = (관서, 종류, id). 종류: chk 위험구역 점검 확인 · todo 체크리스트 체크 · note 한 줄 기록
  *     · beat 관서 요약(상태·진행·접속 시각, 관서마다 1줄) · cfg 관서의 체크리스트 목록(관서마다 1줄)
  *     관서 화면이 상태를 통째로 올리지 않고 줄 단위로 올리는 이유: 같은 관서의 PC 둘이 동시에 체크해도
@@ -89,37 +92,73 @@ export class Log extends DurableObject {
       place TEXT, lat REAL, lng REAL, memo TEXT, wx TEXT, who TEXT)`);
     this.sql.exec(`CREATE INDEX IF NOT EXISTS i_ts ON notes(ts)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT)`);
-    this.sql.exec(`CREATE TABLE IF NOT EXISTS board(
-      station TEXT, kind TEXT, id TEXT, ts INTEGER, text TEXT, extra TEXT,
+    /* board2 — del=1 은 '지운 자리 표시'. 지울 때 줄을 없애면, 늦게 도착한 옛 요청이 그 줄을 되살린다
+       (PC A 의 실패한 체크가 PC B 의 해제 뒤에 재전송되는 경우). 지운 시각을 남겨 같은 '더 나중 것이 이긴다' 규칙을 쓴다. */
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS board2(
+      station TEXT, kind TEXT, id TEXT, ts INTEGER, text TEXT, extra TEXT, del INTEGER DEFAULT 0,
       PRIMARY KEY(station, kind, id))`);
-    this.sql.exec(`CREATE INDEX IF NOT EXISTS i_board_ts ON board(ts)`);
+    this.sql.exec(`CREATE INDEX IF NOT EXISTS i_b2_ts ON board2(ts)`);
+    this.sql.exec(`CREATE INDEX IF NOT EXISTS i_b2_kind ON board2(kind, ts)`);
+    this.sql.exec(`DROP TABLE IF EXISTS board`);   // 2026-11-13 오전 몇 시간만 쓰인 첫 판(시험 줄뿐)
   }
 
-  /* ── 관서 현황판 ── */
-  async boardSet(r) {
-    /* 같은 줄을 두 화면이 올리면 더 나중 시각의 것이 남는다(늦게 도착한 옛 값이 새 값을 덮지 않게) */
-    this.sql.exec(`INSERT INTO board(station,kind,id,ts,text,extra) VALUES(?,?,?,?,?,?)
-      ON CONFLICT(station,kind,id) DO UPDATE SET ts=excluded.ts, text=excluded.text, extra=excluded.extra
-      WHERE excluded.ts >= board.ts`, r.station, r.kind, r.id, r.ts, r.text, r.extra);
-    this.sql.exec(`DELETE FROM board WHERE kind<>'cfg' AND ts < ?`, Date.now() - BOARD_KEEP_DAYS * 86400000);
-    const n = [...this.sql.exec('SELECT COUNT(*) AS c FROM board')][0].c;
-    if (n > BOARD_MAX_ROWS) this.sql.exec(`DELETE FROM board WHERE rowid IN
-      (SELECT rowid FROM board WHERE kind<>'cfg' ORDER BY ts ASC LIMIT ?)`, n - BOARD_MAX_ROWS);
-    return { ok: true, ts: r.ts };
+  /* ── 관서 현황판 ── 열쇠 확인까지 한 번의 호출로 끝낸다(요청마다 저장소 호출 1회 — 무료 한도) */
+  async board(op, code, a) {
+    if (!(await this.ok(code))) return { ok: false, why: '열쇠가 필요합니다', status: 401 };
+    const now = Date.now();
+    if (op === 'list') return { ok: true, now, rows: this._boardList(now, a) };
+    if (op === 'clear') {
+      /* 그 관서의 한 종류를 모두 지움 표시(체크 초기화) — 화면이 아직 못 받은 줄까지 */
+      const n = [...this.sql.exec('SELECT COUNT(*) AS c FROM board2 WHERE station=? AND kind=? AND del=0', a.station, a.kind)][0].c;
+      this.sql.exec(`UPDATE board2 SET del=1, ts=?, text='', extra='' WHERE station=? AND kind=? AND del=0`, now, a.station, a.kind);
+      return { ok: true, n, ts: now };
+    }
+    /* set / del — 같은 줄은 더 나중 시각의 것이 남는다. 시각이 같으면 나중에 도착한 것 */
+    this.sql.exec(`INSERT INTO board2(station,kind,id,ts,text,extra,del) VALUES(?,?,?,?,?,?,?)
+      ON CONFLICT(station,kind,id) DO UPDATE SET ts=excluded.ts, text=excluded.text, extra=excluded.extra, del=excluded.del
+      WHERE excluded.ts >= board2.ts`, a.station, a.kind, a.id, a.ts, a.text, a.extra, op === 'del' ? 1 : 0);
+    const cur = [...this.sql.exec('SELECT ts, del FROM board2 WHERE station=? AND kind=? AND id=?', a.station, a.kind, a.id)][0];
+    const applied = !!cur && cur.ts === a.ts && cur.del === (op === 'del' ? 1 : 0);
+    this._boardPrune(now);
+    return { ok: true, ts: cur ? cur.ts : a.ts, applied };     // applied=false → 서버에 더 새 값이 있다
   }
 
-  async boardDel(station, kind, id) {
-    this.sql.exec('DELETE FROM board WHERE station=? AND kind=? AND id=?', station, kind, id);
-    return { ok: true };
+  /* 정리는 한 시간에 한 번만 — 쓸 때마다 전체를 세면 무료 한도(읽은 줄 수)를 금방 넘는다 */
+  _boardPrune(now) {
+    if (now - (+this._meta('board_pruned') || 0) < 3600000) return;
+    this._setMeta('board_pruned', String(now));
+    this.sql.exec(`DELETE FROM board2 WHERE kind<>'cfg' AND ts < ?`, now - BOARD_KEEP_DAYS * 86400000);
+    const n = [...this.sql.exec('SELECT COUNT(*) AS c FROM board2')][0].c;
+    if (n > BOARD_MAX_ROWS) this.sql.exec(`DELETE FROM board2 WHERE rowid IN
+      (SELECT rowid FROM board2 WHERE kind<>'cfg' ORDER BY ts ASC LIMIT ?)`, n - BOARD_MAX_ROWS);
   }
 
-  /* 모든 관서의 줄. beat 는 기간과 상관없이(마지막 접속 시각을 보여 주려고), cfg 는 부탁한 관서 것만(크다). */
-  async boardList(hours, cfgStation) {
-    const from = Date.now() - hours * 3600000;
-    const rows = [...this.sql.exec(
-      `SELECT station,kind,id,ts,text,extra FROM board
-       WHERE (kind IN ('chk','todo','note') AND ts>=?) OR kind='beat' OR (kind='cfg' AND station=?)
-       ORDER BY ts DESC LIMIT 5000`, from, cfgStation || '')];
+  /* 줄 목록.
+     a.station 이 있으면 그 관서 것만(관서 화면) — 없으면 모든 관서(본부 화면).
+     a.since 가 있으면 그 뒤에 바뀐 것만, 지움 표시(del=1)까지 함께 — 없으면 최근 a.hours 시간의 살아 있는 줄 전부.
+     beat(관서 요약)는 기간과 상관없이 준다(마지막 접속 시각을 보여 주려고). cfg(목록)는 a.cfg 관서 것만(크다).
+     종류마다 따로 묻는다 — 한 질의에 묶어 LIMIT 을 걸면 줄이 많은 날 beat·cfg 가 잘려 나간다. */
+  _boardList(now, a) {
+    const cols = 'station,kind,id,ts,text,extra,del';
+    const from = a.since ? a.since : now - a.hours * 3600000;
+    const liveOnly = a.since ? '' : ' AND del=0';
+    const cmp = a.since ? 'ts > ?' : 'ts >= ?';
+    let rows;
+    if (a.station) {
+      rows = [...this.sql.exec(`SELECT ${cols} FROM board2 WHERE station=? AND kind IN ('chk','todo','note') AND ${cmp}${liveOnly}
+        ORDER BY ts DESC LIMIT 2000`, a.station, from)];
+      rows = rows.concat([...this.sql.exec(`SELECT ${cols} FROM board2 WHERE station=? AND kind='beat' AND id='now'`, a.station)]);
+    } else {
+      rows = [...this.sql.exec(`SELECT ${cols} FROM board2 WHERE kind IN ('chk','todo','note') AND ${cmp}${liveOnly}
+        ORDER BY ts DESC LIMIT 4000`, from)];
+      rows = rows.concat(a.since
+        ? [...this.sql.exec(`SELECT ${cols} FROM board2 WHERE kind='beat' AND ts > ?`, a.since)]
+        : [...this.sql.exec(`SELECT ${cols} FROM board2 WHERE kind='beat'`)]);
+    }
+    if (a.cfg) {
+      const c = [...this.sql.exec(`SELECT ${cols} FROM board2 WHERE station=? AND kind='cfg' AND id='todo' AND del=0`, a.cfg)];
+      if (c.length && (!a.since || c[0].ts > a.since)) rows.push(c[0]);
+    }
     return rows;
   }
 
@@ -197,7 +236,8 @@ export default {
     let body = {};
     if (request.method === 'POST') { try { body = await request.json(); } catch (e) { body = {}; } }
     const code = String(body.code || url.searchParams.get('code') || '');
-    const bkey = (body.key || key).trim();
+    const bkey = String(body.key == null ? key : body.key).trim();
+    if (!/^[a-z]{2,16}$/.test(bkey)) return j({ ok: false, why: '지역키가 올바르지 않습니다' }, 400);
     const broom = bkey === key ? room : env.LOG.get(env.LOG.idFromName(bkey));
 
     try {
@@ -235,41 +275,52 @@ export default {
       }
 
       /* ── 관서 현황판 ── */
-      if (p === '/api/board/set' && request.method === 'POST') {
-        if (!(await broom.ok(code))) return j({ ok: false, why: '열쇠가 필요합니다' }, 401);
+      if (p.startsWith('/api/board/') && request.method === 'POST') {
+        const op = p.slice('/api/board/'.length);
+        if (!['set', 'del', 'clear'].includes(op)) return j({ ok: false, why: '없는 주소' }, 404);
         const station = String(body.station || '').slice(0, 20).trim();
         const kind = String(body.kind || '');
-        const id = String(body.id || '').slice(0, 120);
         if (!station) return j({ ok: false, why: '관서가 없습니다' }, 400);
-        if (!BOARD_KINDS.includes(kind) || !id) return j({ ok: false, why: '종류나 id 가 올바르지 않습니다' }, 400);
-        const text = String(body.text || '').slice(0, BOARD_TEXT).trim();
-        let extra = body.extra == null ? '' : (typeof body.extra === 'string' ? body.extra : JSON.stringify(body.extra));
-        if (extra.length > (kind === 'cfg' ? BOARD_EXTRA_CFG : BOARD_EXTRA)) return j({ ok: false, why: '내용이 너무 깁니다' }, 400);
-        /* 개인정보 — 사람이 적는 글만 본다(beat 의 숫자 묶음을 긴 숫자로 오인하지 않게) */
-        let bad = (kind === 'beat') ? null : looksPersonal(text);
-        if (!bad && kind === 'cfg' && extra) {
-          try { for (const it of (JSON.parse(extra).items || [])) { bad = looksPersonal(it && it.text); if (bad) break; } }
-          catch (e) { return j({ ok: false, why: '목록 형식이 아닙니다' }, 400); }
-        }
-        if (bad) return j({ ok: false, why: bad + ' — 개인정보는 적지 않습니다' }, 400);
-        /* 시각 — 화면이 보낸 값을 쓰되(체크한 시각), 미래이거나 너무 옛날이면 지금으로 */
-        const now = Date.now();
-        let ts = +body.ts;
-        if (!(ts > now - BOARD_KEEP_DAYS * 86400000 && ts < now + 5 * 60000)) ts = now;
-        return j(await broom.boardSet({ station, kind, id, ts, text, extra }));
-      }
-
-      if (p === '/api/board/del' && request.method === 'POST') {
-        if (!(await broom.ok(code))) return j({ ok: false, why: '열쇠가 필요합니다' }, 401);
-        const kind = String(body.kind || '');
         if (!BOARD_KINDS.includes(kind)) return j({ ok: false, why: '종류가 올바르지 않습니다' }, 400);
-        return j(await broom.boardDel(String(body.station || '').slice(0, 20).trim(), kind, String(body.id || '').slice(0, 120)));
+        if (op === 'clear') {
+          if (kind !== 'chk' && kind !== 'todo') return j({ ok: false, why: '이 종류는 한꺼번에 지울 수 없습니다' }, 400);
+          const r = await broom.board('clear', code, { station, kind });
+          return j(r, r.status || 200);
+        }
+        const id = String(body.id || '').slice(0, 120);
+        if (!id) return j({ ok: false, why: 'id 가 없습니다' }, 400);
+        /* 시각 — 화면이 서버 시각에 맞춰 보낸 값(누른 때)을 쓴다. 재전송이 늦게 와도 '누른 때'로 겨루게.
+           미래이거나 너무 옛날이면 지금으로. 관서 요약(beat)은 늘 서버의 지금 — 접속 시각이 PC 시계에 휘둘리지 않게. */
+        const now = Date.now();
+        let ts = Math.floor(+body.ts);
+        if (kind === 'beat' || !(ts > now - BOARD_KEEP_DAYS * 86400000 && ts <= now + 60000)) ts = now;
+        if (op === 'del') {
+          const r = await broom.board('del', code, { station, kind, id, ts, text: '', extra: '' });
+          return j(r, r.status || 200);
+        }
+        const text = String(body.text || '').slice(0, BOARD_TEXT).trim();
+        const extra = body.extra == null ? '' : (typeof body.extra === 'string' ? body.extra : JSON.stringify(body.extra));
+        if (extra.length > (kind === 'cfg' ? BOARD_EXTRA_CFG : BOARD_EXTRA)) return j({ ok: false, why: '내용이 너무 깁니다' }, 400);
+        /* 개인정보 — 사람이 적은 글을 본다. 숫자 묶음(JSON)은 통째로 보지 않는다(시각 13자리를 긴 숫자로 오인) */
+        let bad = looksPersonal(text);
+        try {
+          if (!bad && kind === 'cfg' && extra) { for (const it of (JSON.parse(extra).items || [])) { bad = looksPersonal(it && it.text); if (bad) break; } }
+          else if (!bad && kind === 'beat' && extra) bad = looksPersonal(JSON.parse(extra).why);
+          else if (!bad && extra) bad = looksPersonal(extra);
+        } catch (e) { return j({ ok: false, why: '형식이 올바르지 않습니다' }, 400); }
+        if (bad) return j({ ok: false, why: bad + ' — 개인정보는 적지 않습니다' }, 400);
+        const r = await broom.board('set', code, { station, kind, id, ts, text, extra });
+        return j(r, r.status || 200);
       }
 
       if (p === '/api/board') {
-        if (!(await room.ok(code))) return j({ ok: false, why: '열쇠가 필요합니다' }, 401);
-        const hours = Math.min(24 * BOARD_KEEP_DAYS, Math.max(1, +(url.searchParams.get('hours') || 48)));
-        return j({ ok: true, now: Date.now(), rows: await room.boardList(hours, (url.searchParams.get('cfg') || '').slice(0, 20).trim()) });
+        const q = (n) => (url.searchParams.get(n) || '').slice(0, 20).trim();
+        const since = Math.floor(+(url.searchParams.get('since') || 0));
+        const r = await room.board('list', code, {
+          hours: Math.min(24 * BOARD_KEEP_DAYS, Math.max(1, +(url.searchParams.get('hours') || 48))),
+          station: q('station'), cfg: q('cfg'), since: since > 0 ? since : 0,
+        });
+        return j(r, r.status || 200);
       }
 
       if (p === '/api/stats') {
