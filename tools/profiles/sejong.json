@@ -1,0 +1,185 @@
+{
+ "key": "sejong",
+ "label": "세종",
+ "title": "세종 기상·재난 상황판",
+ "full": "세종특별자치시",
+ "home": "세종",
+ "home_office": "세종소방서",
+ "host": "weather.visanu81.workers.dev",
+ "data_file": "data-sejong.js",
+ "map_file": "map-geo-sejong.js",
+ "combined_file": "상황판-sejong.html",
+ "notify": false,
+ "tide": false,
+ "share_images_from": "data.js",
+ "wrn_stn": 133,
+ "wrn_prefix": [
+  "L117"
+ ],
+ "wide_label": "세종",
+ "wide_names": [
+  "세종"
+ ],
+ "pm_sido": [
+  "세종"
+ ],
+ "sido_words": [
+  "세종"
+ ],
+ "kostat": [
+  "29"
+ ],
+ "map_alias": {
+  "세종": [
+   "세종특별자치시",
+   "세종시"
+  ]
+ },
+ "unit_alias": {},
+ "map_any_prefix": [],
+ "map_inset_units": [],
+ "regions": [
+  {
+   "name": "세종",
+   "nx": 65,
+   "ny": 103,
+   "sgg": "3611000000",
+   "lat": 36.48522,
+   "lon": 127.24438,
+   "admin": "세종특별자치시"
+  }
+ ],
+ "pm_stations": {
+  "세종": "한솔동"
+ },
+ "aws_stations": {
+  "세종": [
+   [
+    239,
+    "세종"
+   ],
+   [
+    494,
+    "세종고운"
+   ],
+   [
+    496,
+    "세종금남"
+   ],
+   [
+    611,
+    "세종연서"
+   ],
+   [
+    629,
+    "세종전의"
+   ]
+  ]
+ },
+ "aws_fallback": {},
+ "aws_neighbors": {
+  "세종": []
+ },
+ "river_stations": [
+  {
+   "code": "3011675",
+   "name": "세종 상조천교",
+   "sigun": "세종",
+   "warning": 2.3,
+   "danger": 4.2,
+   "has_cctv": true,
+   "api": "waterlevel"
+  },
+  {
+   "code": "3012602",
+   "name": "금강 (세종 햇무리교)",
+   "sigun": "세종",
+   "warning": 9.1,
+   "danger": 12.0,
+   "has_cctv": true,
+   "api": "waterlevel"
+  },
+  {
+   "code": "3012607",
+   "name": "용수천 (세종 도암교)",
+   "sigun": "세종",
+   "warning": 1.5,
+   "danger": 3.3,
+   "has_cctv": true,
+   "api": "waterlevel"
+  }
+ ],
+ "river_meta": {
+  "3011675": {
+   "agc": "기후에너지환경부",
+   "addr": "세종특별자치시 조치원읍 신안리 상조천교 (충청북도 청원군 오송읍 상봉리)",
+   "gdt": 29.029,
+   "att": 2.3,
+   "wrn": 3.2,
+   "alm": 4.2,
+   "srs": 4.77,
+   "pfh": 4.77,
+   "fstn": true,
+   "cctv": true
+  },
+  "3012602": {
+   "agc": "기후에너지환경부",
+   "addr": "세종특별자치시 연기면 세종리 햇무리교",
+   "gdt": 9.272,
+   "att": 9.1,
+   "wrn": 9.5,
+   "alm": 12,
+   "srs": 15.28,
+   "pfh": 15.28,
+   "fstn": true,
+   "cctv": true
+  },
+  "3012607": {
+   "agc": "기후에너지환경부",
+   "addr": "세종특별자치시 금남면 도암리 도암교",
+   "gdt": 20.325,
+   "att": 1.5,
+   "wrn": 2.5,
+   "alm": 3.3,
+   "srs": 4.1,
+   "pfh": 4.1,
+   "fstn": true,
+   "cctv": true
+  }
+ },
+ "keywords": [
+  "세종",
+  "세종특별자치시",
+  "세종",
+  "세종"
+ ],
+ "reg_map": {
+  "L1170100": "세종",
+  "L1170110": "세종",
+  "L1170120": "세종",
+  "L1170000": "세종(전체)"
+ },
+ "region_order": [
+  "세종",
+  "세종"
+ ],
+ "fire_sigun_map": {
+  "세종특별자치시": "세종"
+ },
+ "fire_groups": {
+  "세종": [
+   "세종"
+  ]
+ },
+ "flood_keywords": [
+  "금강",
+  "세종",
+  "용수천"
+ ],
+ "exclude_prefix": "",
+ "gun_names": [],
+ "admin": {
+  "세종": "세종특별자치시"
+ },
+ "generated": "2026-09-20 07:12"
+}

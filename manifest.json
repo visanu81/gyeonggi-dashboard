@@ -1,0 +1,27 @@
+{
+  "name": "경기북부 기상·재난 상황판",
+  "short_name": "기상상황판",
+  "description": "동두천소방서 운영 — 경기북부 10개 시군 실시간 기상·재난 모니터링",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f5f1e8",
+  "theme_color": "#1a3a5c",
+  "lang": "ko",
+  "categories": ["utilities", "weather", "government"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
